@@ -10,6 +10,7 @@ builder.Services.AddSingleton<IPlannerService, SimplePlannerService>();
 builder.Services.AddSingleton<IExecutorService, StubExecutorService>();
 builder.Services.AddSingleton<IAgentTaskStore, InMemoryAgentTaskStore>();
 builder.Services.AddSingleton<IWebhookHandler, WebhookHandler>();
+builder.Services.AddSingleton<IWebhookValidator, WebhookValidator>();
 
 // Configure GitHub client
 builder.Services.AddSingleton<IGitHubClient>(sp =>
@@ -32,13 +33,25 @@ var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok("ok"));
 
-app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, ILogger<Program> logger) =>
+app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<Program> logger) =>
 {
     try
     {
         // Read the request body
         using var reader = new StreamReader(context.Request.Body);
         var body = await reader.ReadToEndAsync();
+        
+        // Validate signature if webhook secret is configured
+        var webhookSecret = config["GitHub:WebhookSecret"];
+        if (!string.IsNullOrEmpty(webhookSecret))
+        {
+            var signature = context.Request.Headers["X-Hub-Signature-256"].ToString();
+            if (!validator.ValidateSignature(body, signature, webhookSecret))
+            {
+                logger.LogWarning("Invalid webhook signature");
+                return Results.Unauthorized();
+            }
+        }
         
         logger.LogInformation("Received webhook: {EventType}", context.Request.Headers["X-GitHub-Event"].ToString());
         
