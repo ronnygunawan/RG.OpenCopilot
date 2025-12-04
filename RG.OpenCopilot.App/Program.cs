@@ -2,15 +2,67 @@ using RG.OpenCopilot.Agent;
 using RG.OpenCopilot.App;
 using Octokit;
 using System.Text.Json;
+using Microsoft.SemanticKernel;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure services
-builder.Services.AddSingleton<IPlannerService, SimplePlannerService>();
+// Configure Semantic Kernel
+var kernelBuilder = Kernel.CreateBuilder();
+
+// Configure LLM provider based on configuration
+var llmProvider = builder.Configuration["LLM:Provider"] ?? "OpenAI";
+var apiKey = builder.Configuration["LLM:ApiKey"];
+var modelId = builder.Configuration["LLM:ModelId"] ?? "gpt-4o";
+
+if (string.IsNullOrEmpty(apiKey))
+{
+    // For development/testing, use SimplePlannerService if no API key is configured
+    builder.Services.AddSingleton<IPlannerService, SimplePlannerService>();
+}
+else
+{
+    // Configure the appropriate LLM provider
+    switch (llmProvider.ToLowerInvariant())
+    {
+        case "openai":
+            kernelBuilder.AddOpenAIChatCompletion(
+                modelId: modelId,
+                apiKey: apiKey);
+            break;
+        
+        case "azureopenai":
+            var azureEndpoint = builder.Configuration["LLM:AzureEndpoint"];
+            var azureDeployment = builder.Configuration["LLM:AzureDeployment"];
+            
+            if (string.IsNullOrEmpty(azureEndpoint) || string.IsNullOrEmpty(azureDeployment))
+            {
+                throw new InvalidOperationException(
+                    "Azure OpenAI requires LLM:AzureEndpoint and LLM:AzureDeployment configuration");
+            }
+            
+            kernelBuilder.AddAzureOpenAIChatCompletion(
+                deploymentName: azureDeployment,
+                endpoint: azureEndpoint,
+                apiKey: apiKey);
+            break;
+        
+        default:
+            throw new InvalidOperationException(
+                $"Unsupported LLM provider: {llmProvider}. Supported providers: OpenAI, AzureOpenAI");
+    }
+
+    var kernel = kernelBuilder.Build();
+    builder.Services.AddSingleton(kernel);
+    builder.Services.AddSingleton<IPlannerService, LlmPlannerService>();
+}
+
+// Configure other services
 builder.Services.AddSingleton<IExecutorService, StubExecutorService>();
 builder.Services.AddSingleton<IAgentTaskStore, InMemoryAgentTaskStore>();
 builder.Services.AddSingleton<IWebhookHandler, WebhookHandler>();
 builder.Services.AddSingleton<IWebhookValidator, WebhookValidator>();
+builder.Services.AddSingleton<IRepositoryAnalyzer, RepositoryAnalyzer>();
+builder.Services.AddSingleton<IInstructionsLoader, InstructionsLoader>();
 
 // Configure GitHub client
 builder.Services.AddSingleton<IGitHubClient>(sp =>

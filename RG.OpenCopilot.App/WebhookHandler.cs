@@ -13,17 +13,23 @@ public sealed class WebhookHandler : IWebhookHandler
     private readonly IAgentTaskStore _taskStore;
     private readonly IPlannerService _plannerService;
     private readonly IGitHubService _gitHubService;
+    private readonly IRepositoryAnalyzer _repositoryAnalyzer;
+    private readonly IInstructionsLoader _instructionsLoader;
     private readonly ILogger<WebhookHandler> _logger;
 
     public WebhookHandler(
         IAgentTaskStore taskStore,
         IPlannerService plannerService,
         IGitHubService gitHubService,
+        IRepositoryAnalyzer repositoryAnalyzer,
+        IInstructionsLoader instructionsLoader,
         ILogger<WebhookHandler> logger)
     {
         _taskStore = taskStore;
         _plannerService = plannerService;
         _gitHubService = gitHubService;
+        _repositoryAnalyzer = repositoryAnalyzer;
+        _instructionsLoader = instructionsLoader;
         _logger = logger;
     }
 
@@ -90,11 +96,42 @@ public sealed class WebhookHandler : IWebhookHandler
 
             _logger.LogInformation("Created WIP PR #{PrNumber} for task {TaskId}", prNumber, taskId);
 
-            // Generate plan
+            // Analyze repository to gather context
+            RepositoryAnalysis? repoAnalysis = null;
+            try
+            {
+                repoAnalysis = await _repositoryAnalyzer.AnalyzeAsync(
+                    task.RepositoryOwner,
+                    task.RepositoryName,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to analyze repository, proceeding without analysis");
+            }
+
+            // Load custom instructions if available
+            string? instructions = null;
+            try
+            {
+                instructions = await _instructionsLoader.LoadInstructionsAsync(
+                    task.RepositoryOwner,
+                    task.RepositoryName,
+                    task.IssueNumber,
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load instructions, proceeding without them");
+            }
+
+            // Generate plan with all available context
             var context = new AgentTaskContext
             {
                 IssueTitle = payload.Issue.Title,
-                IssueBody = payload.Issue.Body ?? string.Empty
+                IssueBody = payload.Issue.Body ?? string.Empty,
+                RepositorySummary = repoAnalysis?.Summary,
+                InstructionsMarkdown = instructions
             };
 
             var plan = await _plannerService.CreatePlanAsync(context, cancellationToken);

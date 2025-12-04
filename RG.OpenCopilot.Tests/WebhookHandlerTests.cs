@@ -13,10 +13,14 @@ public class WebhookHandlerTests
         var taskStore = new InMemoryAgentTaskStore();
         var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
         var gitHubService = new TestGitHubService();
+        var repositoryAnalyzer = new TestRepositoryAnalyzer();
+        var instructionsLoader = new TestInstructionsLoader();
         var handler = new WebhookHandler(
             taskStore,
             planner,
             gitHubService,
+            repositoryAnalyzer,
+            instructionsLoader,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload
@@ -42,10 +46,14 @@ public class WebhookHandlerTests
         var taskStore = new InMemoryAgentTaskStore();
         var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
         var gitHubService = new TestGitHubService();
+        var repositoryAnalyzer = new TestRepositoryAnalyzer();
+        var instructionsLoader = new TestInstructionsLoader();
         var handler = new WebhookHandler(
             taskStore,
             planner,
             gitHubService,
+            repositoryAnalyzer,
+            instructionsLoader,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload
@@ -73,10 +81,14 @@ public class WebhookHandlerTests
         var taskStore = new InMemoryAgentTaskStore();
         var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
         var gitHubService = new TestGitHubService();
+        var repositoryAnalyzer = new TestRepositoryAnalyzer();
+        var instructionsLoader = new TestInstructionsLoader();
         var handler = new WebhookHandler(
             taskStore,
             planner,
             gitHubService,
+            repositoryAnalyzer,
+            instructionsLoader,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload
@@ -131,6 +143,29 @@ public class WebhookHandlerTests
         {
             PrUpdated = true;
             return Task.CompletedTask;
+        }
+    }
+
+    private class TestRepositoryAnalyzer : IRepositoryAnalyzer
+    {
+        public Task<RepositoryAnalysis> AnalyzeAsync(string owner, string repo, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new RepositoryAnalysis
+            {
+                Languages = new Dictionary<string, long> { { "C#", 1000 } },
+                KeyFiles = new List<string> { "README.md" },
+                DetectedTestFramework = "xUnit",
+                DetectedBuildTool = "dotnet",
+                Summary = "C# project with dotnet and xUnit"
+            });
+        }
+    }
+
+    private class TestInstructionsLoader : IInstructionsLoader
+    {
+        public Task<string?> LoadInstructionsAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<string?>(null);
         }
     }
 }
