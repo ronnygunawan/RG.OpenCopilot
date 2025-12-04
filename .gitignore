@@ -1,0 +1,29 @@
+# Build artifacts
+bin/
+obj/
+
+# Visual Studio / VS Code
+.vs/
+*.user
+*.suo
+*.userprefs
+*.csproj.user
+
+# Logs and OS junk
+*.log
+*.DS_Store
+Thumbs.db
+
+# Coverage / test
+TestResult*/
+*.coverage*
+*.coveragexml
+
+# Tooling caches
+.nuget/
+.idea/
+RiderProjects/
+
+# Local environment
+.env
+*.local.json

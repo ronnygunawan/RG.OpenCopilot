@@ -1,0 +1,11 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="RG.OpenCopilot.Agent/RG.OpenCopilot.Agent.csproj" />
+  <Project Path="RG.OpenCopilot.App/RG.OpenCopilot.App.csproj" />
+  <Project Path="RG.OpenCopilot.Runner/RG.OpenCopilot.Runner.csproj" />
+  <Project Path="RG.OpenCopilot.Tests/RG.OpenCopilot.Tests.csproj" />
+</Solution>
