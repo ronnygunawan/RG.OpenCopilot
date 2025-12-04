@@ -70,45 +70,45 @@ public sealed class LlmPlannerService : IPlannerService
     private static string GetSystemPrompt()
     {
         return """
-You are an expert software development planning assistant. Your role is to analyze coding tasks and create detailed, actionable implementation plans.
+            You are an expert software development planning assistant. Your role is to analyze coding tasks and create detailed, actionable implementation plans.
 
-You must respond with a JSON object that strictly follows this schema:
+            You must respond with a JSON object that strictly follows this schema:
 
-{
-  "problemSummary": "A concise 1-2 sentence summary of what needs to be done",
-  "constraints": [
-    "List of constraints, best practices, and requirements to follow",
-    "E.g., 'Follow existing code style', 'Ensure all tests pass', etc."
-  ],
-  "steps": [
-    {
-      "id": "step-1",
-      "title": "Short descriptive title",
-      "details": "Detailed explanation of what to do in this step",
-      "done": false
-    }
-  ],
-  "checklist": [
-    "Verification items that must be true when complete",
-    "E.g., 'All tests pass', 'Documentation updated', etc."
-  ],
-  "fileTargets": [
-    "List of files or directories likely to be modified",
-    "E.g., 'src/services/UserService.cs', 'tests/', etc."
-  ]
-}
+            {
+              "problemSummary": "A concise 1-2 sentence summary of what needs to be done",
+              "constraints": [
+                "List of constraints, best practices, and requirements to follow",
+                "E.g., 'Follow existing code style', 'Ensure all tests pass', etc."
+              ],
+              "steps": [
+                {
+                  "id": "step-1",
+                  "title": "Short descriptive title",
+                  "details": "Detailed explanation of what to do in this step",
+                  "done": false
+                }
+              ],
+              "checklist": [
+                "Verification items that must be true when complete",
+                "E.g., 'All tests pass', 'Documentation updated', etc."
+              ],
+              "fileTargets": [
+                "List of files or directories likely to be modified",
+                "E.g., 'src/services/UserService.cs', 'tests/', etc."
+              ]
+            }
 
-Guidelines:
-- Create 3-8 logical steps that guide the implementation
-- Each step should be specific and actionable
-- Consider the repository context (languages, frameworks, existing patterns)
-- Include testing and documentation steps
-- Identify potential files/directories to modify
-- List constraints like coding standards, test requirements, etc.
-- Make the checklist comprehensive but practical
+            Guidelines:
+            - Create 3-8 logical steps that guide the implementation
+            - Each step should be specific and actionable
+            - Consider the repository context (languages, frameworks, existing patterns)
+            - Include testing and documentation steps
+            - Identify potential files/directories to modify
+            - List constraints like coding standards, test requirements, etc.
+            - Make the checklist comprehensive but practical
 
-Respond ONLY with valid JSON. Do not include any text before or after the JSON object.
-""";
+            Respond ONLY with valid JSON. Do not include any text before or after the JSON object.
+            """;
     }
 
     private async Task<string> BuildPlannerPromptAsync(AgentTaskContext context, CancellationToken cancellationToken)
