@@ -1,43 +1,82 @@
 using RG.OpenCopilot.Agent;
+using RG.OpenCopilot.App;
+using Octokit;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<IPlannerService, StubPlannerService>();
+// Configure services
+builder.Services.AddSingleton<IPlannerService, SimplePlannerService>();
 builder.Services.AddSingleton<IExecutorService, StubExecutorService>();
+builder.Services.AddSingleton<IAgentTaskStore, InMemoryAgentTaskStore>();
+builder.Services.AddSingleton<IWebhookHandler, WebhookHandler>();
+
+// Configure GitHub client
+builder.Services.AddSingleton<IGitHubClient>(sp =>
+{
+    var client = new GitHubClient(new ProductHeaderValue("RG-OpenCopilot"));
+    
+    // For POC, use a personal access token if provided
+    var token = builder.Configuration["GitHub:Token"];
+    if (!string.IsNullOrEmpty(token))
+    {
+        client.Credentials = new Credentials(token);
+    }
+    
+    return client;
+});
+
+builder.Services.AddSingleton<IGitHubService, GitHubService>();
 
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok("ok"));
 
-// Placeholder GitHub webhook endpoint; will be wired to real logic later.
-app.MapPost("/github/webhook", () => Results.Ok());
+app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, ILogger<Program> logger) =>
+{
+    try
+    {
+        // Read the request body
+        using var reader = new StreamReader(context.Request.Body);
+        var body = await reader.ReadToEndAsync();
+        
+        logger.LogInformation("Received webhook: {EventType}", context.Request.Headers["X-GitHub-Event"].ToString());
+        
+        // Check if this is an issues event
+        var eventType = context.Request.Headers["X-GitHub-Event"].ToString();
+        if (eventType != "issues")
+        {
+            logger.LogInformation("Ignoring non-issues event: {EventType}", eventType);
+            return Results.Ok();
+        }
+        
+        // Parse the payload
+        var payload = JsonSerializer.Deserialize<GitHubIssueEventPayload>(body, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+        
+        if (payload == null)
+        {
+            logger.LogWarning("Failed to parse webhook payload");
+            return Results.BadRequest("Invalid payload");
+        }
+        
+        // Handle the event
+        await handler.HandleIssuesEventAsync(payload);
+        
+        return Results.Ok();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error processing webhook");
+        return Results.StatusCode(500);
+    }
+});
 
 app.Run();
 
-// Temporary stub implementations so the app builds and runs.
-file sealed class StubPlannerService : IPlannerService
-{
-    public Task<AgentPlan> CreatePlanAsync(AgentTaskContext context, CancellationToken cancellationToken = default)
-    {
-        var plan = new AgentPlan
-        {
-            ProblemSummary = "Stub plan for testing RG.OpenCopilot.App",
-            Steps =
-            {
-                new PlanStep
-                {
-                    Id = "step-1",
-                    Title = "Do nothing",
-                    Details = "This is a stub planner; replace with real implementation.",
-                    Done = false
-                }
-            }
-        };
-
-        return Task.FromResult(plan);
-    }
-}
-
+// Temporary stub executor service (will be implemented in later phases)
 file sealed class StubExecutorService : IExecutorService
 {
     public Task ExecutePlanAsync(AgentTask task, CancellationToken cancellationToken = default)
