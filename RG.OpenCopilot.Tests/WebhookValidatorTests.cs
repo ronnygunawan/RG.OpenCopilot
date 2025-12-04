@@ -90,4 +90,42 @@ public class WebhookValidatorTests
         // Assert
         isValid.ShouldBeFalse();
     }
+
+    [Fact]
+    public void ValidateSignature_HandlesDifferentPayloads()
+    {
+        // Arrange
+        var validator = new WebhookValidator();
+        var payload1 = @"{""action"":""opened""}";
+        var payload2 = @"{""action"":""closed""}";
+        var secret = "shared-secret";
+        
+        using var hmac1 = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(secret));
+        var hash1 = hmac1.ComputeHash(System.Text.Encoding.UTF8.GetBytes(payload1));
+        var signature1 = "sha256=" + Convert.ToHexString(hash1).ToLowerInvariant();
+
+        using var hmac2 = new System.Security.Cryptography.HMACSHA256(System.Text.Encoding.UTF8.GetBytes(secret));
+        var hash2 = hmac2.ComputeHash(System.Text.Encoding.UTF8.GetBytes(payload2));
+        var signature2 = "sha256=" + Convert.ToHexString(hash2).ToLowerInvariant();
+
+        // Act & Assert
+        validator.ValidateSignature(payload1, signature1, secret).ShouldBeTrue();
+        validator.ValidateSignature(payload2, signature2, secret).ShouldBeTrue();
+        validator.ValidateSignature(payload1, signature2, secret).ShouldBeFalse();
+        validator.ValidateSignature(payload2, signature1, secret).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ValidateSignature_ReturnsFalseForMalformedSignature()
+    {
+        // Arrange
+        var validator = new WebhookValidator();
+        var payload = @"{""action"":""labeled""}";
+        var secret = "test-secret";
+
+        // Act & Assert - various malformed signatures
+        validator.ValidateSignature(payload, "notsha256=hash", secret).ShouldBeFalse();
+        validator.ValidateSignature(payload, "sha256", secret).ShouldBeFalse();
+        validator.ValidateSignature(payload, "sha256=", secret).ShouldBeFalse();
+    }
 }
