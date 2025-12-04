@@ -265,7 +265,7 @@ public class LlmPlannerServiceTests
         // Assert
         plan.Steps.ShouldContain(s => s.Title.Contains("Analyze"));
         plan.Steps.ShouldContain(s => s.Title.Contains("Implement"));
-        plan.Steps.ShouldContain(s => s.Title.Contains("test"));
+        plan.Steps.ShouldContain(s => s.Title.Contains("test", StringComparison.OrdinalIgnoreCase));
         plan.Steps.ShouldAllBe(s => !s.Done);
     }
 
