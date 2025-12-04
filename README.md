@@ -66,9 +66,23 @@ Then open `http://localhost:5272/health` (or the port shown in the console) to v
 
 For detailed setup and testing instructions, see **[POC-SETUP.md](POC-SETUP.md)**.
 
+For LLM configuration (OpenAI, Azure OpenAI), see **[LLM-CONFIGURATION.md](LLM-CONFIGURATION.md)**.
+
+## LLM Integration
+
+The planner now supports real LLM integration via Microsoft Semantic Kernel:
+
+- **Intelligent plan generation** using GPT-4 or other premium models
+- **Repository analysis** that detects languages, build tools, and test frameworks
+- **Custom instructions** support via `.github/open-copilot/` markdown files
+- **JSON schema enforcement** for structured plan output
+- **Fallback mode** for development without an API key
+
+See [LLM-CONFIGURATION.md](LLM-CONFIGURATION.md) for setup instructions.
+
 ## Next Steps
 
-- Implement a real `IPlannerService` that calls your chosen premium AI model.
+- ✅ ~~Implement a real `IPlannerService` that calls your chosen premium AI model.~~ (Completed with SemanticKernel integration)
 - Implement a real `IExecutorService` that:
   - Clones the repository associated with the issue.
   - Applies file edits and commits on a new branch.
