@@ -99,6 +99,90 @@ public class RepositoryAnalyzerTests
         summary.ShouldContain("package.json");
     }
 
+    [Fact]
+    public void GenerateSummary_HandlesEmptyAnalysis()
+    {
+        // Arrange
+        var analysis = new RepositoryAnalysis
+        {
+            Languages = new Dictionary<string, long>(),
+            KeyFiles = new List<string>()
+        };
+
+        // Act
+        var summary = GenerateSummaryPublic(analysis);
+
+        // Assert
+        summary.ShouldBe(string.Empty);
+    }
+
+    [Fact]
+    public void GenerateSummary_LimitsTop3Languages()
+    {
+        // Arrange
+        var analysis = new RepositoryAnalysis
+        {
+            Languages = new Dictionary<string, long>
+            {
+                { "C#", 50000 },
+                { "JavaScript", 30000 },
+                { "HTML", 20000 },
+                { "CSS", 10000 },
+                { "TypeScript", 5000 }
+            }
+        };
+
+        // Act
+        var summary = GenerateSummaryPublic(analysis);
+
+        // Assert
+        summary.ShouldContain("C#");
+        summary.ShouldContain("JavaScript");
+        summary.ShouldContain("HTML");
+        summary.ShouldNotContain("CSS");
+        summary.ShouldNotContain("TypeScript");
+    }
+
+    [Fact]
+    public void GenerateSummary_ShowsAndMoreForManyKeyFiles()
+    {
+        // Arrange
+        var analysis = new RepositoryAnalysis
+        {
+            KeyFiles = new List<string> { "file1", "file2", "file3", "file4", "file5", "file6", "file7" }
+        };
+
+        // Act
+        var summary = GenerateSummaryPublic(analysis);
+
+        // Assert
+        summary.ShouldContain("and 2 more");
+        summary.ShouldContain("file1");
+        summary.ShouldContain("file5");
+        summary.ShouldNotContain("file6");
+    }
+
+    [Fact]
+    public void RepositoryAnalysis_PropertiesCanBeSet()
+    {
+        // Arrange & Act
+        var analysis = new RepositoryAnalysis
+        {
+            Languages = new Dictionary<string, long> { { "Python", 1000 } },
+            KeyFiles = new List<string> { "setup.py" },
+            DetectedTestFramework = "pytest",
+            DetectedBuildTool = "pip",
+            Summary = "Python project"
+        };
+
+        // Assert
+        analysis.Languages.ShouldContainKey("Python");
+        analysis.KeyFiles.ShouldContain("setup.py");
+        analysis.DetectedTestFramework.ShouldBe("pytest");
+        analysis.DetectedBuildTool.ShouldBe("pip");
+        analysis.Summary.ShouldBe("Python project");
+    }
+
     // Helper method that duplicates the GenerateSummary logic for testing purposes
     // This avoids reflection complexity and allows easy verification of the logic
     private static string GenerateSummaryPublic(RepositoryAnalysis analysis)

@@ -180,6 +180,95 @@ public class LlmPlannerServiceTests
         prompt.ShouldContain("Use async/await pattern");
     }
 
+    [Fact]
+    public void BuildPlannerPrompt_HandlesEmptyContext()
+    {
+        // Arrange
+        var context = new AgentTaskContext
+        {
+            IssueTitle = "",
+            IssueBody = ""
+        };
+
+        // Act
+        var prompt = BuildPromptPublic(context);
+
+        // Assert
+        prompt.ShouldContain("# Task");
+        prompt.ShouldContain("# Your Task");
+    }
+
+    [Fact]
+    public void BuildPlannerPrompt_IncludesAllSections()
+    {
+        // Arrange
+        var context = new AgentTaskContext
+        {
+            IssueTitle = "Complete task",
+            IssueBody = "Task description",
+            RepositorySummary = "Repo info",
+            InstructionsMarkdown = "Instructions here"
+        };
+
+        // Act
+        var prompt = BuildPromptPublic(context);
+
+        // Assert
+        prompt.ShouldContain("# Task");
+        prompt.ShouldContain("# Repository Context");
+        prompt.ShouldContain("# Custom Instructions");
+        prompt.ShouldContain("# Your Task");
+    }
+
+    [Fact]
+    public void ParsePlanFromResponse_HandlesStepsWithoutId()
+    {
+        // Arrange
+        var json = """
+            {
+                "problemSummary": "Test",
+                "constraints": [],
+                "steps": [
+                    {
+                        "title": "Step without ID",
+                        "details": "Details",
+                        "done": false
+                    }
+                ],
+                "checklist": [],
+                "fileTargets": []
+            }
+            """;
+
+        // Act
+        var plan = ParsePlanFromJson(json);
+
+        // Assert
+        plan.ShouldNotBeNull();
+        plan.Steps.Count.ShouldBe(1);
+        plan.Steps[0].Id.ShouldBe("step-1"); // Default ID assigned
+    }
+
+    [Fact]
+    public void CreateFallbackPlan_ContainsExpectedSteps()
+    {
+        // Arrange
+        var context = new AgentTaskContext
+        {
+            IssueTitle = "Bug fix",
+            IssueBody = "Fix the bug"
+        };
+
+        // Act
+        var plan = CreateFallbackPlanPublic(context);
+
+        // Assert
+        plan.Steps.ShouldContain(s => s.Title.Contains("Analyze"));
+        plan.Steps.ShouldContain(s => s.Title.Contains("Implement"));
+        plan.Steps.ShouldContain(s => s.Title.Contains("test"));
+        plan.Steps.ShouldAllBe(s => !s.Done);
+    }
+
     // Helper methods to test private logic
     private static AgentPlan ParsePlanFromJson(string json)
     {
