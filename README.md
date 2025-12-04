@@ -4,13 +4,26 @@ RG.OpenCopilot is a C#/.NET 10 solution that aims to provide a GitHub Enterprise
 
 The agent is triggered by labeling issues with `copilot-assisted`. It analyzes the issue, optional instructions markdown, and the repository, creates a detailed plan using a premium model, then hands execution to cheaper models that modify code, run tests, and open pull requests.
 
+## Current Status
+
+✅ **POC Implemented** - The proof of concept is complete with:
+- GitHub webhook handler for `issues` events
+- Webhook signature validation (HMAC-SHA256)
+- AgentTask creation and management
+- Simple planner that generates structured plans
+- WIP PR creation with initial issue prompt
+- PR description updates with detailed plans
+- Comprehensive test coverage
+
+See **[POC-SETUP.md](POC-SETUP.md)** for setup and testing instructions.
+
 ## Solution Structure
 
 - `RG.OpenCopilot.slnx` – root solution
 - `RG.OpenCopilot.App` – ASP.NET Core minimal API for GitHub App webhooks and health checks
 - `RG.OpenCopilot.Agent` – shared domain models and planner/executor abstractions
 - `RG.OpenCopilot.Runner` – console app to run the agent locally for testing
-- `RG.OpenCopilot.Tests` – xUnit tests using Shouldly assertions (placeholder)
+- `RG.OpenCopilot.Tests` – xUnit tests using Shouldly assertions
 
 All projects target `.NET 10.0` with nullable reference types and implicit usings enabled.
 
@@ -29,30 +42,29 @@ All projects target `.NET 10.0` with nullable reference types and implicit using
    - Takes the plan and interacts with the repository (via Git + filesystem and commands) to apply changes and run tests.
    - Creates or updates a pull request with the changes.
 
-## Running Locally
+## Quick Start
 
 Build the solution:
 
-```pwsh
-cd "c:\Users\Ronny\Documents\open-copilot"
+```bash
 dotnet build
 ```
 
-Run the web app (placeholder webhook + health endpoint):
+Run tests:
 
-```pwsh
-dotnet run --project .\RG.OpenCopilot.App\RG.OpenCopilot.App.csproj
+```bash
+dotnet test
 ```
 
-Then open `http://localhost:5000/health` (or the port shown in the console) to verify it responds with `ok`.
+Run the web app:
 
-Run the local runner stub:
-
-```pwsh
-dotnet run --project .\RG.OpenCopilot.Runner\RG.OpenCopilot.Runner.csproj -- "Sample issue title" "Sample issue body"
+```bash
+dotnet run --project RG.OpenCopilot.App
 ```
 
-You should see a stub plan printed to the console. This verifies the planner interface and basic wiring.
+Then open `http://localhost:5272/health` (or the port shown in the console) to verify it responds with `ok`.
+
+For detailed setup and testing instructions, see **[POC-SETUP.md](POC-SETUP.md)**.
 
 ## Next Steps
 
@@ -61,4 +73,6 @@ You should see a stub plan printed to the console. This verifies the planner int
   - Clones the repository associated with the issue.
   - Applies file edits and commits on a new branch.
   - Opens/updates pull requests and posts comments via the GitHub API.
+- Add background job processing for long-running tasks.
+- Add persistent storage for agent tasks.
 - Create and configure a GitHub App on your GitHub Enterprise instance that points its webhook URL to `RG.OpenCopilot.App`.

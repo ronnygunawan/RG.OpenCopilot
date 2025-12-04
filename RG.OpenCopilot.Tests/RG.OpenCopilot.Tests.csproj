@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RG.OpenCopilot.Agent\RG.OpenCopilot.Agent.csproj" />
+    <ProjectReference Include="..\RG.OpenCopilot.App\RG.OpenCopilot.App.csproj" />
   </ItemGroup>
 
 </Project>
