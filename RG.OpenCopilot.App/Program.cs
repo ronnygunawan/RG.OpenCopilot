@@ -25,6 +25,7 @@ else
     switch (llmProvider.ToLowerInvariant())
     {
         case "openai":
+            // Supports GPT-4o, GPT-5, GPT-5-Codex, GPT-5.1, GPT-5.1-Codex (when available)
             kernelBuilder.AddOpenAIChatCompletion(
                 modelId: modelId,
                 apiKey: apiKey);
@@ -48,7 +49,8 @@ else
         
         default:
             throw new InvalidOperationException(
-                $"Unsupported LLM provider: {llmProvider}. Supported providers: OpenAI, AzureOpenAI");
+                $"Unsupported LLM provider: {llmProvider}. Supported providers: OpenAI, AzureOpenAI. " +
+                $"For Claude or Gemini models, use OpenAI-compatible endpoints or extend with custom connectors.");
     }
 
     var kernel = kernelBuilder.Build();

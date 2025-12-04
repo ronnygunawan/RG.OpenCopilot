@@ -4,10 +4,32 @@ RG.OpenCopilot uses Microsoft Semantic Kernel to integrate with various LLM prov
 
 ## Supported Providers
 
+Currently implemented:
 - **OpenAI** - Direct OpenAI API integration
 - **Azure OpenAI** - Azure-hosted OpenAI models
 
-Additional providers (AWS Bedrock, Anthropic Claude, Google Gemini) can be added in future versions via Semantic Kernel connectors.
+The architecture supports adding additional providers through SemanticKernel connectors.
+
+## Recommended Premium Models for Planning
+
+Based on performance and capabilities, the following premium models are recommended for intelligent plan generation:
+
+### OpenAI Models
+- **GPT-4o** - Current flagship model (available now)
+- **GPT-5** - Next-generation model (upcoming)
+- **GPT-5-Codex** - Specialized for code generation and planning (upcoming)
+- **GPT-5.1** - Enhanced version (upcoming)
+- **GPT-5.1-Codex** - Latest code-specialized model (upcoming)
+
+### Anthropic Claude Models  
+- **Claude Opus 4.5** - Most capable for complex planning tasks (upcoming)
+- **Claude Sonnet 4.5** - Balanced performance and cost (upcoming)
+- **Claude 3.5 Sonnet** - Current stable version (available via API)
+
+### Google Gemini Models
+- **Gemini 2.5 Pro** - Next-generation Gemini (upcoming)
+- **Gemini 3 Pro** - Advanced Gemini model (upcoming)
+- **Gemini 1.5 Pro** - Current stable version (available via API)
 
 ## Configuration
 
@@ -28,7 +50,16 @@ LLM settings are configured in `appsettings.json` or via environment variables.
 **Configuration Options:**
 - `Provider`: Set to `"OpenAI"`
 - `ApiKey`: Your OpenAI API key
-- `ModelId`: Model to use (e.g., `gpt-4o`, `gpt-4-turbo`, `gpt-3.5-turbo`)
+- `ModelId`: Model to use
+
+**Supported Model IDs:**
+- `gpt-4o` (recommended for current use)
+- `gpt-4-turbo`
+- `gpt-3.5-turbo`
+- `gpt-5` (when available)
+- `gpt-5-codex` (when available)
+- `gpt-5.1` (when available)
+- `gpt-5.1-codex` (when available)
 
 ### Azure OpenAI Configuration
 
@@ -48,6 +79,42 @@ LLM settings are configured in `appsettings.json` or via environment variables.
 - `ApiKey`: Your Azure OpenAI API key
 - `AzureEndpoint`: Your Azure OpenAI endpoint URL
 - `AzureDeployment`: The deployment name you configured in Azure
+
+Azure OpenAI supports the same models as OpenAI once deployed to your Azure resource.
+
+## Adding Support for Claude and Gemini
+
+While not currently implemented, support for Anthropic Claude and Google Gemini can be added in the future through:
+
+1. **OpenAI-Compatible Endpoints**: Some providers offer OpenAI-compatible APIs
+2. **SemanticKernel Connectors**: Custom connectors implementing `IChatCompletionService`
+3. **Microsoft.Extensions.AI**: Using the AI abstractions layer for multi-provider support
+
+### Planned Claude Integration
+
+For Claude models (Opus 4.5, Sonnet 4.5), future implementation would use:
+```json
+{
+  "LLM": {
+    "Provider": "Claude",
+    "ApiKey": "sk-ant-...",
+    "ModelId": "claude-opus-4-5"
+  }
+}
+```
+
+### Planned Gemini Integration
+
+For Gemini models (2.5 Pro, 3 Pro), future implementation would use:
+```json
+{
+  "LLM": {
+    "Provider": "Gemini",
+    "ApiKey": "your-google-api-key",
+    "ModelId": "gemini-2.5-pro"
+  }
+}
+```
 
 ## Environment Variables
 
