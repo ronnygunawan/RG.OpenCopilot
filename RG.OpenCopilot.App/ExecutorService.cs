@@ -95,8 +95,9 @@ public sealed class ExecutorService : IExecutorService
 
                 try
                 {
-                    // For now, mark step as done
-                    // In a full implementation, this would call an LLM to determine what changes to make
+                    // TODO: In a full implementation, this would call an LLM to determine what changes to make
+                    // For now, we mark steps as done to demonstrate the workflow without actual code modification
+                    // This is intentional for the current phase - LLM-driven code changes will be added later
                     step.Done = true;
                     completedSteps.Add(step.Title);
                     
@@ -326,6 +327,17 @@ public sealed class GitCommandRepositoryCloner : IRepositoryCloner
         {
             try
             {
+                // Safety check: ensure we're only deleting from the temporary directory
+                var tempRoot = Path.Combine(Path.GetTempPath(), "opencopilot-repos");
+                var normalizedPath = Path.GetFullPath(localPath);
+                var normalizedTempRoot = Path.GetFullPath(tempRoot);
+                
+                if (!normalizedPath.StartsWith(normalizedTempRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogError("Attempted to delete directory outside of temporary root: {Path}", localPath);
+                    return;
+                }
+                
                 Directory.Delete(localPath, recursive: true);
             }
             catch (Exception ex)

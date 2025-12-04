@@ -20,7 +20,9 @@ public sealed class GitHubAppTokenProvider : IGitHubAppTokenProvider
         IConfiguration configuration,
         ILogger<GitHubAppTokenProvider> logger)
     {
-        // We need the concrete GitHubClient type to set credentials
+        // Note: We cast to GitHubClient to set credentials, which is needed for GitHub App authentication.
+        // This is a limitation of the Octokit API design. In production, consider creating a custom
+        // GitHubClient factory that handles authentication internally.
         _client = (GitHubClient)client;
         _appId = configuration["GitHub:AppId"];
         _privateKey = configuration["GitHub:AppPrivateKey"];
