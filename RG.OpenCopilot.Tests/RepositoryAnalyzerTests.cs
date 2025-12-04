@@ -99,7 +99,8 @@ public class RepositoryAnalyzerTests
         summary.ShouldContain("package.json");
     }
 
-    // Helper method to access private GenerateSummary method through reflection
+    // Helper method that duplicates the GenerateSummary logic for testing purposes
+    // This avoids reflection complexity and allows easy verification of the logic
     private static string GenerateSummaryPublic(RepositoryAnalysis analysis)
     {
         var parts = new List<string>();

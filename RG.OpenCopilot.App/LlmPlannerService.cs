@@ -9,17 +9,14 @@ namespace RG.OpenCopilot.App;
 public sealed class LlmPlannerService : IPlannerService
 {
     private readonly Kernel _kernel;
-    private readonly IRepositoryAnalyzer _repositoryAnalyzer;
     private readonly ILogger<LlmPlannerService> _logger;
     private readonly IChatCompletionService _chatService;
 
     public LlmPlannerService(
         Kernel kernel,
-        IRepositoryAnalyzer repositoryAnalyzer,
         ILogger<LlmPlannerService> logger)
     {
         _kernel = kernel;
-        _repositoryAnalyzer = repositoryAnalyzer;
         _logger = logger;
         _chatService = kernel.GetRequiredService<IChatCompletionService>();
     }

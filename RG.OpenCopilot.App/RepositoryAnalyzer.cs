@@ -150,13 +150,12 @@ public sealed class RepositoryAnalyzer : IRepositoryAnalyzer
 
     private static string? DetectTestFramework(List<string> keyFiles, IReadOnlyList<RepositoryContent> contents)
     {
-        // Check for package.json content for JS/TS projects
+        // Check for package.json for JS/TS projects
         var packageJson = contents.FirstOrDefault(c => c.Name.Equals("package.json", StringComparison.OrdinalIgnoreCase));
         if (packageJson != null)
         {
-            // Would need to fetch content to check dependencies
-            // For now, return a generic detection
-            return "Jest/Mocha/Vitest (detected from package.json)";
+            // Note: Detailed framework detection would require fetching and parsing package.json content
+            return "JavaScript/TypeScript project (common: Jest, Mocha, Vitest)";
         }
 
         // Check for .NET projects
