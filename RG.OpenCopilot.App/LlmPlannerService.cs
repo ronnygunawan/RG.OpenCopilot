@@ -69,31 +69,32 @@ public sealed class LlmPlannerService : IPlannerService
 
     private static string GetSystemPrompt()
     {
-        return @"You are an expert software development planning assistant. Your role is to analyze coding tasks and create detailed, actionable implementation plans.
+        return """
+You are an expert software development planning assistant. Your role is to analyze coding tasks and create detailed, actionable implementation plans.
 
 You must respond with a JSON object that strictly follows this schema:
 
 {
-  ""problemSummary"": ""A concise 1-2 sentence summary of what needs to be done"",
-  ""constraints"": [
-    ""List of constraints, best practices, and requirements to follow"",
-    ""E.g., 'Follow existing code style', 'Ensure all tests pass', etc.""
+  "problemSummary": "A concise 1-2 sentence summary of what needs to be done",
+  "constraints": [
+    "List of constraints, best practices, and requirements to follow",
+    "E.g., 'Follow existing code style', 'Ensure all tests pass', etc."
   ],
-  ""steps"": [
+  "steps": [
     {
-      ""id"": ""step-1"",
-      ""title"": ""Short descriptive title"",
-      ""details"": ""Detailed explanation of what to do in this step"",
-      ""done"": false
+      "id": "step-1",
+      "title": "Short descriptive title",
+      "details": "Detailed explanation of what to do in this step",
+      "done": false
     }
   ],
-  ""checklist"": [
-    ""Verification items that must be true when complete"",
-    ""E.g., 'All tests pass', 'Documentation updated', etc.""
+  "checklist": [
+    "Verification items that must be true when complete",
+    "E.g., 'All tests pass', 'Documentation updated', etc."
   ],
-  ""fileTargets"": [
-    ""List of files or directories likely to be modified"",
-    ""E.g., 'src/services/UserService.cs', 'tests/', etc.""
+  "fileTargets": [
+    "List of files or directories likely to be modified",
+    "E.g., 'src/services/UserService.cs', 'tests/', etc."
   ]
 }
 
@@ -106,41 +107,40 @@ Guidelines:
 - List constraints like coding standards, test requirements, etc.
 - Make the checklist comprehensive but practical
 
-Respond ONLY with valid JSON. Do not include any text before or after the JSON object.";
+Respond ONLY with valid JSON. Do not include any text before or after the JSON object.
+""";
     }
 
     private async Task<string> BuildPlannerPromptAsync(AgentTaskContext context, CancellationToken cancellationToken)
     {
-        var promptParts = new List<string>
-        {
-            "# Task",
-            $"**Issue Title:** {context.IssueTitle}",
-            "",
-            "**Issue Description:**",
-            context.IssueBody
-        };
+        var prompt = new System.Text.StringBuilder();
+        prompt.AppendLine("# Task");
+        prompt.AppendLine($"**Issue Title:** {context.IssueTitle}");
+        prompt.AppendLine();
+        prompt.AppendLine("**Issue Description:**");
+        prompt.AppendLine(context.IssueBody);
 
         // Add repository summary if available
         if (!string.IsNullOrEmpty(context.RepositorySummary))
         {
-            promptParts.Add("");
-            promptParts.Add("# Repository Context");
-            promptParts.Add(context.RepositorySummary);
+            prompt.AppendLine();
+            prompt.AppendLine("# Repository Context");
+            prompt.AppendLine(context.RepositorySummary);
         }
 
         // Add custom instructions if provided
         if (!string.IsNullOrEmpty(context.InstructionsMarkdown))
         {
-            promptParts.Add("");
-            promptParts.Add("# Custom Instructions");
-            promptParts.Add(context.InstructionsMarkdown);
+            prompt.AppendLine();
+            prompt.AppendLine("# Custom Instructions");
+            prompt.AppendLine(context.InstructionsMarkdown);
         }
 
-        promptParts.Add("");
-        promptParts.Add("# Your Task");
-        promptParts.Add("Based on the above information, create a detailed implementation plan following the JSON schema provided in the system message.");
+        prompt.AppendLine();
+        prompt.AppendLine("# Your Task");
+        prompt.AppendLine("Based on the above information, create a detailed implementation plan following the JSON schema provided in the system message.");
 
-        return string.Join("\n", promptParts);
+        return prompt.ToString();
     }
 
     private AgentPlan ParsePlanFromResponse(string jsonResponse)

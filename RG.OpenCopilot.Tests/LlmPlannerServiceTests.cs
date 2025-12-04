@@ -11,26 +11,28 @@ public class LlmPlannerServiceTests
     public void ParsePlanFromResponse_ValidJson_ReturnsAgentPlan()
     {
         // Arrange
-        var json = @"{
-            ""problemSummary"": ""Add user authentication"",
-            ""constraints"": [""Follow security best practices"", ""Use existing auth library""],
-            ""steps"": [
-                {
-                    ""id"": ""step-1"",
-                    ""title"": ""Install authentication library"",
-                    ""details"": ""Add package reference to the project"",
-                    ""done"": false
-                },
-                {
-                    ""id"": ""step-2"",
-                    ""title"": ""Configure authentication"",
-                    ""details"": ""Set up authentication middleware"",
-                    ""done"": false
-                }
-            ],
-            ""checklist"": [""All tests pass"", ""Security review completed""],
-            ""fileTargets"": [""src/Program.cs"", ""src/Services/AuthService.cs""]
-        }";
+        var json = """
+{
+    "problemSummary": "Add user authentication",
+    "constraints": ["Follow security best practices", "Use existing auth library"],
+    "steps": [
+        {
+            "id": "step-1",
+            "title": "Install authentication library",
+            "details": "Add package reference to the project",
+            "done": false
+        },
+        {
+            "id": "step-2",
+            "title": "Configure authentication",
+            "details": "Set up authentication middleware",
+            "done": false
+        }
+    ],
+    "checklist": ["All tests pass", "Security review completed"],
+    "fileTargets": ["src/Program.cs", "src/Services/AuthService.cs"]
+}
+""";
 
         // Act
         var plan = ParsePlanFromJson(json);
@@ -52,13 +54,15 @@ public class LlmPlannerServiceTests
     public void ParsePlanFromResponse_MinimalJson_ReturnsAgentPlan()
     {
         // Arrange
-        var json = @"{
-            ""problemSummary"": ""Fix bug"",
-            ""constraints"": [],
-            ""steps"": [],
-            ""checklist"": [],
-            ""fileTargets"": []
-        }";
+        var json = """
+{
+    "problemSummary": "Fix bug",
+    "constraints": [],
+    "steps": [],
+    "checklist": [],
+    "fileTargets": []
+}
+""";
 
         // Act
         var plan = ParsePlanFromJson(json);
@@ -76,13 +80,15 @@ public class LlmPlannerServiceTests
     public void ParsePlanFromResponse_NullFields_UsesDefaults()
     {
         // Arrange
-        var json = @"{
-            ""problemSummary"": null,
-            ""constraints"": null,
-            ""steps"": null,
-            ""checklist"": null,
-            ""fileTargets"": null
-        }";
+        var json = """
+{
+    "problemSummary": null,
+    "constraints": null,
+    "steps": null,
+    "checklist": null,
+    "fileTargets": null
+}
+""";
 
         // Act
         var plan = ParsePlanFromJson(json);

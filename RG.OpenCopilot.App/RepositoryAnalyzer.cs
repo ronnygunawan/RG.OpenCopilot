@@ -21,28 +21,6 @@ public sealed class RepositoryAnalyzer : IRepositoryAnalyzer
     private readonly IGitHubClient _client;
     private readonly ILogger<RepositoryAnalyzer> _logger;
 
-    // Common build and config files to look for
-    private static readonly string[] KeyFilePatterns = new[]
-    {
-        "package.json",
-        "tsconfig.json",
-        "*.csproj",
-        "*.sln",
-        "pom.xml",
-        "build.gradle",
-        "Cargo.toml",
-        "go.mod",
-        "requirements.txt",
-        "setup.py",
-        "pyproject.toml",
-        "Gemfile",
-        "composer.json",
-        "Makefile",
-        "CMakeLists.txt",
-        "README.md",
-        ".github/workflows/*.yml"
-    };
-
     public RepositoryAnalyzer(IGitHubClient client, ILogger<RepositoryAnalyzer> logger)
     {
         _client = client;
