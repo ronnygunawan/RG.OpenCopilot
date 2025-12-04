@@ -252,11 +252,12 @@ public sealed class RepositoryAnalyzer : IRepositoryAnalyzer
         // Key files count
         if (analysis.KeyFiles.Any())
         {
-            parts.Add($"Key files: {string.Join(", ", analysis.KeyFiles.Take(5))}");
+            var keyFilesDisplay = string.Join(", ", analysis.KeyFiles.Take(5));
             if (analysis.KeyFiles.Count > 5)
             {
-                parts.Add($"and {analysis.KeyFiles.Count - 5} more");
+                keyFilesDisplay += $" and {analysis.KeyFiles.Count - 5} more";
             }
+            parts.Add($"Key files: {keyFilesDisplay}");
         }
 
         return string.Join("; ", parts);
