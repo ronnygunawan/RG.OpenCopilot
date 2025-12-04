@@ -39,7 +39,8 @@ public sealed class GitHubService : IGitHubService
             _logger.LogInformation("Created branch {BranchName} for issue #{IssueNumber}", branchName, issueNumber);
             return branchName;
         }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity)
+        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity && 
+                                       ex.Message.Contains("Reference already exists", StringComparison.OrdinalIgnoreCase))
         {
             // Branch already exists, return it
             _logger.LogInformation("Branch {BranchName} already exists for issue #{IssueNumber}", branchName, issueNumber);

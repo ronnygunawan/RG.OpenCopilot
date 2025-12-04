@@ -23,7 +23,7 @@ public sealed class WebhookValidator : IWebhookValidator
             return false;
         }
 
-        var hashValue = signature.Substring(7);
+        var hashValue = signature[7..];
         var keyBytes = Encoding.UTF8.GetBytes(secret);
         var payloadBytes = Encoding.UTF8.GetBytes(payload);
 

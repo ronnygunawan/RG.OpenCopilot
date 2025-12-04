@@ -126,14 +126,14 @@ public sealed class WebhookHandler : IWebhookHandler
     private static string FormatPrBodyWithPlan(int issueNumber, string issueTitle, string issueBody, AgentPlan plan)
     {
         var stepsMarkdown = string.Join("\n", plan.Steps.Select(s => 
-            $"- [ ] **{s.Title}** - {s.Details}"));
+            $"- [ ] **{EscapeMarkdown(s.Title)}** - {EscapeMarkdown(s.Details)}"));
 
         var checklistMarkdown = string.Join("\n", plan.Checklist.Select(c => 
-            $"- [ ] {c}"));
+            $"- [ ] {EscapeMarkdown(c)}"));
 
         return $@"## Plan
 
-**Problem Summary:** {plan.ProblemSummary}
+**Problem Summary:** {EscapeMarkdown(plan.ProblemSummary)}
 
 ### Steps
 
@@ -145,16 +145,16 @@ public sealed class WebhookHandler : IWebhookHandler
 
 ### Constraints
 
-{string.Join("\n", plan.Constraints.Select(c => $"- {c}"))}
+{string.Join("\n", plan.Constraints.Select(c => $"- {EscapeMarkdown(c)}"))}
 
 ---
 
 <details>
 <summary>Original Issue Prompt</summary>
 
-**Issue #{issueNumber}: {issueTitle}**
+**Issue #{issueNumber}: {EscapeMarkdown(issueTitle)}**
 
-{issueBody}
+{EscapeMarkdown(issueBody)}
 
 </details>
 
@@ -162,5 +162,31 @@ public sealed class WebhookHandler : IWebhookHandler
 
 _This PR was automatically created by RG.OpenCopilot._
 _Progress will be updated here as the agent works on this issue._";
+    }
+
+    private static string EscapeMarkdown(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        // Escape special markdown characters to prevent injection
+        return text
+            .Replace("\\", "\\\\")
+            .Replace("`", "\\`")
+            .Replace("*", "\\*")
+            .Replace("_", "\\_")
+            .Replace("{", "\\{")
+            .Replace("}", "\\}")
+            .Replace("[", "\\[")
+            .Replace("]", "\\]")
+            .Replace("(", "\\(")
+            .Replace(")", "\\)")
+            .Replace("#", "\\#")
+            .Replace("+", "\\+")
+            .Replace("-", "\\-")
+            .Replace(".", "\\.")
+            .Replace("!", "\\!");
     }
 }
