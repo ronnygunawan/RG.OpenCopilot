@@ -83,10 +83,11 @@ See [LLM-CONFIGURATION.md](LLM-CONFIGURATION.md) for setup instructions.
 ## Next Steps
 
 - ✅ ~~Implement a real `IPlannerService` that calls your chosen premium AI model.~~ (Completed with SemanticKernel integration)
-- Implement a real `IExecutorService` that:
-  - Clones the repository associated with the issue.
-  - Applies file edits and commits on a new branch.
-  - Opens/updates pull requests and posts comments via the GitHub API.
+- ✅ ~~Implement a real `IExecutorService` that:~~ (Completed with Git-based repository cloning and command execution)
+  - ✅ ~~Clones the repository associated with the issue using GitHub App installation tokens.~~
+  - ✅ ~~Provides file read/write operations and command execution in sandboxed environment.~~
+  - ✅ ~~Commits and pushes changes to the WIP branch.~~
+  - ✅ ~~Posts progress comments to pull requests via the GitHub API.~~
 - Add background job processing for long-running tasks.
 - Add persistent storage for agent tasks.
 - Create and configure a GitHub App on your GitHub Enterprise instance that points its webhook URL to `RG.OpenCopilot.App`.

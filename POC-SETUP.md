@@ -1,17 +1,19 @@
-# RG.OpenCopilot POC Setup Guide
+# RG.OpenCopilot Setup Guide
 
-This guide explains how to set up and test the RG.OpenCopilot Proof of Concept (POC).
+This guide explains how to set up and test RG.OpenCopilot.
 
 ## What's Implemented
 
-The POC includes the following key components:
+The implementation includes the following key components:
 
 1. **Webhook Handler** - Receives GitHub webhook events for issues
 2. **GitHub Integration** - Creates branches and pull requests via Octokit
-3. **Simple Planner** - Generates a structured plan for each issue
-4. **Task Store** - In-memory storage for agent tasks
-5. **Webhook Validation** - HMAC-SHA256 signature verification for security
-6. **Tests** - Comprehensive tests for all major components
+3. **LLM Planner** - Generates structured plans using Semantic Kernel (with fallback to simple planner)
+4. **Executor Service** - Clones repositories, executes commands, commits, and posts PR comments
+5. **Repository Analyzer** - Detects languages, build tools, and test frameworks
+6. **Task Store** - In-memory storage for agent tasks
+7. **Webhook Validation** - HMAC-SHA256 signature verification for security
+8. **Comprehensive Tests** - 39 tests covering all major components
 
 ## Architecture
 
@@ -22,8 +24,11 @@ When an issue is labeled with `copilot-assisted`:
 3. Creates an `AgentTask` for the issue
 4. Creates a working branch (e.g., `open-copilot/issue-123`)
 5. Creates a WIP PR with the initial issue prompt
-6. Calls the planner to generate a structured plan
-7. Updates the PR description with the plan and checklist
+6. Analyzes the repository to understand its structure
+7. Loads custom instructions (if available)
+8. Calls the planner to generate a structured plan
+9. Updates the PR description with the plan and checklist
+10. (Optional) Executor service clones repo, makes changes, commits, and posts progress
 
 ## Configuration
 
@@ -33,19 +38,46 @@ Configure the application using `appsettings.json` or environment variables:
 {
   "GitHub": {
     "Token": "your-github-personal-access-token",
-    "WebhookSecret": "your-webhook-secret"
+    "WebhookSecret": "your-webhook-secret",
+    "AppId": "123456",
+    "AppPrivateKey": "-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+  },
+  "LLM": {
+    "Provider": "OpenAI",
+    "ApiKey": "your-openai-api-key",
+    "ModelId": "gpt-4o"
   }
 }
 ```
 
-### GitHub Personal Access Token
+### GitHub Personal Access Token (for Development)
 
-For the POC, use a personal access token with the following permissions:
+For development/testing, use a personal access token with the following permissions:
 
 - `repo` - Full control of private repositories
 - `workflow` - Update GitHub Action workflows
 
 Create a token at: https://github.com/settings/tokens
+
+### GitHub App Credentials (for Production)
+
+For production use with a GitHub App:
+
+1. Create a GitHub App with the required permissions (see below)
+2. Generate a private key for the app
+3. Configure `GitHub:AppId` and `GitHub:AppPrivateKey` in your settings
+
+The executor service will use installation tokens for repository access when App credentials are configured.
+
+### LLM Configuration
+
+For intelligent planning, configure an LLM provider:
+
+- **Provider**: `OpenAI` or `AzureOpenAI`
+- **ApiKey**: Your API key
+- **ModelId**: Model to use (e.g., `gpt-4o`, `gpt-5`)
+
+See [LLM-CONFIGURATION.md](LLM-CONFIGURATION.md) for details.
 
 ### Webhook Secret
 
@@ -150,17 +182,31 @@ All tests should pass. Current test coverage includes:
    - Generate a plan
    - Update the PR description
 
-## Next Steps (Not in POC)
+## Current Implementation Status
 
-The following features are planned but not yet implemented:
+The following features are now implemented:
 
-- **Executor Service** - Actually execute the plan and make code changes
-- **Repository Analysis** - Analyze the repo to better understand structure
-- **LLM Integration** - Use a real LLM for planning instead of the simple planner
+- ✅ **Webhook Handler** - Receives GitHub webhook events for issues
+- ✅ **GitHub Integration** - Creates branches and pull requests via Octokit
+- ✅ **Planner Service** - Generates structured plans (with LLM support via Semantic Kernel)
+- ✅ **Executor Service** - Clones repositories, executes commands, commits, and posts PR comments
+- ✅ **Repository Analysis** - Analyzes repos to detect languages, build tools, and test frameworks
+- ✅ **Task Store** - In-memory storage for agent tasks
+- ✅ **Webhook Validation** - HMAC-SHA256 signature verification for security
+- ✅ **Comprehensive Tests** - 39 tests covering all major components
+
+## Next Steps (Future Enhancements)
+
+The following features are planned for future releases:
+
+- **LLM-Driven Code Changes** - Integrate executor with LLM to actually modify code based on plan steps
 - **Background Jobs** - Process webhooks asynchronously for better scalability
 - **Persistent Storage** - Store tasks in a database instead of in-memory
 - **PR Updates** - Update PR descriptions as work progresses
 - **Completion Logic** - Remove [WIP] tag and finalize PR when done
+- **Docker Sandboxing** - Run commands in isolated Docker containers for enhanced security
+
+For detailed information about the executor service, see [EXECUTOR-SERVICE.md](EXECUTOR-SERVICE.md).
 
 ## Troubleshooting
 
