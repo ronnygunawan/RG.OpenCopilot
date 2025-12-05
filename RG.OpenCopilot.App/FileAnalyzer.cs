@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using RG.OpenCopilot.Agent;
 
 namespace RG.OpenCopilot.App;
@@ -274,7 +275,7 @@ public sealed class FileAnalyzer : IFileAnalyzer {
         var methodMatches = Regex.Matches(content, @"(?:async\s+)?([A-Za-z0-9_]+)\s*\([^)]*\)\s*\{");
         foreach (Match match in methodMatches) {
             var methodName = match.Groups[1].Value;
-            if (!IsKeyword(methodName) && !structure.Functions.Contains(methodName)) {
+            if (!IsKeyword(methodName, "javascript") && !structure.Functions.Contains(methodName)) {
                 structure.Functions.Add(methodName);
             }
         }
@@ -309,11 +310,25 @@ public sealed class FileAnalyzer : IFileAnalyzer {
         }
     }
 
-    private bool IsKeyword(string word) {
-        var csharpKeywords = new HashSet<string> {
-            "if", "else", "while", "for", "foreach", "switch", "case", "return",
-            "new", "this", "base", "get", "set", "class", "interface", "struct"
+    private bool IsKeyword(string word, string language = "csharp") {
+        var commonKeywords = new HashSet<string> {
+            "if", "else", "while", "for", "switch", "case", "return", "new"
         };
-        return csharpKeywords.Contains(word.ToLowerInvariant());
+        
+        if (language == "csharp") {
+            var csharpKeywords = new HashSet<string>(commonKeywords) {
+                "foreach", "this", "base", "get", "set", "class", "interface", "struct"
+            };
+            return csharpKeywords.Contains(word.ToLowerInvariant());
+        }
+        
+        if (language == "javascript" || language == "typescript") {
+            var jsKeywords = new HashSet<string>(commonKeywords) {
+                "function", "class", "const", "let", "var", "async", "await"
+            };
+            return jsKeywords.Contains(word.ToLowerInvariant());
+        }
+        
+        return commonKeywords.Contains(word.ToLowerInvariant());
     }
 }
