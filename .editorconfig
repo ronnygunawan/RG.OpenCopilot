@@ -9,11 +9,19 @@ indent_size = 4
 trim_trailing_whitespace = true
 
 [*.{cs,csproj}]
+# Code style conventions
 dotnet_style_qualification_for_field = false:suggestion
 dotnet_style_qualification_for_property = false:suggestion
 dotnet_style_qualification_for_method = false:suggestion
 dotnet_style_qualification_for_event = false:suggestion
 dotnet_sort_system_directives_first = true:warning
+
+# Formatting conventions
 csharp_new_line_before_open_brace = none
 csharp_indent_case_contents = true
 csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:suggestion
+
+# Naming and argument conventions
+# Use named arguments when calling methods if the meaning of the argument is not immediately obvious
+# Example: use kernelBuilder.AddOpenAIChatCompletion(modelId: modelId, apiKey: apiKey)
+# instead of kernelBuilder.AddOpenAIChatCompletion(modelId, apiKey)
