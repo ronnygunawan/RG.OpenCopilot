@@ -15,6 +15,13 @@ public sealed class FileAnalyzer : IFileAnalyzer {
         _logger = logger;
     }
 
+    /// <summary>
+    /// Analyzes a file in a container to extract its structure including classes, functions, and imports
+    /// </summary>
+    /// <param name="containerId">The Docker container ID</param>
+    /// <param name="filePath">Path to the file within the container</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A FileStructure containing parsed elements from the file</returns>
     public async Task<FileStructure> AnalyzeFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default) {
         _logger.LogDebug("Analyzing file {FilePath} in container {ContainerId}", filePath, containerId);
 
@@ -24,6 +31,13 @@ public sealed class FileAnalyzer : IFileAnalyzer {
         return ParseFile(filePath, content, language);
     }
 
+    /// <summary>
+    /// Lists files in a container matching the specified pattern
+    /// </summary>
+    /// <param name="containerId">The Docker container ID</param>
+    /// <param name="pattern">File pattern to match (e.g., "*.cs", "*.js")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of file paths matching the pattern</returns>
     public async Task<List<string>> ListFilesAsync(string containerId, string pattern, CancellationToken cancellationToken = default) {
         _logger.LogDebug("Listing files with pattern {Pattern} in container {ContainerId}", pattern, containerId);
 
@@ -45,6 +59,13 @@ public sealed class FileAnalyzer : IFileAnalyzer {
             .ToList();
     }
 
+    /// <summary>
+    /// Builds a hierarchical file tree structure of all files in the container
+    /// </summary>
+    /// <param name="containerId">The Docker container ID</param>
+    /// <param name="rootPath">Root path to start building the tree from (default: ".")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A FileTree containing the hierarchical structure and list of all files</returns>
     public async Task<FileTree> BuildFileTreeAsync(string containerId, string rootPath = ".", CancellationToken cancellationToken = default) {
         _logger.LogDebug("Building file tree for {RootPath} in container {ContainerId}", rootPath, containerId);
 
@@ -155,7 +176,8 @@ public sealed class FileAnalyzer : IFileAnalyzer {
         return extension switch {
             ".cs" => "csharp",
             ".js" => "javascript",
-            ".ts" => "typescript",
+            ".ts" or ".tsx" => "typescript",
+            ".jsx" => "javascript",
             ".py" => "python",
             ".java" => "java",
             ".go" => "go",
