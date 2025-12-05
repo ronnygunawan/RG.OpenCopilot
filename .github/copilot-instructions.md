@@ -46,10 +46,13 @@ dotnet run --project RG.OpenCopilot.App
 - Initialize collections with `= new()` syntax
 - Use nullable reference types appropriately (`?` for nullable)
 - Use file-scoped namespaces (no braces)
-- Place opening braces on new lines for all constructs
+- **Use K&R brace style** - opening braces on the same line as the declaration
 - Sort `using` directives with System namespaces first
 - Don't use `this.` qualifier unless necessary
 - Use `string.Empty` instead of `""`
+- **Use named arguments** when calling methods if the meaning of the argument is not immediately obvious
+  - Example: `kernelBuilder.AddOpenAIChatCompletion(modelId: modelId, apiKey: apiKey)`
+  - Instead of: `kernelBuilder.AddOpenAIChatCompletion(modelId, apiKey)`
 
 ### Naming Conventions
 - Interfaces: Prefix with `I` (e.g., `IPlannerService`, `IExecutorService`)
@@ -68,11 +71,9 @@ dotnet run --project RG.OpenCopilot.App
 
 ### Test Structure
 ```csharp
-public class FeatureTests
-{
+public class FeatureTests {
     [Fact]
-    public void MethodName_Scenario_ExpectedOutcome()
-    {
+    public void MethodName_Scenario_ExpectedOutcome() {
         // Arrange
         var sut = new Feature();
 
@@ -182,16 +183,14 @@ See `LLM-CONFIGURATION.md` for detailed LLM setup instructions.
 ```csharp
 public async Task<AgentPlan> CreatePlanAsync(
     AgentTaskContext context,
-    CancellationToken cancellationToken = default)
-{
+    CancellationToken cancellationToken = default) {
     // Implementation
 }
 ```
 
 ### Sealed Class Pattern
 ```csharp
-public sealed class AgentPlan
-{
+public sealed class AgentPlan {
     public string ProblemSummary { get; init; } = string.Empty;
     public List<string> Constraints { get; init; } = new();
 }
@@ -200,8 +199,7 @@ public sealed class AgentPlan
 ### Test Method Pattern
 ```csharp
 [Fact]
-public void FeatureName_Condition_ExpectedResult()
-{
+public void FeatureName_Condition_ExpectedResult() {
     var result = feature.Execute();
     result.ShouldBe(expected);
 }
@@ -226,3 +224,4 @@ public void FeatureName_Condition_ExpectedResult()
 5. Follow existing code patterns and conventions
 6. Use appropriate logging for debugging
 7. Validate webhook inputs when handling GitHub events
+8. **Update this instructions file** (`.github/copilot-instructions.md`) whenever coding conventions or architectural patterns change
