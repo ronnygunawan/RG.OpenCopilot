@@ -6,27 +6,23 @@ using RG.OpenCopilot.Agent;
 
 namespace RG.OpenCopilot.App;
 
-public sealed class LlmPlannerService : IPlannerService
-{
+public sealed class LlmPlannerService : IPlannerService {
     private readonly Kernel _kernel;
     private readonly ILogger<LlmPlannerService> _logger;
     private readonly IChatCompletionService _chatService;
 
     public LlmPlannerService(
         Kernel kernel,
-        ILogger<LlmPlannerService> logger)
-    {
+        ILogger<LlmPlannerService> logger) {
         _kernel = kernel;
         _logger = logger;
         _chatService = kernel.GetRequiredService<IChatCompletionService>();
     }
 
-    public async Task<AgentPlan> CreatePlanAsync(AgentTaskContext context, CancellationToken cancellationToken = default)
-    {
+    public async Task<AgentPlan> CreatePlanAsync(AgentTaskContext context, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Creating LLM-powered plan for issue: {IssueTitle}", context.IssueTitle);
 
-        try
-        {
+        try {
             // Build the prompt with all available context
             var prompt = await BuildPlannerPromptAsync(context, cancellationToken);
 
@@ -36,8 +32,7 @@ public sealed class LlmPlannerService : IPlannerService
             chatHistory.AddUserMessage(prompt);
 
             // Configure OpenAI settings to enforce JSON response
-            var executionSettings = new OpenAIPromptExecutionSettings
-            {
+            var executionSettings = new OpenAIPromptExecutionSettings {
                 Temperature = 0.3, // Lower temperature for more deterministic planning
                 MaxTokens = 4000,
                 ResponseFormat = "json_object" // Enforce JSON response
@@ -58,17 +53,15 @@ public sealed class LlmPlannerService : IPlannerService
             _logger.LogInformation("Plan created with {StepCount} steps", plan.Steps.Count);
             return plan;
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             _logger.LogError(ex, "Error creating plan with LLM, falling back to simple plan");
-            
+
             // Fallback to a simple plan if LLM fails
             return CreateFallbackPlan(context);
         }
     }
 
-    private static string GetSystemPrompt()
-    {
+    private static string GetSystemPrompt() {
         return """
             You are an expert software development planning assistant. Your role is to analyze coding tasks and create detailed, actionable implementation plans.
 
@@ -111,8 +104,7 @@ public sealed class LlmPlannerService : IPlannerService
             """;
     }
 
-    private async Task<string> BuildPlannerPromptAsync(AgentTaskContext context, CancellationToken cancellationToken)
-    {
+    private async Task<string> BuildPlannerPromptAsync(AgentTaskContext context, CancellationToken cancellationToken) {
         var prompt = new System.Text.StringBuilder();
         prompt.AppendLine("# Task");
         prompt.AppendLine($"**Issue Title:** {context.IssueTitle}");
@@ -121,16 +113,14 @@ public sealed class LlmPlannerService : IPlannerService
         prompt.AppendLine(context.IssueBody);
 
         // Add repository summary if available
-        if (!string.IsNullOrEmpty(context.RepositorySummary))
-        {
+        if (!string.IsNullOrEmpty(context.RepositorySummary)) {
             prompt.AppendLine();
             prompt.AppendLine("# Repository Context");
             prompt.AppendLine(context.RepositorySummary);
         }
 
         // Add custom instructions if provided
-        if (!string.IsNullOrEmpty(context.InstructionsMarkdown))
-        {
+        if (!string.IsNullOrEmpty(context.InstructionsMarkdown)) {
             prompt.AppendLine();
             prompt.AppendLine("# Custom Instructions");
             prompt.AppendLine(context.InstructionsMarkdown);
@@ -143,30 +133,24 @@ public sealed class LlmPlannerService : IPlannerService
         return prompt.ToString();
     }
 
-    private AgentPlan ParsePlanFromResponse(string jsonResponse)
-    {
-        try
-        {
-            var options = new JsonSerializerOptions
-            {
+    private AgentPlan ParsePlanFromResponse(string jsonResponse) {
+        try {
+            var options = new JsonSerializerOptions {
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
             var planDto = JsonSerializer.Deserialize<AgentPlanDto>(jsonResponse, options);
-            
-            if (planDto == null)
-            {
+
+            if (planDto == null) {
                 throw new InvalidOperationException("Failed to deserialize plan from LLM response");
             }
 
             // Convert DTO to domain model
-            return new AgentPlan
-            {
+            return new AgentPlan {
                 ProblemSummary = planDto.ProblemSummary ?? "Task implementation",
                 Constraints = planDto.Constraints ?? new List<string>(),
-                Steps = planDto.Steps?.Select((s, index) => new PlanStep
-                {
+                Steps = planDto.Steps?.Select((s, index) => new PlanStep {
                     Id = s.Id ?? $"step-{index + 1}",
                     Title = s.Title ?? "Implementation step",
                     Details = s.Details ?? "",
@@ -176,17 +160,14 @@ public sealed class LlmPlannerService : IPlannerService
                 FileTargets = planDto.FileTargets ?? new List<string>()
             };
         }
-        catch (JsonException ex)
-        {
+        catch (JsonException ex) {
             _logger.LogError(ex, "Failed to parse plan JSON: {Json}", jsonResponse);
             throw new InvalidOperationException("Invalid JSON response from LLM", ex);
         }
     }
 
-    private static AgentPlan CreateFallbackPlan(AgentTaskContext context)
-    {
-        return new AgentPlan
-        {
+    private static AgentPlan CreateFallbackPlan(AgentTaskContext context) {
+        return new AgentPlan {
             ProblemSummary = $"Implement solution for: {context.IssueTitle}",
             Constraints =
             {
@@ -247,8 +228,7 @@ public sealed class LlmPlannerService : IPlannerService
     }
 
     // DTO classes for JSON deserialization
-    private sealed class AgentPlanDto
-    {
+    private sealed class AgentPlanDto {
         public string? ProblemSummary { get; set; }
         public List<string>? Constraints { get; set; }
         public List<PlanStepDto>? Steps { get; set; }
@@ -256,8 +236,7 @@ public sealed class LlmPlannerService : IPlannerService
         public List<string>? FileTargets { get; set; }
     }
 
-    private sealed class PlanStepDto
-    {
+    private sealed class PlanStepDto {
         public string? Id { get; set; }
         public string? Title { get; set; }
         public string? Details { get; set; }

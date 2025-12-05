@@ -3,14 +3,11 @@ using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
 
-public class RepositoryAnalyzerTests
-{
+public class RepositoryAnalyzerTests {
     [Fact]
-    public void GenerateSummary_IncludesTopLanguages()
-    {
+    public void GenerateSummary_IncludesTopLanguages() {
         // Arrange
-        var analysis = new RepositoryAnalysis
-        {
+        var analysis = new RepositoryAnalysis {
             Languages = new Dictionary<string, long>
             {
                 { "C#", 50000 },
@@ -29,11 +26,9 @@ public class RepositoryAnalyzerTests
     }
 
     [Fact]
-    public void GenerateSummary_IncludesBuildTool()
-    {
+    public void GenerateSummary_IncludesBuildTool() {
         // Arrange
-        var analysis = new RepositoryAnalysis
-        {
+        var analysis = new RepositoryAnalysis {
             DetectedBuildTool = "dotnet"
         };
 
@@ -45,11 +40,9 @@ public class RepositoryAnalyzerTests
     }
 
     [Fact]
-    public void GenerateSummary_IncludesTestFramework()
-    {
+    public void GenerateSummary_IncludesTestFramework() {
         // Arrange
-        var analysis = new RepositoryAnalysis
-        {
+        var analysis = new RepositoryAnalysis {
             DetectedTestFramework = "xUnit"
         };
 
@@ -61,11 +54,9 @@ public class RepositoryAnalyzerTests
     }
 
     [Fact]
-    public void GenerateSummary_IncludesKeyFiles()
-    {
+    public void GenerateSummary_IncludesKeyFiles() {
         // Arrange
-        var analysis = new RepositoryAnalysis
-        {
+        var analysis = new RepositoryAnalysis {
             KeyFiles = new List<string> { "package.json", "README.md", "Dockerfile" }
         };
 
@@ -78,11 +69,9 @@ public class RepositoryAnalyzerTests
     }
 
     [Fact]
-    public void GenerateSummary_CombinesAllElements()
-    {
+    public void GenerateSummary_CombinesAllElements() {
         // Arrange
-        var analysis = new RepositoryAnalysis
-        {
+        var analysis = new RepositoryAnalysis {
             Languages = new Dictionary<string, long> { { "TypeScript", 50000 } },
             DetectedBuildTool = "npm",
             DetectedTestFramework = "Jest",
@@ -100,11 +89,9 @@ public class RepositoryAnalyzerTests
     }
 
     [Fact]
-    public void GenerateSummary_HandlesEmptyAnalysis()
-    {
+    public void GenerateSummary_HandlesEmptyAnalysis() {
         // Arrange
-        var analysis = new RepositoryAnalysis
-        {
+        var analysis = new RepositoryAnalysis {
             Languages = new Dictionary<string, long>(),
             KeyFiles = new List<string>()
         };
@@ -117,11 +104,9 @@ public class RepositoryAnalyzerTests
     }
 
     [Fact]
-    public void GenerateSummary_LimitsTop3Languages()
-    {
+    public void GenerateSummary_LimitsTop3Languages() {
         // Arrange
-        var analysis = new RepositoryAnalysis
-        {
+        var analysis = new RepositoryAnalysis {
             Languages = new Dictionary<string, long>
             {
                 { "C#", 50000 },
@@ -144,11 +129,9 @@ public class RepositoryAnalyzerTests
     }
 
     [Fact]
-    public void GenerateSummary_ShowsAndMoreForManyKeyFiles()
-    {
+    public void GenerateSummary_ShowsAndMoreForManyKeyFiles() {
         // Arrange
-        var analysis = new RepositoryAnalysis
-        {
+        var analysis = new RepositoryAnalysis {
             KeyFiles = new List<string> { "file1", "file2", "file3", "file4", "file5", "file6", "file7" }
         };
 
@@ -163,11 +146,9 @@ public class RepositoryAnalyzerTests
     }
 
     [Fact]
-    public void RepositoryAnalysis_PropertiesCanBeSet()
-    {
+    public void RepositoryAnalysis_PropertiesCanBeSet() {
         // Arrange & Act
-        var analysis = new RepositoryAnalysis
-        {
+        var analysis = new RepositoryAnalysis {
             Languages = new Dictionary<string, long> { { "Python", 1000 } },
             KeyFiles = new List<string> { "setup.py" },
             DetectedTestFramework = "pytest",
@@ -185,13 +166,11 @@ public class RepositoryAnalyzerTests
 
     // Helper method that duplicates the GenerateSummary logic for testing purposes
     // This avoids reflection complexity and allows easy verification of the logic
-    private static string GenerateSummaryPublic(RepositoryAnalysis analysis)
-    {
+    private static string GenerateSummaryPublic(RepositoryAnalysis analysis) {
         var parts = new List<string>();
 
         // Languages
-        if (analysis.Languages.Any())
-        {
+        if (analysis.Languages.Any()) {
             var topLanguages = analysis.Languages
                 .OrderByDescending(kvp => kvp.Value)
                 .Take(3)
@@ -200,23 +179,19 @@ public class RepositoryAnalyzerTests
         }
 
         // Build tool
-        if (!string.IsNullOrEmpty(analysis.DetectedBuildTool))
-        {
+        if (!string.IsNullOrEmpty(analysis.DetectedBuildTool)) {
             parts.Add($"Build tool: {analysis.DetectedBuildTool}");
         }
 
         // Test framework
-        if (!string.IsNullOrEmpty(analysis.DetectedTestFramework))
-        {
+        if (!string.IsNullOrEmpty(analysis.DetectedTestFramework)) {
             parts.Add($"Testing: {analysis.DetectedTestFramework}");
         }
 
         // Key files count
-        if (analysis.KeyFiles.Any())
-        {
+        if (analysis.KeyFiles.Any()) {
             var keyFilesDisplay = string.Join(", ", analysis.KeyFiles.Take(5));
-            if (analysis.KeyFiles.Count > 5)
-            {
+            if (analysis.KeyFiles.Count > 5) {
                 keyFilesDisplay += $" and {analysis.KeyFiles.Count - 5} more";
             }
             parts.Add($"Key files: {keyFilesDisplay}");

@@ -1,8 +1,8 @@
-using RG.OpenCopilot.Agent;
-using RG.OpenCopilot.App;
-using Octokit;
 using System.Text.Json;
 using Microsoft.SemanticKernel;
+using Octokit;
+using RG.OpenCopilot.Agent;
+using RG.OpenCopilot.App;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,39 +14,35 @@ var llmProvider = builder.Configuration["LLM:Provider"] ?? "OpenAI";
 var apiKey = builder.Configuration["LLM:ApiKey"];
 var modelId = builder.Configuration["LLM:ModelId"] ?? "gpt-4o";
 
-if (string.IsNullOrEmpty(apiKey))
-{
+if (string.IsNullOrEmpty(apiKey)) {
     // For development/testing, use SimplePlannerService if no API key is configured
     builder.Services.AddSingleton<IPlannerService, SimplePlannerService>();
 }
-else
-{
+else {
     // Configure the appropriate LLM provider
-    switch (llmProvider.ToLowerInvariant())
-    {
+    switch (llmProvider.ToLowerInvariant()) {
         case "openai":
             // Supports GPT-4o, GPT-5, GPT-5-Codex, GPT-5.1, GPT-5.1-Codex (when available)
             kernelBuilder.AddOpenAIChatCompletion(
                 modelId: modelId,
                 apiKey: apiKey);
             break;
-        
+
         case "azureopenai":
             var azureEndpoint = builder.Configuration["LLM:AzureEndpoint"];
             var azureDeployment = builder.Configuration["LLM:AzureDeployment"];
-            
-            if (string.IsNullOrEmpty(azureEndpoint) || string.IsNullOrEmpty(azureDeployment))
-            {
+
+            if (string.IsNullOrEmpty(azureEndpoint) || string.IsNullOrEmpty(azureDeployment)) {
                 throw new InvalidOperationException(
                     "Azure OpenAI requires LLM:AzureEndpoint and LLM:AzureDeployment configuration");
             }
-            
+
             kernelBuilder.AddAzureOpenAIChatCompletion(
                 deploymentName: azureDeployment,
                 endpoint: azureEndpoint,
                 apiKey: apiKey);
             break;
-        
+
         default:
             throw new InvalidOperationException(
                 $"Unsupported LLM provider: {llmProvider}. Supported providers: OpenAI, AzureOpenAI. " +
@@ -70,17 +66,15 @@ builder.Services.AddSingleton<IRepositoryAnalyzer, RepositoryAnalyzer>();
 builder.Services.AddSingleton<IInstructionsLoader, InstructionsLoader>();
 
 // Configure GitHub client
-builder.Services.AddSingleton<IGitHubClient>(sp =>
-{
+builder.Services.AddSingleton<IGitHubClient>(sp => {
     var client = new GitHubClient(new ProductHeaderValue("RG-OpenCopilot"));
-    
+
     // For POC, use a personal access token if provided
     var token = builder.Configuration["GitHub:Token"];
-    if (!string.IsNullOrEmpty(token))
-    {
+    if (!string.IsNullOrEmpty(token)) {
         client.Credentials = new Credentials(token);
     }
-    
+
     return client;
 });
 
@@ -90,55 +84,47 @@ var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok("ok"));
 
-app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<Program> logger) =>
-{
-    try
-    {
+app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<Program> logger) => {
+    try {
         // Read the request body
         using var reader = new StreamReader(context.Request.Body);
         var body = await reader.ReadToEndAsync();
-        
+
         // Validate signature if webhook secret is configured
         var webhookSecret = config["GitHub:WebhookSecret"];
-        if (!string.IsNullOrEmpty(webhookSecret))
-        {
+        if (!string.IsNullOrEmpty(webhookSecret)) {
             var signature = context.Request.Headers["X-Hub-Signature-256"].ToString();
-            if (!validator.ValidateSignature(body, signature, webhookSecret))
-            {
+            if (!validator.ValidateSignature(body, signature, webhookSecret)) {
                 logger.LogWarning("Invalid webhook signature");
                 return Results.Unauthorized();
             }
         }
-        
+
         logger.LogInformation("Received webhook: {EventType}", context.Request.Headers["X-GitHub-Event"].ToString());
-        
+
         // Check if this is an issues event
         var eventType = context.Request.Headers["X-GitHub-Event"].ToString();
-        if (eventType != "issues")
-        {
+        if (eventType != "issues") {
             logger.LogInformation("Ignoring non-issues event: {EventType}", eventType);
             return Results.Ok();
         }
-        
+
         // Parse the payload
-        var payload = JsonSerializer.Deserialize<GitHubIssueEventPayload>(body, new JsonSerializerOptions
-        {
+        var payload = JsonSerializer.Deserialize<GitHubIssueEventPayload>(body, new JsonSerializerOptions {
             PropertyNameCaseInsensitive = true
         });
-        
-        if (payload == null)
-        {
+
+        if (payload == null) {
             logger.LogWarning("Failed to parse webhook payload");
             return Results.BadRequest("Invalid payload");
         }
-        
+
         // Handle the event
         await handler.HandleIssuesEventAsync(payload);
-        
+
         return Results.Ok();
     }
-    catch (Exception ex)
-    {
+    catch (Exception ex) {
         logger.LogError(ex, "Error processing webhook");
         return Results.StatusCode(500);
     }

@@ -4,11 +4,9 @@ using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
 
-public class ExecutorServiceTests
-{
+public class ExecutorServiceTests {
     [Fact]
-    public async Task ExecutePlanAsync_ThrowsWhenPlanIsNull()
-    {
+    public async Task ExecutePlanAsync_ThrowsWhenPlanIsNull() {
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
@@ -23,8 +21,7 @@ public class ExecutorServiceTests
             taskStore,
             new TestLogger<ExecutorService>());
 
-        var task = new AgentTask
-        {
+        var task = new AgentTask {
             Id = "test/repo/issues/1",
             InstallationId = 123,
             RepositoryOwner = "owner",
@@ -39,8 +36,7 @@ public class ExecutorServiceTests
     }
 
     [Fact]
-    public async Task ExecutePlanAsync_UpdatesTaskStatusToExecuting()
-    {
+    public async Task ExecutePlanAsync_UpdatesTaskStatusToExecuting() {
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
@@ -55,16 +51,14 @@ public class ExecutorServiceTests
             taskStore,
             new TestLogger<ExecutorService>());
 
-        var task = new AgentTask
-        {
+        var task = new AgentTask {
             Id = "test/repo/issues/1",
             InstallationId = 123,
             RepositoryOwner = "owner",
             RepositoryName = "repo",
             IssueNumber = 1,
             Status = AgentTaskStatus.Planned,
-            Plan = new AgentPlan
-            {
+            Plan = new AgentPlan {
                 ProblemSummary = "Test",
                 Steps = new List<PlanStep>
                 {
@@ -85,8 +79,7 @@ public class ExecutorServiceTests
     }
 
     [Fact]
-    public async Task ExecutePlanAsync_ClonesRepository()
-    {
+    public async Task ExecutePlanAsync_ClonesRepository() {
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
@@ -101,15 +94,13 @@ public class ExecutorServiceTests
             taskStore,
             new TestLogger<ExecutorService>());
 
-        var task = new AgentTask
-        {
+        var task = new AgentTask {
             Id = "test/repo/issues/1",
             InstallationId = 123,
             RepositoryOwner = "owner",
             RepositoryName = "repo",
             IssueNumber = 1,
-            Plan = new AgentPlan
-            {
+            Plan = new AgentPlan {
                 ProblemSummary = "Test",
                 Steps = new List<PlanStep>()
             }
@@ -126,8 +117,7 @@ public class ExecutorServiceTests
     }
 
     [Fact]
-    public async Task ExecutePlanAsync_MarksStepsAsDone()
-    {
+    public async Task ExecutePlanAsync_MarksStepsAsDone() {
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
@@ -142,15 +132,13 @@ public class ExecutorServiceTests
             taskStore,
             new TestLogger<ExecutorService>());
 
-        var task = new AgentTask
-        {
+        var task = new AgentTask {
             Id = "test/repo/issues/1",
             InstallationId = 123,
             RepositoryOwner = "owner",
             RepositoryName = "repo",
             IssueNumber = 1,
-            Plan = new AgentPlan
-            {
+            Plan = new AgentPlan {
                 ProblemSummary = "Test",
                 Steps = new List<PlanStep>
                 {
@@ -173,8 +161,7 @@ public class ExecutorServiceTests
     }
 
     [Fact]
-    public async Task ExecutePlanAsync_PostsProgressComment()
-    {
+    public async Task ExecutePlanAsync_PostsProgressComment() {
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
@@ -189,15 +176,13 @@ public class ExecutorServiceTests
             taskStore,
             new TestLogger<ExecutorService>());
 
-        var task = new AgentTask
-        {
+        var task = new AgentTask {
             Id = "test/repo/issues/1",
             InstallationId = 123,
             RepositoryOwner = "owner",
             RepositoryName = "repo",
             IssueNumber = 1,
-            Plan = new AgentPlan
-            {
+            Plan = new AgentPlan {
                 ProblemSummary = "Test",
                 Steps = new List<PlanStep>
                 {
@@ -216,8 +201,7 @@ public class ExecutorServiceTests
     }
 
     [Fact]
-    public async Task ExecutePlanAsync_CleansUpRepositoryOnSuccess()
-    {
+    public async Task ExecutePlanAsync_CleansUpRepositoryOnSuccess() {
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
@@ -232,15 +216,13 @@ public class ExecutorServiceTests
             taskStore,
             new TestLogger<ExecutorService>());
 
-        var task = new AgentTask
-        {
+        var task = new AgentTask {
             Id = "test/repo/issues/1",
             InstallationId = 123,
             RepositoryOwner = "owner",
             RepositoryName = "repo",
             IssueNumber = 1,
-            Plan = new AgentPlan
-            {
+            Plan = new AgentPlan {
                 ProblemSummary = "Test",
                 Steps = new List<PlanStep>()
             }
@@ -256,15 +238,13 @@ public class ExecutorServiceTests
     }
 
     [Fact]
-    public async Task ProcessCommandExecutor_ExecutesCommand()
-    {
+    public async Task ProcessCommandExecutor_ExecutesCommand() {
         // Arrange
         var executor = new ProcessCommandExecutor(new TestLogger<ProcessCommandExecutor>());
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempDir);
 
-        try
-        {
+        try {
             // Act
             var result = await executor.ExecuteCommandAsync(
                 tempDir,
@@ -276,25 +256,21 @@ public class ExecutorServiceTests
             result.Success.ShouldBeTrue();
             result.Output.ShouldContain("hello");
         }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
+        finally {
+            if (Directory.Exists(tempDir)) {
                 Directory.Delete(tempDir, recursive: true);
             }
         }
     }
 
     [Fact]
-    public async Task ProcessCommandExecutor_ReturnsFailureForNonExistentCommand()
-    {
+    public async Task ProcessCommandExecutor_ReturnsFailureForNonExistentCommand() {
         // Arrange
         var executor = new ProcessCommandExecutor(new TestLogger<ProcessCommandExecutor>());
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Directory.CreateDirectory(tempDir);
 
-        try
-        {
+        try {
             // Act
             var result = await executor.ExecuteCommandAsync(
                 tempDir,
@@ -305,75 +281,60 @@ public class ExecutorServiceTests
             // Assert
             result.Success.ShouldBeFalse();
         }
-        catch (Exception)
-        {
+        catch (Exception) {
             // Expected - command not found
         }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-            {
+        finally {
+            if (Directory.Exists(tempDir)) {
                 Directory.Delete(tempDir, recursive: true);
             }
         }
     }
 
     // Test helper classes
-    private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T>
-    {
+    private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
         public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
     }
 
-    private class TestTokenProvider : IGitHubAppTokenProvider
-    {
-        public Task<string> GetInstallationTokenAsync(long installationId, CancellationToken cancellationToken = default)
-        {
+    private class TestTokenProvider : IGitHubAppTokenProvider {
+        public Task<string> GetInstallationTokenAsync(long installationId, CancellationToken cancellationToken = default) {
             return Task.FromResult("test-token");
         }
     }
 
-    private class TestRepositoryCloner : IRepositoryCloner
-    {
+    private class TestRepositoryCloner : IRepositoryCloner {
         public bool CloneWasCalled { get; private set; }
         public bool CleanupWasCalled { get; private set; }
 
-        public Task<string> CloneRepositoryAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default)
-        {
+        public Task<string> CloneRepositoryAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default) {
             CloneWasCalled = true;
             var tempPath = Path.Combine(Path.GetTempPath(), $"test-clone-{Guid.NewGuid()}");
             Directory.CreateDirectory(tempPath);
             return Task.FromResult(tempPath);
         }
 
-        public void CleanupRepository(string localPath)
-        {
+        public void CleanupRepository(string localPath) {
             CleanupWasCalled = true;
-            if (Directory.Exists(localPath))
-            {
+            if (Directory.Exists(localPath)) {
                 Directory.Delete(localPath, recursive: true);
             }
         }
     }
 
-    private class TestCommandExecutor : ICommandExecutor
-    {
-        public Task<CommandResult> ExecuteCommandAsync(string workingDirectory, string command, string[] args, CancellationToken cancellationToken = default)
-        {
+    private class TestCommandExecutor : ICommandExecutor {
+        public Task<CommandResult> ExecuteCommandAsync(string workingDirectory, string command, string[] args, CancellationToken cancellationToken = default) {
             // Simulate git status --porcelain returning empty (no changes)
-            if (command == "git" && args.Length > 0 && args[0] == "status")
-            {
-                return Task.FromResult(new CommandResult
-                {
+            if (command == "git" && args.Length > 0 && args[0] == "status") {
+                return Task.FromResult(new CommandResult {
                     ExitCode = 0,
                     Output = string.Empty,
                     Error = string.Empty
                 });
             }
 
-            return Task.FromResult(new CommandResult
-            {
+            return Task.FromResult(new CommandResult {
                 ExitCode = 0,
                 Output = "success",
                 Error = string.Empty
@@ -381,32 +342,26 @@ public class ExecutorServiceTests
         }
     }
 
-    private class TestGitHubService : IGitHubService
-    {
+    private class TestGitHubService : IGitHubService {
         public bool CommentPosted { get; private set; }
 
-        public Task<string> CreateWorkingBranchAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default)
-        {
+        public Task<string> CreateWorkingBranchAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default) {
             return Task.FromResult($"open-copilot/issue-{issueNumber}");
         }
 
-        public Task<int> CreateWipPullRequestAsync(string owner, string repo, string branchName, int issueNumber, string issueTitle, string issueBody, CancellationToken cancellationToken = default)
-        {
+        public Task<int> CreateWipPullRequestAsync(string owner, string repo, string branchName, int issueNumber, string issueTitle, string issueBody, CancellationToken cancellationToken = default) {
             return Task.FromResult(1);
         }
 
-        public Task UpdatePullRequestDescriptionAsync(string owner, string repo, int prNumber, string title, string body, CancellationToken cancellationToken = default)
-        {
+        public Task UpdatePullRequestDescriptionAsync(string owner, string repo, int prNumber, string title, string body, CancellationToken cancellationToken = default) {
             return Task.CompletedTask;
         }
 
-        public Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default)
-        {
+        public Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default) {
             return Task.FromResult<int?>(1);
         }
 
-        public Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default)
-        {
+        public Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default) {
             CommentPosted = true;
             return Task.CompletedTask;
         }

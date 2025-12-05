@@ -4,11 +4,9 @@ using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
 
-public class WebhookHandlerTests
-{
+public class WebhookHandlerTests {
     [Fact]
-    public async Task HandleIssuesEventAsync_IgnoresNonLabeledActions()
-    {
+    public async Task HandleIssuesEventAsync_IgnoresNonLabeledActions() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
@@ -23,8 +21,7 @@ public class WebhookHandlerTests
             instructionsLoader,
             new TestLogger<WebhookHandler>());
 
-        var payload = new GitHubIssueEventPayload
-        {
+        var payload = new GitHubIssueEventPayload {
             Action = "opened",
             Issue = new GitHubIssue { Number = 1, Title = "Test", Body = "Test body" },
             Repository = new GitHubRepository { Name = "test", Full_Name = "owner/test", Owner = new GitHubOwner { Login = "owner" } },
@@ -40,8 +37,7 @@ public class WebhookHandlerTests
     }
 
     [Fact]
-    public async Task HandleIssuesEventAsync_CreatesBranchAndPrForCopilotAssistedLabel()
-    {
+    public async Task HandleIssuesEventAsync_CreatesBranchAndPrForCopilotAssistedLabel() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
@@ -56,8 +52,7 @@ public class WebhookHandlerTests
             instructionsLoader,
             new TestLogger<WebhookHandler>());
 
-        var payload = new GitHubIssueEventPayload
-        {
+        var payload = new GitHubIssueEventPayload {
             Action = "labeled",
             Label = new GitHubLabel { Name = "copilot-assisted" },
             Issue = new GitHubIssue { Number = 1, Title = "Test Issue", Body = "Test body" },
@@ -75,8 +70,7 @@ public class WebhookHandlerTests
     }
 
     [Fact]
-    public async Task HandleIssuesEventAsync_CreatesTaskWithCorrectDetails()
-    {
+    public async Task HandleIssuesEventAsync_CreatesTaskWithCorrectDetails() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
@@ -91,8 +85,7 @@ public class WebhookHandlerTests
             instructionsLoader,
             new TestLogger<WebhookHandler>());
 
-        var payload = new GitHubIssueEventPayload
-        {
+        var payload = new GitHubIssueEventPayload {
             Action = "labeled",
             Label = new GitHubLabel { Name = "copilot-assisted" },
             Issue = new GitHubIssue { Number = 42, Title = "Test Issue", Body = "Test body" },
@@ -114,54 +107,44 @@ public class WebhookHandlerTests
         task.Plan.ShouldNotBeNull();
     }
 
-    private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T>
-    {
+    private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
         public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
     }
 
-    private class TestGitHubService : IGitHubService
-    {
+    private class TestGitHubService : IGitHubService {
         public bool BranchCreated { get; private set; }
         public bool PrCreated { get; private set; }
         public bool PrUpdated { get; private set; }
 
-        public Task<string> CreateWorkingBranchAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default)
-        {
+        public Task<string> CreateWorkingBranchAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default) {
             BranchCreated = true;
             return Task.FromResult($"open-copilot/issue-{issueNumber}");
         }
 
-        public Task<int> CreateWipPullRequestAsync(string owner, string repo, string branchName, int issueNumber, string issueTitle, string issueBody, CancellationToken cancellationToken = default)
-        {
+        public Task<int> CreateWipPullRequestAsync(string owner, string repo, string branchName, int issueNumber, string issueTitle, string issueBody, CancellationToken cancellationToken = default) {
             PrCreated = true;
             return Task.FromResult(1);
         }
 
-        public Task UpdatePullRequestDescriptionAsync(string owner, string repo, int prNumber, string title, string body, CancellationToken cancellationToken = default)
-        {
+        public Task UpdatePullRequestDescriptionAsync(string owner, string repo, int prNumber, string title, string body, CancellationToken cancellationToken = default) {
             PrUpdated = true;
             return Task.CompletedTask;
         }
 
-        public Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default)
-        {
+        public Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default) {
             return Task.FromResult<int?>(1);
         }
 
-        public Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default)
-        {
+        public Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default) {
             return Task.CompletedTask;
         }
     }
 
-    private class TestRepositoryAnalyzer : IRepositoryAnalyzer
-    {
-        public Task<RepositoryAnalysis> AnalyzeAsync(string owner, string repo, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new RepositoryAnalysis
-            {
+    private class TestRepositoryAnalyzer : IRepositoryAnalyzer {
+        public Task<RepositoryAnalysis> AnalyzeAsync(string owner, string repo, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new RepositoryAnalysis {
                 Languages = new Dictionary<string, long> { { "C#", 1000 } },
                 KeyFiles = new List<string> { "README.md" },
                 DetectedTestFramework = "xUnit",
@@ -171,10 +154,8 @@ public class WebhookHandlerTests
         }
     }
 
-    private class TestInstructionsLoader : IInstructionsLoader
-    {
-        public Task<string?> LoadInstructionsAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default)
-        {
+    private class TestInstructionsLoader : IInstructionsLoader {
+        public Task<string?> LoadInstructionsAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default) {
             return Task.FromResult<string?>(null);
         }
     }
