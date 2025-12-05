@@ -180,7 +180,9 @@ public sealed class FileEditor : IFileEditor {
         };
 
         // Don't allow deletion of files in .git directory
-        if (filePath.Contains("/.git/") || filePath.StartsWith(".git/")) {
+        var normalizedPath = filePath.Replace('\\', '/');
+        var pathComponents = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (pathComponents.Any(component => component == ".git")) {
             return true;
         }
 

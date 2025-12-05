@@ -222,7 +222,7 @@ public class FileEditorIntegrationTests {
     }
 
     private static ILogger<T> CreateLogger<T>() {
-        using var loggerFactory = LoggerFactory.Create(builder => {
+        var loggerFactory = LoggerFactory.Create(builder => {
             builder.AddConsole();
             builder.SetMinimumLevel(LogLevel.Information);
         });
