@@ -34,7 +34,7 @@ public sealed class GitHubAppTokenProvider : IGitHubAppTokenProvider {
 
             // Return empty string - the caller should handle this
             // In a real implementation, this would throw an exception
-            return string.Empty;
+            return "";
         }
 
         try {

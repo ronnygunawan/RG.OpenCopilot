@@ -43,20 +43,20 @@ dotnet run --project RG.OpenCopilot.App
 ### C# Specific Conventions
 - Use `sealed` classes for domain models that shouldn't be inherited
 - Use `init` accessors for immutable properties
-- Initialize collections with `= new()` syntax
+- Initialize collections with `= []` syntax
 - Use nullable reference types appropriately (`?` for nullable)
 - Use file-scoped namespaces (no braces)
 - **Use K&R brace style** - opening braces on the same line as the declaration
 - Sort `using` directives with System namespaces first
 - Don't use `this.` qualifier unless necessary
-- Use `string.Empty` instead of `""`
+- Use `""` instead of `string.Empty`
 - **Use named arguments** when calling methods if the meaning of the argument is not immediately obvious
   - Example: `SaveFile(fileName: path, overwrite: true)` or `CreateTask(timeout: 30, retryCount: 3)`
   - Instead of: `SaveFile(path, true)` or `CreateTask(30, 3)`
 
 ### Naming Conventions
 - Interfaces: Prefix with `I` (e.g., `IPlannerService`, `IExecutorService`)
-- Private fields: camelCase without prefix
+- Private fields: _camelCase with underscore prefix
 - Properties: PascalCase
 - Methods: PascalCase
 - Parameters: camelCase
@@ -191,8 +191,8 @@ public async Task<AgentPlan> CreatePlanAsync(
 ### Sealed Class Pattern
 ```csharp
 public sealed class AgentPlan {
-    public string ProblemSummary { get; init; } = string.Empty;
-    public List<string> Constraints { get; init; } = new();
+    public string ProblemSummary { get; init; } = "";
+    public List<string> Constraints { get; init; } = [];
 }
 ```
 
