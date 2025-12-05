@@ -3,23 +3,18 @@ using System.Text;
 
 namespace RG.OpenCopilot.App;
 
-public interface IWebhookValidator
-{
+public interface IWebhookValidator {
     bool ValidateSignature(string payload, string signature, string secret);
 }
 
-public sealed class WebhookValidator : IWebhookValidator
-{
-    public bool ValidateSignature(string payload, string signature, string secret)
-    {
-        if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(secret))
-        {
+public sealed class WebhookValidator : IWebhookValidator {
+    public bool ValidateSignature(string payload, string signature, string secret) {
+        if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(secret)) {
             return false;
         }
 
         // GitHub signature format is "sha256=<hash>"
-        if (!signature.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase))
-        {
+        if (!signature.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase)) {
             return false;
         }
 

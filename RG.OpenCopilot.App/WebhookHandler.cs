@@ -1,15 +1,13 @@
-using RG.OpenCopilot.Agent;
 using System.Text.Json;
+using RG.OpenCopilot.Agent;
 
 namespace RG.OpenCopilot.App;
 
-public interface IWebhookHandler
-{
+public interface IWebhookHandler {
     Task HandleIssuesEventAsync(GitHubIssueEventPayload payload, CancellationToken cancellationToken = default);
 }
 
-public sealed class WebhookHandler : IWebhookHandler
-{
+public sealed class WebhookHandler : IWebhookHandler {
     private readonly IAgentTaskStore _taskStore;
     private readonly IPlannerService _plannerService;
     private readonly IGitHubService _gitHubService;
@@ -23,8 +21,7 @@ public sealed class WebhookHandler : IWebhookHandler
         IGitHubService gitHubService,
         IRepositoryAnalyzer repositoryAnalyzer,
         IInstructionsLoader instructionsLoader,
-        ILogger<WebhookHandler> logger)
-    {
+        ILogger<WebhookHandler> logger) {
         _taskStore = taskStore;
         _plannerService = plannerService;
         _gitHubService = gitHubService;
@@ -33,18 +30,15 @@ public sealed class WebhookHandler : IWebhookHandler
         _logger = logger;
     }
 
-    public async Task HandleIssuesEventAsync(GitHubIssueEventPayload payload, CancellationToken cancellationToken = default)
-    {
+    public async Task HandleIssuesEventAsync(GitHubIssueEventPayload payload, CancellationToken cancellationToken = default) {
         // Check if this is a label event with the copilot-assisted label
-        if (payload.Action != "labeled" || payload.Label?.Name != "copilot-assisted")
-        {
-            _logger.LogInformation("Ignoring issues event: action={Action}, label={Label}", 
+        if (payload.Action != "labeled" || payload.Label?.Name != "copilot-assisted") {
+            _logger.LogInformation("Ignoring issues event: action={Action}, label={Label}",
                 payload.Action, payload.Label?.Name);
             return;
         }
 
-        if (payload.Issue == null || payload.Repository == null || payload.Installation == null)
-        {
+        if (payload.Issue == null || payload.Repository == null || payload.Installation == null) {
             _logger.LogWarning("Received issues event with missing required fields");
             return;
         }
@@ -52,20 +46,17 @@ public sealed class WebhookHandler : IWebhookHandler
         _logger.LogInformation("Processing copilot-assisted label for issue #{IssueNumber} in {Repo}",
             payload.Issue.Number, payload.Repository.Full_Name);
 
-        try
-        {
+        try {
             // Create an agent task
             var taskId = $"{payload.Repository.Full_Name}/issues/{payload.Issue.Number}";
             var existingTask = await _taskStore.GetTaskAsync(taskId, cancellationToken);
-            
-            if (existingTask != null)
-            {
+
+            if (existingTask != null) {
                 _logger.LogInformation("Task {TaskId} already exists, skipping", taskId);
                 return;
             }
 
-            var task = new AgentTask
-            {
+            var task = new AgentTask {
                 Id = taskId,
                 InstallationId = payload.Installation.Id,
                 RepositoryOwner = payload.Repository.Owner?.Login ?? string.Empty,
@@ -98,36 +89,31 @@ public sealed class WebhookHandler : IWebhookHandler
 
             // Analyze repository to gather context
             RepositoryAnalysis? repoAnalysis = null;
-            try
-            {
+            try {
                 repoAnalysis = await _repositoryAnalyzer.AnalyzeAsync(
                     task.RepositoryOwner,
                     task.RepositoryName,
                     cancellationToken);
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 _logger.LogWarning(ex, "Failed to analyze repository, proceeding without analysis");
             }
 
             // Load custom instructions if available
             string? instructions = null;
-            try
-            {
+            try {
                 instructions = await _instructionsLoader.LoadInstructionsAsync(
                     task.RepositoryOwner,
                     task.RepositoryName,
                     task.IssueNumber,
                     cancellationToken);
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 _logger.LogWarning(ex, "Failed to load instructions, proceeding without them");
             }
 
             // Generate plan with all available context
-            var context = new AgentTaskContext
-            {
+            var context = new AgentTaskContext {
                 IssueTitle = payload.Issue.Title,
                 IssueBody = payload.Issue.Body ?? string.Empty,
                 RepositorySummary = repoAnalysis?.Summary,
@@ -153,19 +139,17 @@ public sealed class WebhookHandler : IWebhookHandler
 
             _logger.LogInformation("Updated PR #{PrNumber} with plan for task {TaskId}", prNumber, taskId);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             _logger.LogError(ex, "Error handling issues event for issue #{IssueNumber}", payload.Issue.Number);
             throw;
         }
     }
 
-    private static string FormatPrBodyWithPlan(int issueNumber, string issueTitle, string issueBody, AgentPlan plan)
-    {
-        var stepsMarkdown = string.Join("\n", plan.Steps.Select(s => 
+    private static string FormatPrBodyWithPlan(int issueNumber, string issueTitle, string issueBody, AgentPlan plan) {
+        var stepsMarkdown = string.Join("\n", plan.Steps.Select(s =>
             $"- [ ] **{EscapeMarkdown(s.Title)}** - {EscapeMarkdown(s.Details)}"));
 
-        var checklistMarkdown = string.Join("\n", plan.Checklist.Select(c => 
+        var checklistMarkdown = string.Join("\n", plan.Checklist.Select(c =>
             $"- [ ] {EscapeMarkdown(c)}"));
 
         return $@"## Plan
@@ -201,10 +185,8 @@ _This PR was automatically created by RG.OpenCopilot._
 _Progress will be updated here as the agent works on this issue._";
     }
 
-    private static string EscapeMarkdown(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
+    private static string EscapeMarkdown(string text) {
+        if (string.IsNullOrEmpty(text)) {
             return text;
         }
 

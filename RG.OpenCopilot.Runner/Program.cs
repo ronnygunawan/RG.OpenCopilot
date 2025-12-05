@@ -1,7 +1,6 @@
-﻿using RG.OpenCopilot.Agent;
+using RG.OpenCopilot.Agent;
 
-if (args.Length == 0)
-{
+if (args.Length == 0) {
     Console.WriteLine("RG.OpenCopilot.Runner - local agent runner stub");
     Console.WriteLine("Usage: dotnet run --project RG.OpenCopilot.Runner -- <issue-title> <issue-body>");
     return;
@@ -10,8 +9,7 @@ if (args.Length == 0)
 var issueTitle = args.ElementAtOrDefault(0) ?? string.Empty;
 var issueBody = args.ElementAtOrDefault(1) ?? string.Empty;
 
-var context = new AgentTaskContext
-{
+var context = new AgentTaskContext {
     IssueTitle = issueTitle,
     IssueBody = issueBody
 };
@@ -21,17 +19,13 @@ var plan = await planner.CreatePlanAsync(context);
 
 Console.WriteLine("Generated plan:");
 Console.WriteLine($"Summary: {plan.ProblemSummary}");
-foreach (var step in plan.Steps)
-{
+foreach (var step in plan.Steps) {
     Console.WriteLine($"- [{(step.Done ? 'x' : ' ')}] {step.Title}: {step.Details}");
 }
 
-file sealed class ConsoleStubPlannerService : IPlannerService
-{
-    public Task<AgentPlan> CreatePlanAsync(AgentTaskContext context, CancellationToken cancellationToken = default)
-    {
-        var plan = new AgentPlan
-        {
+file sealed class ConsoleStubPlannerService : IPlannerService {
+    public Task<AgentPlan> CreatePlanAsync(AgentTaskContext context, CancellationToken cancellationToken = default) {
+        var plan = new AgentPlan {
             ProblemSummary = $"Stub plan for: {context.IssueTitle}",
             Steps =
             {

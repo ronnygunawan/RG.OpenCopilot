@@ -2,22 +2,18 @@ using RG.OpenCopilot.Agent;
 
 namespace RG.OpenCopilot.App;
 
-public sealed class SimplePlannerService : IPlannerService
-{
+public sealed class SimplePlannerService : IPlannerService {
     private readonly ILogger<SimplePlannerService> _logger;
 
-    public SimplePlannerService(ILogger<SimplePlannerService> logger)
-    {
+    public SimplePlannerService(ILogger<SimplePlannerService> logger) {
         _logger = logger;
     }
 
-    public Task<AgentPlan> CreatePlanAsync(AgentTaskContext context, CancellationToken cancellationToken = default)
-    {
+    public Task<AgentPlan> CreatePlanAsync(AgentTaskContext context, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Creating plan for issue: {IssueTitle}", context.IssueTitle);
 
         // For POC, create a simple structured plan based on the issue
-        var plan = new AgentPlan
-        {
+        var plan = new AgentPlan {
             ProblemSummary = $"Implement solution for: {context.IssueTitle}",
             Constraints =
             {

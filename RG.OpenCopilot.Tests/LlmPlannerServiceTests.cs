@@ -1,15 +1,13 @@
+using System.Text.Json;
 using RG.OpenCopilot.Agent;
 using RG.OpenCopilot.App;
 using Shouldly;
-using System.Text.Json;
 
 namespace RG.OpenCopilot.Tests;
 
-public class LlmPlannerServiceTests
-{
+public class LlmPlannerServiceTests {
     [Fact]
-    public void ParsePlanFromResponse_ValidJson_ReturnsAgentPlan()
-    {
+    public void ParsePlanFromResponse_ValidJson_ReturnsAgentPlan() {
         // Arrange
         var json = """
             {
@@ -51,8 +49,7 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void ParsePlanFromResponse_MinimalJson_ReturnsAgentPlan()
-    {
+    public void ParsePlanFromResponse_MinimalJson_ReturnsAgentPlan() {
         // Arrange
         var json = """
             {
@@ -77,8 +74,7 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void ParsePlanFromResponse_NullFields_UsesDefaults()
-    {
+    public void ParsePlanFromResponse_NullFields_UsesDefaults() {
         // Arrange
         var json = """
             {
@@ -103,11 +99,9 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void CreateFallbackPlan_ReturnsValidPlan()
-    {
+    public void CreateFallbackPlan_ReturnsValidPlan() {
         // Arrange
-        var context = new AgentTaskContext
-        {
+        var context = new AgentTaskContext {
             IssueTitle = "Implement feature X",
             IssueBody = "Add feature X to the application"
         };
@@ -125,11 +119,9 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void BuildPlannerPrompt_IncludesIssueDetails()
-    {
+    public void BuildPlannerPrompt_IncludesIssueDetails() {
         // Arrange
-        var context = new AgentTaskContext
-        {
+        var context = new AgentTaskContext {
             IssueTitle = "Fix login bug",
             IssueBody = "Users cannot login after password reset"
         };
@@ -143,11 +135,9 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void BuildPlannerPrompt_IncludesRepositorySummary()
-    {
+    public void BuildPlannerPrompt_IncludesRepositorySummary() {
         // Arrange
-        var context = new AgentTaskContext
-        {
+        var context = new AgentTaskContext {
             IssueTitle = "Update dependencies",
             IssueBody = "Upgrade to latest versions",
             RepositorySummary = "C# project with dotnet and xUnit"
@@ -162,11 +152,9 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void BuildPlannerPrompt_IncludesCustomInstructions()
-    {
+    public void BuildPlannerPrompt_IncludesCustomInstructions() {
         // Arrange
-        var context = new AgentTaskContext
-        {
+        var context = new AgentTaskContext {
             IssueTitle = "Add API endpoint",
             IssueBody = "Create new REST endpoint",
             InstructionsMarkdown = "# Custom Instructions\n\nUse async/await pattern"
@@ -181,11 +169,9 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void BuildPlannerPrompt_HandlesEmptyContext()
-    {
+    public void BuildPlannerPrompt_HandlesEmptyContext() {
         // Arrange
-        var context = new AgentTaskContext
-        {
+        var context = new AgentTaskContext {
             IssueTitle = "",
             IssueBody = ""
         };
@@ -199,11 +185,9 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void BuildPlannerPrompt_IncludesAllSections()
-    {
+    public void BuildPlannerPrompt_IncludesAllSections() {
         // Arrange
-        var context = new AgentTaskContext
-        {
+        var context = new AgentTaskContext {
             IssueTitle = "Complete task",
             IssueBody = "Task description",
             RepositorySummary = "Repo info",
@@ -221,8 +205,7 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void ParsePlanFromResponse_HandlesStepsWithoutId()
-    {
+    public void ParsePlanFromResponse_HandlesStepsWithoutId() {
         // Arrange
         var json = """
             {
@@ -250,11 +233,9 @@ public class LlmPlannerServiceTests
     }
 
     [Fact]
-    public void CreateFallbackPlan_ContainsExpectedSteps()
-    {
+    public void CreateFallbackPlan_ContainsExpectedSteps() {
         // Arrange
-        var context = new AgentTaskContext
-        {
+        var context = new AgentTaskContext {
             IssueTitle = "Bug fix",
             IssueBody = "Fix the bug"
         };
@@ -270,27 +251,22 @@ public class LlmPlannerServiceTests
     }
 
     // Helper methods to test private logic
-    private static AgentPlan ParsePlanFromJson(string json)
-    {
-        var options = new JsonSerializerOptions
-        {
+    private static AgentPlan ParsePlanFromJson(string json) {
+        var options = new JsonSerializerOptions {
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
         var planDto = JsonSerializer.Deserialize<AgentPlanDto>(json, options);
 
-        if (planDto == null)
-        {
+        if (planDto == null) {
             throw new InvalidOperationException("Failed to deserialize plan");
         }
 
-        return new AgentPlan
-        {
+        return new AgentPlan {
             ProblemSummary = planDto.ProblemSummary ?? "Task implementation",
             Constraints = planDto.Constraints ?? new List<string>(),
-            Steps = planDto.Steps?.Select((s, index) => new PlanStep
-            {
+            Steps = planDto.Steps?.Select((s, index) => new PlanStep {
                 Id = s.Id ?? $"step-{index + 1}",
                 Title = s.Title ?? "Implementation step",
                 Details = s.Details ?? "",
@@ -301,10 +277,8 @@ public class LlmPlannerServiceTests
         };
     }
 
-    private static AgentPlan CreateFallbackPlanPublic(AgentTaskContext context)
-    {
-        return new AgentPlan
-        {
+    private static AgentPlan CreateFallbackPlanPublic(AgentTaskContext context) {
+        return new AgentPlan {
             ProblemSummary = $"Implement solution for: {context.IssueTitle}",
             Constraints =
             {
@@ -364,8 +338,7 @@ public class LlmPlannerServiceTests
         };
     }
 
-    private static string BuildPromptPublic(AgentTaskContext context)
-    {
+    private static string BuildPromptPublic(AgentTaskContext context) {
         var promptParts = new List<string>
         {
             "# Task",
@@ -375,15 +348,13 @@ public class LlmPlannerServiceTests
             context.IssueBody
         };
 
-        if (!string.IsNullOrEmpty(context.RepositorySummary))
-        {
+        if (!string.IsNullOrEmpty(context.RepositorySummary)) {
             promptParts.Add("");
             promptParts.Add("# Repository Context");
             promptParts.Add(context.RepositorySummary);
         }
 
-        if (!string.IsNullOrEmpty(context.InstructionsMarkdown))
-        {
+        if (!string.IsNullOrEmpty(context.InstructionsMarkdown)) {
             promptParts.Add("");
             promptParts.Add("# Custom Instructions");
             promptParts.Add(context.InstructionsMarkdown);
@@ -397,8 +368,7 @@ public class LlmPlannerServiceTests
     }
 
     // DTO classes for JSON deserialization
-    private sealed class AgentPlanDto
-    {
+    private sealed class AgentPlanDto {
         public string? ProblemSummary { get; set; }
         public List<string>? Constraints { get; set; }
         public List<PlanStepDto>? Steps { get; set; }
@@ -406,8 +376,7 @@ public class LlmPlannerServiceTests
         public List<string>? FileTargets { get; set; }
     }
 
-    private sealed class PlanStepDto
-    {
+    private sealed class PlanStepDto {
         public string? Id { get; set; }
         public string? Title { get; set; }
         public string? Details { get; set; }

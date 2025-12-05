@@ -3,11 +3,9 @@ using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
 
-public class AgentPlanTests
-{
+public class AgentPlanTests {
     [Fact]
-    public void AgentPlan_Defaults_AreEmpty()
-    {
+    public void AgentPlan_Defaults_AreEmpty() {
         var plan = new AgentPlan();
 
         plan.ProblemSummary.ShouldBe(string.Empty);
