@@ -51,8 +51,8 @@ dotnet run --project RG.OpenCopilot.App
 - Don't use `this.` qualifier unless necessary
 - Use `string.Empty` instead of `""`
 - **Use named arguments** when calling methods if the meaning of the argument is not immediately obvious
-  - Example: `kernelBuilder.AddOpenAIChatCompletion(modelId: modelId, apiKey: apiKey)`
-  - Instead of: `kernelBuilder.AddOpenAIChatCompletion(modelId, apiKey)`
+  - Example: `SaveFile(fileName: path, overwrite: true)` or `CreateTask(timeout: 30, retryCount: 3)`
+  - Instead of: `SaveFile(path, true)` or `CreateTask(30, 3)`
 
 ### Naming Conventions
 - Interfaces: Prefix with `I` (e.g., `IPlannerService`, `IExecutorService`)
@@ -224,4 +224,4 @@ public void FeatureName_Condition_ExpectedResult() {
 5. Follow existing code patterns and conventions
 6. Use appropriate logging for debugging
 7. Validate webhook inputs when handling GitHub events
-8. **Update this instructions file** (`.github/copilot-instructions.md`) whenever coding conventions or architectural patterns change
+8. **Update this instructions file** (`.github/copilot-instructions.md`) whenever coding conventions or architectural patterns change to keep Copilot aligned with the current codebase standards
