@@ -9,16 +9,16 @@ public class FileAnalyzerTests {
     public async Task AnalyzeFileAsync_CSharpFile_ParsesNamespaces() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("Test.cs", @"
-using System;
-using System.Collections.Generic;
+        containerManager.SetFileContent("Test.cs", """
+            using System;
+            using System.Collections.Generic;
 
-namespace MyApp.Services {
-    public class TestService {
-        public void DoSomething() { }
-    }
-}
-");
+            namespace MyApp.Services {
+                public class TestService {
+                    public void DoSomething() { }
+                }
+            }
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -34,15 +34,15 @@ namespace MyApp.Services {
     public async Task AnalyzeFileAsync_CSharpFile_ParsesImports() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("Test.cs", @"
-using System;
-using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
+        containerManager.SetFileContent("Test.cs", """
+            using System;
+            using System.Collections.Generic;
+            using Microsoft.Extensions.Logging;
 
-namespace MyApp {
-    public class Test { }
-}
-");
+            namespace MyApp {
+                public class Test { }
+            }
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -58,16 +58,16 @@ namespace MyApp {
     public async Task AnalyzeFileAsync_CSharpFile_ParsesClasses() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("Test.cs", @"
-namespace MyApp {
-    public class MyClass { }
-    public interface IMyInterface { }
-    public sealed class SealedClass { }
-    public abstract class AbstractClass { }
-    public record MyRecord { }
-    public struct MyStruct { }
-}
-");
+        containerManager.SetFileContent("Test.cs", """
+            namespace MyApp {
+                public class MyClass { }
+                public interface IMyInterface { }
+                public sealed class SealedClass { }
+                public abstract class AbstractClass { }
+                public record MyRecord { }
+                public struct MyStruct { }
+            }
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -86,16 +86,16 @@ namespace MyApp {
     public async Task AnalyzeFileAsync_CSharpFile_ParsesMethods() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("Test.cs", @"
-public class MyClass {
-    public void PublicMethod() { }
-    private void PrivateMethod() { }
-    protected void ProtectedMethod() { }
-    internal void InternalMethod() { }
-    public async Task AsyncMethod() { }
-    public static void StaticMethod() { }
-}
-");
+        containerManager.SetFileContent("Test.cs", """
+            public class MyClass {
+                public void PublicMethod() { }
+                private void PrivateMethod() { }
+                protected void ProtectedMethod() { }
+                internal void InternalMethod() { }
+                public async Task AsyncMethod() { }
+                public static void StaticMethod() { }
+            }
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -114,12 +114,12 @@ public class MyClass {
     public async Task AnalyzeFileAsync_JavaScriptFile_ParsesImports() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("test.js", @"
-import React from 'react';
-import { useState, useEffect } from 'react';
-const lodash = require('lodash');
-const express = require('express');
-");
+        containerManager.SetFileContent("test.js", """
+            import React from 'react';
+            import { useState, useEffect } from 'react';
+            const lodash = require('lodash');
+            const express = require('express');
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -136,17 +136,17 @@ const express = require('express');
     public async Task AnalyzeFileAsync_JavaScriptFile_ParsesClassesAndFunctions() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("test.js", @"
-class MyClass {
-    constructor() {}
-    myMethod() {}
-}
+        containerManager.SetFileContent("test.js", """
+            class MyClass {
+                constructor() {}
+                myMethod() {}
+            }
 
-function myFunction() {}
+            function myFunction() {}
 
-const myArrowFunc = () => {};
-const asyncFunc = async () => {};
-");
+            const myArrowFunc = () => {};
+            const asyncFunc = async () => {};
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -163,12 +163,12 @@ const asyncFunc = async () => {};
     public async Task AnalyzeFileAsync_PythonFile_ParsesImports() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("test.py", @"
-import os
-import sys
-from datetime import datetime
-from collections import OrderedDict, Counter
-");
+        containerManager.SetFileContent("test.py", """
+            import os
+            import sys
+            from datetime import datetime
+            from collections import OrderedDict, Counter
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -187,20 +187,20 @@ from collections import OrderedDict, Counter
     public async Task AnalyzeFileAsync_PythonFile_ParsesClassesAndFunctions() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("test.py", @"
-class MyClass:
-    def __init__(self):
-        pass
-    
-    def my_method(self):
-        pass
+        containerManager.SetFileContent("test.py", """
+            class MyClass:
+                def __init__(self):
+                    pass
+                
+                def my_method(self):
+                    pass
 
-def my_function():
-    pass
+            def my_function():
+                pass
 
-async def async_function():
-    pass
-");
+            async def async_function():
+                pass
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -218,11 +218,11 @@ async def async_function():
     public async Task ListFilesAsync_ReturnsMatchingFiles() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFindResult("*.cs", @"
-./File1.cs
-./Services/File2.cs
-./Models/File3.cs
-");
+        containerManager.SetFindResult("*.cs", """
+            ./File1.cs
+            ./Services/File2.cs
+            ./Models/File3.cs
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -253,12 +253,12 @@ async def async_function():
     public async Task BuildFileTreeAsync_CreatesCorrectStructure() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFindResult(".", @"
-./README.md
-./src/Program.cs
-./src/Services/MyService.cs
-./tests/MyTests.cs
-");
+        containerManager.SetFindResult(".", """
+            ./README.md
+            ./src/Program.cs
+            ./src/Services/MyService.cs
+            ./tests/MyTests.cs
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -279,11 +279,11 @@ async def async_function():
     public async Task BuildFileTreeAsync_HandlesNestedDirectories() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFindResult(".", @"
-./a/b/c/file1.txt
-./a/b/file2.txt
-./a/file3.txt
-");
+        containerManager.SetFindResult(".", """
+            ./a/b/c/file1.txt
+            ./a/b/file2.txt
+            ./a/file3.txt
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -314,15 +314,15 @@ async def async_function():
     public async Task AnalyzeFileAsync_TypeScriptFile_DetectsCorrectLanguage() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("test.ts", @"
-interface MyInterface {
-    name: string;
-}
+        containerManager.SetFileContent("test.ts", """
+            interface MyInterface {
+                name: string;
+            }
 
-class MyClass implements MyInterface {
-    name: string = '';
-}
-");
+            class MyClass implements MyInterface {
+                name: string = '';
+            }
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
