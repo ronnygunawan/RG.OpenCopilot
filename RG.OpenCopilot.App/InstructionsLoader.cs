@@ -32,7 +32,7 @@ public sealed class InstructionsLoader : IInstructionsLoader {
             var path = pathTemplate.Replace("{issueNumber}", issueNumber.ToString());
 
             try {
-                var contents = await _client.Repository.Content.GetAllContents(owner, repo, path);
+                var contents = await _client.Repository.Content.GetAllContents(owner: owner, name: repo, path: path);
 
                 if (contents != null && contents.Count > 0) {
                     var content = contents[0];

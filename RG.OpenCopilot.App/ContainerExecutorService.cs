@@ -185,19 +185,19 @@ public sealed class ContainerExecutorService : IExecutorService {
                 _logger.LogInformation("Detected .NET project, running build and test");
 
                 var buildResult = await _containerManager.ExecuteInContainerAsync(
-                    containerId,
-                    "dotnet",
-                    new[] { "build" },
-                    cancellationToken);
+                    containerId: containerId,
+                    command: "dotnet",
+                    args: new[] { "build" },
+                    cancellationToken: cancellationToken);
 
                 if (buildResult.Success) {
                     _logger.LogInformation("Build successful");
 
                     var testResult = await _containerManager.ExecuteInContainerAsync(
-                        containerId,
-                        "dotnet",
-                        new[] { "test", "--no-build" },
-                        cancellationToken);
+                        containerId: containerId,
+                        command: "dotnet",
+                        args: new[] { "test", "--no-build" },
+                        cancellationToken: cancellationToken);
 
                     if (testResult.Success) {
                         _logger.LogInformation("Tests passed");
@@ -215,17 +215,17 @@ public sealed class ContainerExecutorService : IExecutorService {
 
                 // Install dependencies if needed
                 await _containerManager.ExecuteInContainerAsync(
-                    containerId,
-                    "npm",
-                    new[] { "install" },
-                    cancellationToken);
+                    containerId: containerId,
+                    command: "npm",
+                    args: new[] { "install" },
+                    cancellationToken: cancellationToken);
 
                 // Try to run tests
                 var testResult = await _containerManager.ExecuteInContainerAsync(
-                    containerId,
-                    "npm",
-                    new[] { "test" },
-                    cancellationToken);
+                    containerId: containerId,
+                    command: "npm",
+                    args: new[] { "test" },
+                    cancellationToken: cancellationToken);
 
                 if (testResult.Success) {
                     _logger.LogInformation("Tests passed");
@@ -236,10 +236,10 @@ public sealed class ContainerExecutorService : IExecutorService {
 
                 // Install dependencies
                 await _containerManager.ExecuteInContainerAsync(
-                    containerId,
-                    "pip",
-                    new[] { "install", "-r", "requirements.txt" },
-                    cancellationToken);
+                    containerId: containerId,
+                    command: "pip",
+                    args: new[] { "install", "-r", "requirements.txt" },
+                    cancellationToken: cancellationToken);
             }
         }
         catch (Exception ex) {
@@ -249,10 +249,10 @@ public sealed class ContainerExecutorService : IExecutorService {
 
     private async Task<bool> FileExistsInContainerAsync(string containerId, string pattern, CancellationToken cancellationToken) {
         var result = await _containerManager.ExecuteInContainerAsync(
-            containerId,
-            "sh",
-            new[] { "-c", $"ls {pattern} 2>/dev/null" },
-            cancellationToken);
+            containerId: containerId,
+            command: "sh",
+            args: new[] { "-c", $"ls {pattern} 2>/dev/null" },
+            cancellationToken: cancellationToken);
 
         return result.Success && !string.IsNullOrWhiteSpace(result.Output);
     }

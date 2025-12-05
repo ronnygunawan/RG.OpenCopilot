@@ -68,11 +68,11 @@ public sealed class ExecutorService : IExecutorService {
             _logger.LogInformation("Cloning repository {Owner}/{Repo} on branch {Branch}",
                 task.RepositoryOwner, task.RepositoryName, branchName);
             localRepoPath = await _repositoryCloner.CloneRepositoryAsync(
-                task.RepositoryOwner,
-                task.RepositoryName,
-                token,
-                branchName,
-                cancellationToken);
+                owner: task.RepositoryOwner,
+                repo: task.RepositoryName,
+                token: token,
+                branch: branchName,
+                cancellationToken: cancellationToken);
 
             _logger.LogInformation("Repository cloned to {Path}", localRepoPath);
 
@@ -156,10 +156,10 @@ public sealed class ExecutorService : IExecutorService {
 
     private async Task<bool> HasUncommittedChanges(string repoPath, CancellationToken cancellationToken) {
         var result = await _commandExecutor.ExecuteCommandAsync(
-            repoPath,
-            "git",
-            new[] { "status", "--porcelain" },
-            cancellationToken);
+            workingDirectory: repoPath,
+            command: "git",
+            args: new[] { "status", "--porcelain" },
+            cancellationToken: cancellationToken);
 
         return !string.IsNullOrWhiteSpace(result.Output);
     }
@@ -172,23 +172,23 @@ public sealed class ExecutorService : IExecutorService {
         CancellationToken cancellationToken) {
         // Configure git user
         await _commandExecutor.ExecuteCommandAsync(
-            repoPath,
-            "git",
-            new[] { "config", "user.name", "RG.OpenCopilot[bot]" },
-            cancellationToken);
+            workingDirectory: repoPath,
+            command: "git",
+            args: new[] { "config", "user.name", "RG.OpenCopilot[bot]" },
+            cancellationToken: cancellationToken);
 
         await _commandExecutor.ExecuteCommandAsync(
-            repoPath,
-            "git",
-            new[] { "config", "user.email", "opencopilot@users.noreply.github.com" },
-            cancellationToken);
+            workingDirectory: repoPath,
+            command: "git",
+            args: new[] { "config", "user.email", "opencopilot@users.noreply.github.com" },
+            cancellationToken: cancellationToken);
 
         // Stage all changes
         await _commandExecutor.ExecuteCommandAsync(
-            repoPath,
-            "git",
-            new[] { "add", "." },
-            cancellationToken);
+            workingDirectory: repoPath,
+            command: "git",
+            args: new[] { "add", "." },
+            cancellationToken: cancellationToken);
 
         // Commit changes
         var commitMessage = completedSteps.Count == 1
@@ -196,26 +196,26 @@ public sealed class ExecutorService : IExecutorService {
             : $"Implement {completedSteps.Count} changes for issue #{task.IssueNumber}";
 
         await _commandExecutor.ExecuteCommandAsync(
-            repoPath,
-            "git",
-            new[] { "commit", "-m", commitMessage },
-            cancellationToken);
+            workingDirectory: repoPath,
+            command: "git",
+            args: new[] { "commit", "-m", commitMessage },
+            cancellationToken: cancellationToken);
 
         // Push changes
         var branchName = $"open-copilot/issue-{task.IssueNumber}";
         var remoteUrl = $"https://x-access-token:{token}@github.com/{task.RepositoryOwner}/{task.RepositoryName}.git";
 
         await _commandExecutor.ExecuteCommandAsync(
-            repoPath,
-            "git",
-            new[] { "remote", "set-url", "origin", remoteUrl },
-            cancellationToken);
+            workingDirectory: repoPath,
+            command: "git",
+            args: new[] { "remote", "set-url", "origin", remoteUrl },
+            cancellationToken: cancellationToken);
 
         await _commandExecutor.ExecuteCommandAsync(
-            repoPath,
-            "git",
-            new[] { "push", "origin", branchName },
-            cancellationToken);
+            workingDirectory: repoPath,
+            command: "git",
+            args: new[] { "push", "origin", branchName },
+            cancellationToken: cancellationToken);
     }
 
     private static string FormatProgressComment(List<string> completedSteps, List<string> failedSteps) {

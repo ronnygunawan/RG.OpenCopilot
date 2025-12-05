@@ -42,7 +42,7 @@ public sealed class GitHubAppTokenProvider : IGitHubAppTokenProvider {
             var jwt = GenerateJwtToken(_appId, _privateKey);
 
             // Authenticate as GitHub App
-            _client.Credentials = new Credentials(jwt, AuthenticationType.Bearer);
+            _client.Credentials = new Credentials(token: jwt, authenticationType: AuthenticationType.Bearer);
 
             // Get installation token
             var response = await _client.GitHubApps.CreateInstallationToken(installationId);
@@ -65,8 +65,8 @@ public sealed class GitHubAppTokenProvider : IGitHubAppTokenProvider {
         rsa.ImportFromPem(privateKey);
 
         var signingCredentials = new SigningCredentials(
-            new RsaSecurityKey(rsa),
-            SecurityAlgorithms.RsaSha256);
+            key: new RsaSecurityKey(rsa),
+            algorithm: SecurityAlgorithms.RsaSha256);
 
         var now = DateTimeOffset.UtcNow;
         var tokenDescriptor = new SecurityTokenDescriptor {

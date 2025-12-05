@@ -34,9 +34,9 @@ public sealed class DockerContainerManager : IContainerManager {
         // Use a base image with git and common build tools
         // We'll use Ubuntu with git, dotnet, node, python pre-installed
         var result = await _commandExecutor.ExecuteCommandAsync(
-            Directory.GetCurrentDirectory(),
-            "docker",
-            new[] {
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] {
                 "run",
                 "-d",
                 "--name", containerName,
@@ -44,7 +44,7 @@ public sealed class DockerContainerManager : IContainerManager {
                 "mcr.microsoft.com/dotnet/sdk:10.0",
                 "sleep", "infinity"
             },
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         if (!result.Success) {
             throw new InvalidOperationException($"Failed to create container: {result.Error}");
@@ -54,16 +54,16 @@ public sealed class DockerContainerManager : IContainerManager {
         _logger.LogInformation("Created container {ContainerId}", containerId);
 
         // Install git in the container
-        await ExecuteInContainerAsync(containerId, "apt-get", new[] { "update" }, cancellationToken);
-        await ExecuteInContainerAsync(containerId, "apt-get", new[] { "install", "-y", "git" }, cancellationToken);
+        await ExecuteInContainerAsync(containerId: containerId, command: "apt-get", args: new[] { "update" }, cancellationToken: cancellationToken);
+        await ExecuteInContainerAsync(containerId: containerId, command: "apt-get", args: new[] { "install", "-y", "git" }, cancellationToken: cancellationToken);
 
         // Clone the repository inside the container
         var repoUrl = $"https://x-access-token:{token}@github.com/{owner}/{repo}.git";
         var cloneResult = await _commandExecutor.ExecuteCommandAsync(
-            Directory.GetCurrentDirectory(),
-            "docker",
-            new[] { "exec", containerId, "git", "clone", "--branch", branch, "--single-branch", repoUrl, WorkDir },
-            cancellationToken);
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] { "exec", containerId, "git", "clone", "--branch", branch, "--single-branch", repoUrl, WorkDir },
+            cancellationToken: cancellationToken);
 
         if (!cloneResult.Success) {
             await CleanupContainerAsync(containerId, cancellationToken);
@@ -79,10 +79,10 @@ public sealed class DockerContainerManager : IContainerManager {
         dockerArgs.AddRange(args);
 
         var result = await _commandExecutor.ExecuteCommandAsync(
-            Directory.GetCurrentDirectory(),
-            "docker",
-            dockerArgs.ToArray(),
-            cancellationToken);
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: dockerArgs.ToArray(),
+            cancellationToken: cancellationToken);
 
         _logger.LogDebug("Executed {Command} in container {ContainerId}: exit code {ExitCode}",
             command, containerId, result.ExitCode);
@@ -94,10 +94,10 @@ public sealed class DockerContainerManager : IContainerManager {
         var fullPath = Path.Combine(WorkDir, filePath.TrimStart('/'));
 
         var result = await _commandExecutor.ExecuteCommandAsync(
-            Directory.GetCurrentDirectory(),
-            "docker",
-            new[] { "exec", containerId, "cat", fullPath },
-            cancellationToken);
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] { "exec", containerId, "cat", fullPath },
+            cancellationToken: cancellationToken);
 
         if (!result.Success) {
             throw new InvalidOperationException($"Failed to read file {filePath}: {result.Error}");
@@ -113,16 +113,16 @@ public sealed class DockerContainerManager : IContainerManager {
         var escapedContent = content.Replace("'", "'\\''");
 
         var result = await _commandExecutor.ExecuteCommandAsync(
-            Directory.GetCurrentDirectory(),
-            "docker",
-            new[] {
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] {
                 "exec",
                 containerId,
                 "sh",
                 "-c",
                 $"printf '%s' '{escapedContent}' > {fullPath}"
             },
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         if (!result.Success) {
             throw new InvalidOperationException($"Failed to write file {filePath}: {result.Error}");
@@ -140,31 +140,31 @@ public sealed class DockerContainerManager : IContainerManager {
         string token,
         CancellationToken cancellationToken = default) {
         // Configure git user
-        await ExecuteInContainerAsync(containerId, "git", new[] { "config", "user.name", "RG.OpenCopilot[bot]" }, cancellationToken);
-        await ExecuteInContainerAsync(containerId, "git", new[] { "config", "user.email", "opencopilot@users.noreply.github.com" }, cancellationToken);
+        await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "config", "user.name", "RG.OpenCopilot[bot]" }, cancellationToken: cancellationToken);
+        await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "config", "user.email", "opencopilot@users.noreply.github.com" }, cancellationToken: cancellationToken);
 
         // Stage all changes
-        await ExecuteInContainerAsync(containerId, "git", new[] { "add", "." }, cancellationToken);
+        await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "add", "." }, cancellationToken: cancellationToken);
 
         // Check if there are changes to commit
-        var statusResult = await ExecuteInContainerAsync(containerId, "git", new[] { "status", "--porcelain" }, cancellationToken);
+        var statusResult = await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "status", "--porcelain" }, cancellationToken: cancellationToken);
         if (string.IsNullOrWhiteSpace(statusResult.Output)) {
             _logger.LogInformation("No changes to commit in container {ContainerId}", containerId);
             return;
         }
 
         // Commit
-        var commitResult = await ExecuteInContainerAsync(containerId, "git", new[] { "commit", "-m", commitMessage }, cancellationToken);
+        var commitResult = await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "commit", "-m", commitMessage }, cancellationToken: cancellationToken);
         if (!commitResult.Success) {
             throw new InvalidOperationException($"Failed to commit: {commitResult.Error}");
         }
 
         // Set remote URL with token
         var remoteUrl = $"https://x-access-token:{token}@github.com/{owner}/{repo}.git";
-        await ExecuteInContainerAsync(containerId, "git", new[] { "remote", "set-url", "origin", remoteUrl }, cancellationToken);
+        await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "remote", "set-url", "origin", remoteUrl }, cancellationToken: cancellationToken);
 
         // Push
-        var pushResult = await ExecuteInContainerAsync(containerId, "git", new[] { "push", "origin", branch }, cancellationToken);
+        var pushResult = await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "push", "origin", branch }, cancellationToken: cancellationToken);
         if (!pushResult.Success) {
             throw new InvalidOperationException($"Failed to push: {pushResult.Error}");
         }
@@ -177,17 +177,17 @@ public sealed class DockerContainerManager : IContainerManager {
 
         // Stop the container
         await _commandExecutor.ExecuteCommandAsync(
-            Directory.GetCurrentDirectory(),
-            "docker",
-            new[] { "stop", containerId },
-            cancellationToken);
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] { "stop", containerId },
+            cancellationToken: cancellationToken);
 
         // Remove the container
         await _commandExecutor.ExecuteCommandAsync(
-            Directory.GetCurrentDirectory(),
-            "docker",
-            new[] { "rm", containerId },
-            cancellationToken);
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] { "rm", containerId },
+            cancellationToken: cancellationToken);
 
         _logger.LogInformation("Cleaned up container {ContainerId}", containerId);
     }
