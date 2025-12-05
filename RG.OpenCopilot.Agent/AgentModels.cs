@@ -48,3 +48,42 @@ public interface IPlannerService {
 public interface IExecutorService {
     Task ExecutePlanAsync(AgentTask task, CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Represents the structure of a file including its classes, functions, and other elements
+/// </summary>
+public sealed class FileStructure {
+    public string FilePath { get; init; } = "";
+    public string Language { get; init; } = "";
+    public List<string> Imports { get; init; } = [];
+    public List<string> Classes { get; init; } = [];
+    public List<string> Functions { get; init; } = [];
+    public List<string> Namespaces { get; init; } = [];
+}
+
+/// <summary>
+/// Represents a node in the file tree
+/// </summary>
+public sealed class FileTreeNode {
+    public string Name { get; init; } = "";
+    public string Path { get; init; } = "";
+    public bool IsDirectory { get; init; }
+    public List<FileTreeNode> Children { get; init; } = [];
+}
+
+/// <summary>
+/// Represents the file tree structure of a repository
+/// </summary>
+public sealed class FileTree {
+    public FileTreeNode Root { get; init; } = new();
+    public List<string> AllFiles { get; init; } = [];
+}
+
+/// <summary>
+/// Service for analyzing files in containers
+/// </summary>
+public interface IFileAnalyzer {
+    Task<FileStructure> AnalyzeFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default);
+    Task<List<string>> ListFilesAsync(string containerId, string pattern, CancellationToken cancellationToken = default);
+    Task<FileTree> BuildFileTreeAsync(string containerId, string rootPath = ".", CancellationToken cancellationToken = default);
+}
