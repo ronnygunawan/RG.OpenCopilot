@@ -53,6 +53,23 @@ dotnet run --project RG.OpenCopilot.App
 - **Use named arguments** when calling methods if the meaning of the argument is not immediately obvious
   - Example: `SaveFile(fileName: path, overwrite: true)` or `CreateTask(timeout: 30, retryCount: 3)`
   - Instead of: `SaveFile(path, true)` or `CreateTask(30, 3)`
+- **Use raw string literals (triple quotes `"""`)** instead of verbatim strings (`@""`) for multi-line strings
+  - Content should be indented one level more than the opening `"""`
+  - Closing `"""` should have the same indentation as the content
+  - Example:
+    ```csharp
+    var content = """
+        Line 1
+        Line 2
+        """;
+    ```
+  - NOT:
+    ```csharp
+    var content = @"
+    Line 1
+    Line 2
+    ";
+    ```
 
 ### Naming Conventions
 - Interfaces: Prefix with `I` (e.g., `IPlannerService`, `IExecutorService`)

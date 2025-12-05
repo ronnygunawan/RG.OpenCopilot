@@ -12,51 +12,51 @@ public class FileAnalyzerIntegrationTests {
     public async Task AnalyzeFileAsync_ComplexCSharpClass_ExtractsAllElements() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("ComplexService.cs", @"
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
+        containerManager.SetFileContent("ComplexService.cs", """
+            using System;
+            using System.Collections.Generic;
+            using System.Threading.Tasks;
+            using Microsoft.Extensions.Logging;
 
-namespace MyApp.Services {
-    /// <summary>
-    /// A complex service demonstrating various C# features
-    /// </summary>
-    public sealed class ComplexService : IComplexService {
-        private readonly ILogger<ComplexService> _logger;
-        private readonly IDependency _dependency;
+            namespace MyApp.Services {
+                /// <summary>
+                /// A complex service demonstrating various C# features
+                /// </summary>
+                public sealed class ComplexService : IComplexService {
+                    private readonly ILogger<ComplexService> _logger;
+                    private readonly IDependency _dependency;
 
-        public ComplexService(ILogger<ComplexService> logger, IDependency dependency) {
-            _logger = logger;
-            _dependency = dependency;
-        }
+                    public ComplexService(ILogger<ComplexService> logger, IDependency dependency) {
+                        _logger = logger;
+                        _dependency = dependency;
+                    }
 
-        public async Task<Result> ProcessAsync(Request request) {
-            _logger.LogInformation(""Processing request"");
-            return await Task.FromResult(new Result());
-        }
+                    public async Task<Result> ProcessAsync(Request request) {
+                        _logger.LogInformation("Processing request");
+                        return await Task.FromResult(new Result());
+                    }
 
-        public void SyncMethod() {
-            _logger.LogDebug(""Synchronous method called"");
-        }
+                    public void SyncMethod() {
+                        _logger.LogDebug("Synchronous method called");
+                    }
 
-        protected internal virtual void ProtectedMethod() { }
+                    protected internal virtual void ProtectedMethod() { }
 
-        private static string PrivateStaticMethod() => """";
-    }
+                    private static string PrivateStaticMethod() => "";
+                }
 
-    public interface IComplexService {
-        Task<Result> ProcessAsync(Request request);
-        void SyncMethod();
-    }
+                public interface IComplexService {
+                    Task<Result> ProcessAsync(Request request);
+                    void SyncMethod();
+                }
 
-    public record Request {
-        public string Name { get; init; } = """";
-    }
+                public record Request {
+                    public string Name { get; init; } = "";
+                }
 
-    public record Result;
-}
-");
+                public record Result;
+            }
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -85,48 +85,48 @@ namespace MyApp.Services {
     public async Task AnalyzeFileAsync_ReactComponent_ParsesCorrectly() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("UserProfile.tsx", @"
-import React, { useState, useEffect } from 'react';
-import { User } from '../types';
-import { fetchUser } from '../api';
-import './UserProfile.css';
+        containerManager.SetFileContent("UserProfile.tsx", """
+            import React, { useState, useEffect } from 'react';
+            import { User } from '../types';
+            import { fetchUser } from '../api';
+            import './UserProfile.css';
 
-interface UserProfileProps {
-    userId: string;
-}
+            interface UserProfileProps {
+                userId: string;
+            }
 
-export const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+            export const UserProfile: React.FC<UserProfileProps> = ({ userId }) => {
+                const [user, setUser] = useState<User | null>(null);
+                const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadUser();
-    }, [userId]);
+                useEffect(() => {
+                    loadUser();
+                }, [userId]);
 
-    const loadUser = async () => {
-        setLoading(true);
-        const userData = await fetchUser(userId);
-        setUser(userData);
-        setLoading(false);
-    };
+                const loadUser = async () => {
+                    setLoading(true);
+                    const userData = await fetchUser(userId);
+                    setUser(userData);
+                    setLoading(false);
+                };
 
-    const handleRefresh = () => {
-        loadUser();
-    };
+                const handleRefresh = () => {
+                    loadUser();
+                };
 
-    if (loading) return <div>Loading...</div>;
-    if (!user) return <div>User not found</div>;
+                if (loading) return <div>Loading...</div>;
+                if (!user) return <div>User not found</div>;
 
-    return (
-        <div className=""user-profile"">
-            <h1>{user.name}</h1>
-            <button onClick={handleRefresh}>Refresh</button>
-        </div>
-    );
-};
+                return (
+                    <div className="user-profile">
+                        <h1>{user.name}</h1>
+                        <button onClick={handleRefresh}>Refresh</button>
+                    </div>
+                );
+            };
 
-export default UserProfile;
-");
+            export default UserProfile;
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -145,43 +145,43 @@ export default UserProfile;
     public async Task AnalyzeFileAsync_PythonDjangoModel_ParsesCorrectly() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFileContent("models.py", @"
-from django.db import models
-from django.contrib.auth.models import User
-from datetime import datetime
+        containerManager.SetFileContent("models.py", """
+            from django.db import models
+            from django.contrib.auth.models import User
+            from datetime import datetime
 
-class BlogPost(models.Model):
-    title = models.CharField(max_length=200)
-    content = models.TextField()
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    published = models.BooleanField(default=False)
+            class BlogPost(models.Model):
+                title = models.CharField(max_length=200)
+                content = models.TextField()
+                author = models.ForeignKey(User, on_delete=models.CASCADE)
+                created_at = models.DateTimeField(auto_now_add=True)
+                updated_at = models.DateTimeField(auto_now=True)
+                published = models.BooleanField(default=False)
 
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Blog Post'
-        verbose_name_plural = 'Blog Posts'
+                class Meta:
+                    ordering = ['-created_at']
+                    verbose_name = 'Blog Post'
+                    verbose_name_plural = 'Blog Posts'
 
-    def __str__(self):
-        return self.title
+                def __str__(self):
+                    return self.title
 
-    def publish(self):
-        self.published = True
-        self.save()
+                def publish(self):
+                    self.published = True
+                    self.save()
 
-    async def async_publish(self):
-        await self.async_save()
+                async def async_publish(self):
+                    await self.async_save()
 
-class Comment(models.Model):
-    post = models.ForeignKey(BlogPost, on_delete=models.CASCADE, related_name='comments')
-    author = models.CharField(max_length=100)
-    content = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+            class Comment(models.Model):
+                post = models.ForeignKey(BlogPost, on_delete=models.CASCADE, related_name='comments')
+                author = models.CharField(max_length=100)
+                content = models.TextField()
+                created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f'Comment by {self.author} on {self.post.title}'
-");
+                def __str__(self):
+                    return f'Comment by {self.author} on {self.post.title}'
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -206,20 +206,20 @@ class Comment(models.Model):
     public async Task BuildFileTreeAsync_RealProjectStructure_BuildsCorrectTree() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFindResult(".", @"
-./README.md
-./LICENSE
-./.gitignore
-./src/Program.cs
-./src/Services/UserService.cs
-./src/Services/EmailService.cs
-./src/Models/User.cs
-./src/Models/Email.cs
-./tests/UserServiceTests.cs
-./tests/EmailServiceTests.cs
-./docs/architecture.md
-./docs/api.md
-");
+        containerManager.SetFindResult(".", """
+            ./README.md
+            ./LICENSE
+            ./.gitignore
+            ./src/Program.cs
+            ./src/Services/UserService.cs
+            ./src/Services/EmailService.cs
+            ./src/Models/User.cs
+            ./src/Models/Email.cs
+            ./tests/UserServiceTests.cs
+            ./tests/EmailServiceTests.cs
+            ./docs/architecture.md
+            ./docs/api.md
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -242,15 +242,15 @@ class Comment(models.Model):
     public async Task ListFilesAsync_WithWildcardPatterns_FindsAllMatches() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFindResult("*.cs", @"
-./Program.cs
-./Startup.cs
-./Services/UserService.cs
-./Services/EmailService.cs
-./Models/User.cs
-./Controllers/UserController.cs
-./Tests/UserServiceTests.cs
-");
+        containerManager.SetFindResult("*.cs", """
+            ./Program.cs
+            ./Startup.cs
+            ./Services/UserService.cs
+            ./Services/EmailService.cs
+            ./Models/User.cs
+            ./Controllers/UserController.cs
+            ./Tests/UserServiceTests.cs
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
@@ -268,11 +268,11 @@ class Comment(models.Model):
     public async Task ListFilesAsync_TestFilesPattern_FindsOnlyTests() {
         // Arrange
         var containerManager = new TestContainerManagerForFileAnalyzer();
-        containerManager.SetFindResult("*Tests.cs", @"
-./Tests/UserServiceTests.cs
-./Tests/EmailServiceTests.cs
-./Tests/Integration/ApiTests.cs
-");
+        containerManager.SetFindResult("*Tests.cs", """
+            ./Tests/UserServiceTests.cs
+            ./Tests/EmailServiceTests.cs
+            ./Tests/Integration/ApiTests.cs
+            """);
         var analyzer = new FileAnalyzer(containerManager, new TestLogger<FileAnalyzer>());
 
         // Act
