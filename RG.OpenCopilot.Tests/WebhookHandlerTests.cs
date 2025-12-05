@@ -144,6 +144,16 @@ public class WebhookHandlerTests
             PrUpdated = true;
             return Task.CompletedTask;
         }
+
+        public Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<int?>(1);
+        }
+
+        public Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private class TestRepositoryAnalyzer : IRepositoryAnalyzer

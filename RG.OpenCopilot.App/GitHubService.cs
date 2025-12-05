@@ -8,6 +8,8 @@ public interface IGitHubService
     Task<string> CreateWorkingBranchAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default);
     Task<int> CreateWipPullRequestAsync(string owner, string repo, string branchName, int issueNumber, string issueTitle, string issueBody, CancellationToken cancellationToken = default);
     Task UpdatePullRequestDescriptionAsync(string owner, string repo, int prNumber, string title, string body, CancellationToken cancellationToken = default);
+    Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default);
+    Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default);
 }
 
 public sealed class GitHubService : IGitHubService
@@ -85,5 +87,30 @@ _The plan and progress will be updated here as the agent works on this issue._"
 
         await _client.PullRequest.Update(owner, repo, prNumber, update);
         _logger.LogInformation("Updated PR #{PrNumber} with new description", prNumber);
+    }
+
+    public async Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default)
+    {
+        var pullRequests = await _client.PullRequest.GetAllForRepository(owner, repo, new PullRequestRequest
+        {
+            State = ItemStateFilter.Open,
+            Head = $"{owner}:{branchName}"
+        });
+
+        var pr = pullRequests.FirstOrDefault();
+        if (pr != null)
+        {
+            _logger.LogInformation("Found PR #{PrNumber} for branch {BranchName}", pr.Number, branchName);
+            return pr.Number;
+        }
+
+        _logger.LogWarning("No open PR found for branch {BranchName}", branchName);
+        return null;
+    }
+
+    public async Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default)
+    {
+        await _client.Issue.Comment.Create(owner, repo, prNumber, comment);
+        _logger.LogInformation("Posted comment to PR #{PrNumber}", prNumber);
     }
 }

@@ -59,7 +59,10 @@ else
 }
 
 // Configure other services
-builder.Services.AddSingleton<IExecutorService, StubExecutorService>();
+builder.Services.AddSingleton<IGitHubAppTokenProvider, GitHubAppTokenProvider>();
+builder.Services.AddSingleton<IContainerManager, DockerContainerManager>();
+builder.Services.AddSingleton<ICommandExecutor, ProcessCommandExecutor>();
+builder.Services.AddSingleton<IExecutorService, ContainerExecutorService>();
 builder.Services.AddSingleton<IAgentTaskStore, InMemoryAgentTaskStore>();
 builder.Services.AddSingleton<IWebhookHandler, WebhookHandler>();
 builder.Services.AddSingleton<IWebhookValidator, WebhookValidator>();
@@ -142,14 +145,4 @@ app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handl
 });
 
 app.Run();
-
-// Temporary stub executor service (will be implemented in later phases)
-file sealed class StubExecutorService : IExecutorService
-{
-    public Task ExecutePlanAsync(AgentTask task, CancellationToken cancellationToken = default)
-    {
-        task.Status = AgentTaskStatus.Completed;
-        return Task.CompletedTask;
-    }
-}
 
