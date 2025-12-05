@@ -100,7 +100,7 @@ public class RepositoryAnalyzerTests {
         var summary = GenerateSummaryPublic(analysis);
 
         // Assert
-        summary.ShouldBe(string.Empty);
+        summary.ShouldBe("");
     }
 
     [Fact]

@@ -7,11 +7,11 @@ public interface IRepositoryAnalyzer {
 }
 
 public sealed class RepositoryAnalysis {
-    public Dictionary<string, long> Languages { get; set; } = new();
-    public List<string> KeyFiles { get; set; } = new();
+    public Dictionary<string, long> Languages { get; set; } = [];
+    public List<string> KeyFiles { get; set; } = [];
     public string? DetectedTestFramework { get; set; }
     public string? DetectedBuildTool { get; set; }
-    public string Summary { get; set; } = string.Empty;
+    public string Summary { get; set; } = "";
 }
 
 public sealed class RepositoryAnalyzer : IRepositoryAnalyzer {

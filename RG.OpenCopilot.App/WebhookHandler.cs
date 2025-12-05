@@ -59,7 +59,7 @@ public sealed class WebhookHandler : IWebhookHandler {
             var task = new AgentTask {
                 Id = taskId,
                 InstallationId = payload.Installation.Id,
-                RepositoryOwner = payload.Repository.Owner?.Login ?? string.Empty,
+                RepositoryOwner = payload.Repository.Owner?.Login ?? "",
                 RepositoryName = payload.Repository.Name,
                 IssueNumber = payload.Issue.Number,
                 Status = AgentTaskStatus.PendingPlanning
@@ -82,7 +82,7 @@ public sealed class WebhookHandler : IWebhookHandler {
                 branchName,
                 task.IssueNumber,
                 payload.Issue.Title,
-                payload.Issue.Body ?? string.Empty,
+                payload.Issue.Body ?? "",
                 cancellationToken);
 
             _logger.LogInformation("Created WIP PR #{PrNumber} for task {TaskId}", prNumber, taskId);
@@ -115,7 +115,7 @@ public sealed class WebhookHandler : IWebhookHandler {
             // Generate plan with all available context
             var context = new AgentTaskContext {
                 IssueTitle = payload.Issue.Title,
-                IssueBody = payload.Issue.Body ?? string.Empty,
+                IssueBody = payload.Issue.Body ?? "",
                 RepositorySummary = repoAnalysis?.Summary,
                 InstructionsMarkdown = instructions
             };
@@ -128,7 +128,7 @@ public sealed class WebhookHandler : IWebhookHandler {
             _logger.LogInformation("Generated plan for task {TaskId}", taskId);
 
             // Update PR description with the plan
-            var updatedPrBody = FormatPrBodyWithPlan(payload.Issue.Number, payload.Issue.Title, payload.Issue.Body ?? string.Empty, plan);
+            var updatedPrBody = FormatPrBodyWithPlan(payload.Issue.Number, payload.Issue.Title, payload.Issue.Body ?? "", plan);
             await _gitHubService.UpdatePullRequestDescriptionAsync(
                 task.RepositoryOwner,
                 task.RepositoryName,

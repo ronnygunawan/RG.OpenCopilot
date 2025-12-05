@@ -329,15 +329,15 @@ public class ExecutorServiceTests {
             if (command == "git" && args.Length > 0 && args[0] == "status") {
                 return Task.FromResult(new CommandResult {
                     ExitCode = 0,
-                    Output = string.Empty,
-                    Error = string.Empty
+                    Output = "",
+                    Error = ""
                 });
             }
 
             return Task.FromResult(new CommandResult {
                 ExitCode = 0,
                 Output = "success",
-                Error = string.Empty
+                Error = ""
             });
         }
     }

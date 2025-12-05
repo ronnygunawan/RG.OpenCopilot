@@ -1,7 +1,7 @@
 namespace RG.OpenCopilot.App;
 
 public sealed class GitHubIssueEventPayload {
-    public string Action { get; set; } = string.Empty;
+    public string Action { get; set; } = "";
     public GitHubIssue? Issue { get; set; }
     public GitHubRepository? Repository { get; set; }
     public GitHubInstallation? Installation { get; set; }
@@ -10,21 +10,21 @@ public sealed class GitHubIssueEventPayload {
 
 public sealed class GitHubIssue {
     public int Number { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public string Body { get; set; } = string.Empty;
-    public string State { get; set; } = string.Empty;
-    public List<GitHubLabel> Labels { get; set; } = new();
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    public string State { get; set; } = "";
+    public List<GitHubLabel> Labels { get; set; } = [];
 }
 
 public sealed class GitHubRepository {
     public long Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Full_Name { get; set; } = string.Empty;
+    public string Name { get; set; } = "";
+    public string Full_Name { get; set; } = "";
     public GitHubOwner? Owner { get; set; }
 }
 
 public sealed class GitHubOwner {
-    public string Login { get; set; } = string.Empty;
+    public string Login { get; set; } = "";
 }
 
 public sealed class GitHubInstallation {
@@ -32,5 +32,5 @@ public sealed class GitHubInstallation {
 }
 
 public sealed class GitHubLabel {
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = "";
 }

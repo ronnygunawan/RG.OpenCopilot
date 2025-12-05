@@ -8,7 +8,7 @@ public class AgentPlanTests {
     public void AgentPlan_Defaults_AreEmpty() {
         var plan = new AgentPlan();
 
-        plan.ProblemSummary.ShouldBe(string.Empty);
+        plan.ProblemSummary.ShouldBe("");
         plan.Constraints.ShouldBeEmpty();
         plan.Steps.ShouldBeEmpty();
         plan.Checklist.ShouldBeEmpty();

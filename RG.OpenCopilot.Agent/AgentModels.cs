@@ -1,17 +1,17 @@
 namespace RG.OpenCopilot.Agent;
 
 public sealed class AgentPlan {
-    public string ProblemSummary { get; init; } = string.Empty;
-    public List<string> Constraints { get; init; } = new();
-    public List<PlanStep> Steps { get; init; } = new();
-    public List<string> Checklist { get; init; } = new();
-    public List<string> FileTargets { get; init; } = new();
+    public string ProblemSummary { get; init; } = "";
+    public List<string> Constraints { get; init; } = [];
+    public List<PlanStep> Steps { get; init; } = [];
+    public List<string> Checklist { get; init; } = [];
+    public List<string> FileTargets { get; init; } = [];
 }
 
 public sealed class PlanStep {
-    public string Id { get; init; } = string.Empty;
-    public string Title { get; init; } = string.Empty;
-    public string Details { get; init; } = string.Empty;
+    public string Id { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string Details { get; init; } = "";
     public bool Done { get; set; }
 }
 
@@ -25,18 +25,18 @@ public enum AgentTaskStatus {
 }
 
 public sealed class AgentTask {
-    public string Id { get; init; } = string.Empty;
+    public string Id { get; init; } = "";
     public long InstallationId { get; init; }
-    public string RepositoryOwner { get; init; } = string.Empty;
-    public string RepositoryName { get; init; } = string.Empty;
+    public string RepositoryOwner { get; init; } = "";
+    public string RepositoryName { get; init; } = "";
     public int IssueNumber { get; init; }
     public AgentPlan? Plan { get; set; }
     public AgentTaskStatus Status { get; set; } = AgentTaskStatus.PendingPlanning;
 }
 
 public sealed class AgentTaskContext {
-    public string IssueTitle { get; init; } = string.Empty;
-    public string IssueBody { get; init; } = string.Empty;
+    public string IssueTitle { get; init; } = "";
+    public string IssueBody { get; init; } = "";
     public string? InstructionsMarkdown { get; init; }
     public string? RepositorySummary { get; init; }
 }

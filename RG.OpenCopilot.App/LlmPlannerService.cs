@@ -149,15 +149,15 @@ public sealed class LlmPlannerService : IPlannerService {
             // Convert DTO to domain model
             return new AgentPlan {
                 ProblemSummary = planDto.ProblemSummary ?? "Task implementation",
-                Constraints = planDto.Constraints ?? new List<string>(),
+                Constraints = planDto.Constraints ?? [],
                 Steps = planDto.Steps?.Select((s, index) => new PlanStep {
                     Id = s.Id ?? $"step-{index + 1}",
                     Title = s.Title ?? "Implementation step",
                     Details = s.Details ?? "",
                     Done = s.Done
-                }).ToList() ?? new List<PlanStep>(),
-                Checklist = planDto.Checklist ?? new List<string>(),
-                FileTargets = planDto.FileTargets ?? new List<string>()
+                }).ToList() ?? [],
+                Checklist = planDto.Checklist ?? [],
+                FileTargets = planDto.FileTargets ?? []
             };
         }
         catch (JsonException ex) {

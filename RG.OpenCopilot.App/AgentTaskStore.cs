@@ -10,7 +10,7 @@ public interface IAgentTaskStore {
 }
 
 public sealed class InMemoryAgentTaskStore : IAgentTaskStore {
-    private readonly ConcurrentDictionary<string, AgentTask> _tasks = new();
+    private readonly ConcurrentDictionary<string, AgentTask> _tasks = [];
 
     public Task<AgentTask?> GetTaskAsync(string id, CancellationToken cancellationToken = default) {
         _tasks.TryGetValue(id, out var task);

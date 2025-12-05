@@ -213,7 +213,7 @@ public class ContainerExecutorServiceTests {
             return Task.FromResult(new CommandResult {
                 ExitCode = 0,
                 Output = "success",
-                Error = string.Empty
+                Error = ""
             });
         }
 
