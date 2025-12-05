@@ -60,9 +60,9 @@ else
 
 // Configure other services
 builder.Services.AddSingleton<IGitHubAppTokenProvider, GitHubAppTokenProvider>();
-builder.Services.AddSingleton<IRepositoryCloner, GitCommandRepositoryCloner>();
+builder.Services.AddSingleton<IContainerManager, DockerContainerManager>();
 builder.Services.AddSingleton<ICommandExecutor, ProcessCommandExecutor>();
-builder.Services.AddSingleton<IExecutorService, ExecutorService>();
+builder.Services.AddSingleton<IExecutorService, ContainerExecutorService>();
 builder.Services.AddSingleton<IAgentTaskStore, InMemoryAgentTaskStore>();
 builder.Services.AddSingleton<IWebhookHandler, WebhookHandler>();
 builder.Services.AddSingleton<IWebhookValidator, WebhookValidator>();
