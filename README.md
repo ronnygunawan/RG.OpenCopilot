@@ -27,6 +27,24 @@ See **[POC-SETUP.md](POC-SETUP.md)** for setup and testing instructions.
 
 All projects target `.NET 10.0` with nullable reference types and implicit usings enabled.
 
+## Features
+
+### Container-Based Executor
+- **Docker Integration**: Executes code changes in isolated Docker containers
+- **Repository Cloning**: Automatic repository cloning inside containers
+- **File Operations**: Read and write files in containers using Docker exec
+- **Build & Test**: Automatic detection and execution of .NET, Node.js, and Python projects
+- **Git Integration**: Commits and pushes changes from containers
+
+### File Analysis
+- **FileAnalyzer Service**: Analyzes repository files to extract structure and metadata
+- **Multi-Language Support**: Parses C#, JavaScript/TypeScript, and Python files
+- **Structure Extraction**: Identifies classes, functions, imports, and namespaces
+- **File Tree Building**: Creates hierarchical file tree representation
+- **Pattern Matching**: Supports file discovery with wildcard patterns
+
+The FileAnalyzer enables the executor to understand repository code structure before making modifications, supporting intelligent code changes.
+
 ## High-Level Architecture
 
 1. **GitHub App (on GitHub Enterprise)**
