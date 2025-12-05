@@ -200,10 +200,6 @@ For development without a GitHub App:
 2. **Short-lived Containers**: Containers are automatically removed after execution
 3. **Installation Tokens**: Automatically expire after 1 hour
 4. **No Host Access**: Containers run with limited privileges and no access to host filesystem
-1. **Container Isolation**: Each task runs in a fresh, isolated Docker container
-2. **Short-lived Containers**: Containers are automatically removed after execution
-3. **Installation Tokens**: Automatically expire after 1 hour
-4. **No Host Access**: Containers run with limited privileges and no access to host filesystem
 5. **Token Handling**: Tokens are never logged or exposed in error messages
 
 ## Testing
