@@ -156,14 +156,17 @@ public sealed class FileEditor : IFileEditor {
             return;
         }
 
+        // Normalize path separators to forward slashes for Docker containers (Linux-based)
+        var normalizedDirectory = directory.Replace('\\', '/');
+
         var result = await _containerManager.ExecuteInContainerAsync(
             containerId: containerId,
             command: "mkdir",
-            args: new[] { "-p", directory },
+            args: new[] { "-p", normalizedDirectory },
             cancellationToken: cancellationToken);
 
         if (!result.Success) {
-            throw new InvalidOperationException($"Failed to create directory {directory}: {result.Error}");
+            throw new InvalidOperationException($"Failed to create directory {normalizedDirectory}: {result.Error}");
         }
     }
 
