@@ -72,6 +72,11 @@ public partial class Program {
         builder.Services.AddSingleton<IFileAnalyzer, FileAnalyzer>();
         builder.Services.AddSingleton<IFileEditor, FileEditor>();
 
+        // Register StepAnalyzer only if LLM is configured
+        if (!string.IsNullOrEmpty(apiKey)) {
+            builder.Services.AddSingleton<IStepAnalyzer, StepAnalyzer>();
+        }
+
         // Configure GitHub client
         builder.Services.AddSingleton<IGitHubClient>(sp => {
             var client = new GitHubClient(new ProductHeaderValue("RG-OpenCopilot"));
