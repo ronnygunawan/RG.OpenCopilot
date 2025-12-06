@@ -6,7 +6,7 @@ namespace RG.OpenCopilot.App.Docker;
 /// <summary>
 /// Manages Docker containers for executing agent tasks in isolated environments
 /// </summary>
-public interface IContainerManager {
+public interface IContainerManager : IDirectoryOperations {
     Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default);
     Task<CommandResult> ExecuteInContainerAsync(string containerId, string command, string[] args, CancellationToken cancellationToken = default);
     Task<string> ReadFileInContainerAsync(string containerId, string filePath, CancellationToken cancellationToken = default);
@@ -190,5 +190,141 @@ public sealed class DockerContainerManager : IContainerManager {
             cancellationToken: cancellationToken);
 
         _logger.LogInformation("Cleaned up container {ContainerId}", containerId);
+    }
+
+    public async Task CreateDirectoryAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+        ValidateWorkspacePath(dirPath);
+        var fullPath = Path.Combine(WorkDir, dirPath.TrimStart('/'));
+
+        var result = await _commandExecutor.ExecuteCommandAsync(
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] { "exec", containerId, "mkdir", "-p", fullPath },
+            cancellationToken: cancellationToken);
+
+        if (!result.Success) {
+            throw new InvalidOperationException($"Failed to create directory {dirPath}: {result.Error}");
+        }
+
+        _logger.LogInformation("Created directory {DirPath} in container {ContainerId}", dirPath, containerId);
+    }
+
+    public async Task<bool> DirectoryExistsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+        ValidateWorkspacePath(dirPath);
+        var fullPath = Path.Combine(WorkDir, dirPath.TrimStart('/'));
+
+        var result = await _commandExecutor.ExecuteCommandAsync(
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] { "exec", containerId, "test", "-d", fullPath },
+            cancellationToken: cancellationToken);
+
+        return result.Success;
+    }
+
+    public async Task MoveAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+        ValidateWorkspacePath(source);
+        ValidateWorkspacePath(dest);
+
+        var fullSource = Path.Combine(WorkDir, source.TrimStart('/'));
+        var fullDest = Path.Combine(WorkDir, dest.TrimStart('/'));
+
+        var result = await _commandExecutor.ExecuteCommandAsync(
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] { "exec", containerId, "mv", fullSource, fullDest },
+            cancellationToken: cancellationToken);
+
+        if (!result.Success) {
+            throw new InvalidOperationException($"Failed to move {source} to {dest}: {result.Error}");
+        }
+
+        _logger.LogInformation("Moved {Source} to {Dest} in container {ContainerId}", source, dest, containerId);
+    }
+
+    public async Task CopyAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+        ValidateWorkspacePath(source);
+        ValidateWorkspacePath(dest);
+
+        var fullSource = Path.Combine(WorkDir, source.TrimStart('/'));
+        var fullDest = Path.Combine(WorkDir, dest.TrimStart('/'));
+
+        var result = await _commandExecutor.ExecuteCommandAsync(
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] { "exec", containerId, "cp", "-r", fullSource, fullDest },
+            cancellationToken: cancellationToken);
+
+        if (!result.Success) {
+            throw new InvalidOperationException($"Failed to copy {source} to {dest}: {result.Error}");
+        }
+
+        _logger.LogInformation("Copied {Source} to {Dest} in container {ContainerId}", source, dest, containerId);
+    }
+
+    public async Task DeleteAsync(string containerId, string path, bool recursive = false, CancellationToken cancellationToken = default) {
+        ValidateWorkspacePath(path);
+        var fullPath = Path.Combine(WorkDir, path.TrimStart('/'));
+
+        var args = new List<string> { "exec", containerId, "rm" };
+        if (recursive) {
+            args.Add("-rf");
+        } else {
+            args.Add("-f");
+        }
+        args.Add(fullPath);
+
+        var result = await _commandExecutor.ExecuteCommandAsync(
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: args.ToArray(),
+            cancellationToken: cancellationToken);
+
+        if (!result.Success) {
+            throw new InvalidOperationException($"Failed to delete {path}: {result.Error}");
+        }
+
+        _logger.LogInformation("Deleted {Path} in container {ContainerId}", path, containerId);
+    }
+
+    public async Task<List<string>> ListContentsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+        ValidateWorkspacePath(dirPath);
+        var fullPath = Path.Combine(WorkDir, dirPath.TrimStart('/'));
+
+        var result = await _commandExecutor.ExecuteCommandAsync(
+            workingDirectory: Directory.GetCurrentDirectory(),
+            command: "docker",
+            args: new[] { "exec", containerId, "ls", "-1", fullPath },
+            cancellationToken: cancellationToken);
+
+        if (!result.Success) {
+            throw new InvalidOperationException($"Failed to list contents of {dirPath}: {result.Error}");
+        }
+
+        var contents = result.Output
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrEmpty(line))
+            .ToList();
+
+        return contents;
+    }
+
+    private static void ValidateWorkspacePath(string path) {
+        if (string.IsNullOrWhiteSpace(path)) {
+            throw new InvalidOperationException("Path cannot be null or empty.");
+        }
+
+        // Remove leading slash for consistency
+        var cleanPath = path.TrimStart('/');
+        
+        // Normalize the path to prevent directory traversal
+        var normalizedPath = Path.GetFullPath(Path.Combine(WorkDir, cleanPath));
+        
+        // Ensure the path is within the workspace (must start with /workspace and either end there or continue with /)
+        if (!normalizedPath.Equals(WorkDir, StringComparison.Ordinal) && 
+            !normalizedPath.StartsWith(WorkDir + Path.DirectorySeparatorChar, StringComparison.Ordinal)) {
+            throw new InvalidOperationException($"Path {path} is outside the workspace directory. Only paths within /workspace are allowed.");
+        }
     }
 }
