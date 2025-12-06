@@ -14,6 +14,12 @@ public sealed class RepositoryAnalysis {
     public string Summary { get; set; } = "";
 }
 
+internal sealed class ContentInfo {
+    public string Name { get; set; } = "";
+    public string Path { get; set; } = "";
+    public bool IsDirectory { get; set; }
+}
+
 public sealed class RepositoryAnalyzer : IRepositoryAnalyzer {
     private readonly IGitHubClient _client;
     private readonly ILogger<RepositoryAnalyzer> _logger;
@@ -38,8 +44,15 @@ public sealed class RepositoryAnalyzer : IRepositoryAnalyzer {
             // Get repository content to find key files
             var contents = await _client.Repository.Content.GetAllContents(owner, repo);
             var keyFiles = new List<string>();
+            
+            // Extract data from RepositoryContent immediately to avoid holding references
+            var contentData = contents.Select(c => new ContentInfo {
+                Name = c.Name,
+                Path = c.Path,
+                IsDirectory = c.Type == ContentType.Dir
+            }).ToList();
 
-            foreach (var content in contents) {
+            foreach (var content in contentData) {
                 if (IsKeyFile(content.Name)) {
                     keyFiles.Add(content.Path);
                 }
@@ -47,7 +60,10 @@ public sealed class RepositoryAnalyzer : IRepositoryAnalyzer {
 
             // Check for common directories
             try {
-                var rootDirs = contents.Where(c => c.Type == ContentType.Dir).Select(c => c.Name).ToList();
+                var rootDirs = contentData
+                    .Where(c => c.IsDirectory)
+                    .Select(c => c.Name)
+                    .ToList();
 
                 // Check for test directories
                 if (rootDirs.Any(d => d.Equals("test", StringComparison.OrdinalIgnoreCase) ||
@@ -60,7 +76,7 @@ public sealed class RepositoryAnalyzer : IRepositoryAnalyzer {
             }
 
             analysis.KeyFiles = keyFiles;
-            analysis.DetectedTestFramework = DetectTestFramework(keyFiles, contents);
+            analysis.DetectedTestFramework = DetectTestFramework(keyFiles, contentData);
             analysis.DetectedBuildTool = DetectBuildTool(keyFiles);
             analysis.Summary = GenerateSummary(analysis);
 
@@ -110,9 +126,9 @@ public sealed class RepositoryAnalyzer : IRepositoryAnalyzer {
         return false;
     }
 
-    private static string? DetectTestFramework(List<string> keyFiles, IReadOnlyList<RepositoryContent> contents) {
+    private static string? DetectTestFramework(List<string> keyFiles, List<ContentInfo> contentData) {
         // Check for package.json for JS/TS projects
-        var packageJson = contents.FirstOrDefault(c => c.Name.Equals("package.json", StringComparison.OrdinalIgnoreCase));
+        var packageJson = contentData.FirstOrDefault(c => c.Name.Equals("package.json", StringComparison.OrdinalIgnoreCase));
         if (packageJson != null) {
             // Note: Detailed framework detection would require fetching and parsing package.json content
             return "JavaScript/TypeScript project (common: Jest, Mocha, Vitest)";

@@ -9,7 +9,8 @@ namespace RG.OpenCopilot.App;
 /// Provides GitHub App installation tokens for authentication
 /// </summary>
 public sealed class GitHubAppTokenProvider : IGitHubAppTokenProvider {
-    private readonly GitHubClient _client;
+    private readonly IGitHubClient _client;
+    private readonly IJwtTokenGenerator _jwtGenerator;
     private readonly string? _appId;
     private readonly string? _privateKey;
     private readonly ILogger<GitHubAppTokenProvider> _logger;
@@ -17,11 +18,17 @@ public sealed class GitHubAppTokenProvider : IGitHubAppTokenProvider {
     public GitHubAppTokenProvider(
         IGitHubClient client,
         IConfiguration configuration,
+        ILogger<GitHubAppTokenProvider> logger)
+        : this(client, new JwtTokenGenerator(), configuration, logger) {
+    }
+
+    public GitHubAppTokenProvider(
+        IGitHubClient client,
+        IJwtTokenGenerator jwtGenerator,
+        IConfiguration configuration,
         ILogger<GitHubAppTokenProvider> logger) {
-        // Note: We cast to GitHubClient to set credentials, which is needed for GitHub App authentication.
-        // This is a limitation of the Octokit API design. In production, consider creating a custom
-        // GitHubClient factory that handles authentication internally.
-        _client = (GitHubClient)client;
+        _client = client;
+        _jwtGenerator = jwtGenerator;
         _appId = configuration["GitHub:AppId"];
         _privateKey = configuration["GitHub:AppPrivateKey"];
         _logger = logger;
@@ -39,25 +46,32 @@ public sealed class GitHubAppTokenProvider : IGitHubAppTokenProvider {
 
         try {
             // Generate JWT for GitHub App authentication
-            var jwt = GenerateJwtToken(_appId, _privateKey);
+            var jwt = _jwtGenerator.GenerateJwtToken(_appId, _privateKey);
 
-            // Authenticate as GitHub App
-            _client.Credentials = new Credentials(token: jwt, authenticationType: AuthenticationType.Bearer);
+            // Get installation token - we need to temporarily set credentials
+            // Create a new client with the JWT credentials
+            if (_client is GitHubClient concreteClient) {
+                concreteClient.Credentials = new Credentials(token: jwt, authenticationType: AuthenticationType.Bearer);
+                var response = await concreteClient.GitHubApps.CreateInstallationToken(installationId);
+                _logger.LogInformation("Generated installation token for installation {InstallationId}", installationId);
+                return response.Token;
+            }
 
-            // Get installation token
-            var response = await _client.GitHubApps.CreateInstallationToken(installationId);
-
-            _logger.LogInformation("Generated installation token for installation {InstallationId}", installationId);
-
-            return response.Token;
+            throw new InvalidOperationException("Client must be a GitHubClient to authenticate with JWT");
         }
         catch (Exception ex) {
             _logger.LogError(ex, "Failed to get installation token for installation {InstallationId}", installationId);
             throw;
         }
     }
+}
 
-    private string GenerateJwtToken(string appId, string privateKey) {
+public interface IJwtTokenGenerator {
+    string GenerateJwtToken(string appId, string privateKey);
+}
+
+public sealed class JwtTokenGenerator : IJwtTokenGenerator {
+    public string GenerateJwtToken(string appId, string privateKey) {
         // GitHub requires the JWT to be signed with RS256
         // The token should expire within 10 minutes
 
