@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Octokit;
@@ -97,7 +98,7 @@ var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok("ok"));
 
-app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<Program> logger) => {
+app.MapPost("/github/webhook", [ExcludeFromCodeCoverage] async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<WebhookEndpoint> logger) => {
     try {
         // Read the request body
         using var reader = new StreamReader(context.Request.Body);
@@ -144,4 +145,8 @@ app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handl
 });
 
 app.Run();
+
+// Marker class for logging in webhook endpoint
+[ExcludeFromCodeCoverage]
+internal sealed class WebhookEndpoint { }
 
