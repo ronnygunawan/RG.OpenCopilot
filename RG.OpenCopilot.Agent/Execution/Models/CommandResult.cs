@@ -1,4 +1,4 @@
-namespace RG.OpenCopilot.App.Infrastructure;
+namespace RG.OpenCopilot.Agent.Execution.Models;
 
 public sealed class CommandResult {
     public int ExitCode { get; init; }
