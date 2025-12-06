@@ -291,6 +291,120 @@ public class ExecutorServiceTests {
         }
     }
 
+    [Fact]
+    public async Task ExecutePlanAsync_WithRepositoryCloningFailure_ThrowsException() {
+        // Arrange
+        var tokenProvider = new TestTokenProvider();
+        var cloner = new TestRepositoryClonerThatFails();
+        var executor = new TestCommandExecutor();
+        var gitHubService = new TestGitHubService();
+        var taskStore = new InMemoryAgentTaskStore();
+        var service = new ExecutorService(
+            tokenProvider,
+            cloner,
+            executor,
+            gitHubService,
+            taskStore,
+            new TestLogger<ExecutorService>());
+
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Plan = new AgentPlan {
+                ProblemSummary = "Test",
+                Steps = new List<PlanStep>()
+            }
+        };
+
+        await taskStore.CreateTaskAsync(task);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await service.ExecutePlanAsync(task));
+        
+        exception.Message.ShouldBe("Clone failed");
+    }
+
+    [Fact]
+    public async Task ExecutePlanAsync_CleansUpRepositoryOnFailure() {
+        // Arrange
+        var tokenProvider = new TestTokenProvider();
+        var cloner = new TestRepositoryCloner();
+        var executor = new TestCommandExecutorThatFails();
+        var gitHubService = new TestGitHubService();
+        var taskStore = new InMemoryAgentTaskStore();
+        var service = new ExecutorService(
+            tokenProvider,
+            cloner,
+            executor,
+            gitHubService,
+            taskStore,
+            new TestLogger<ExecutorService>());
+
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Plan = new AgentPlan {
+                ProblemSummary = "Test",
+                Steps = new List<PlanStep>
+                {
+                    new() { Id = "1", Title = "Step 1", Details = "Do something" }
+                }
+            }
+        };
+
+        await taskStore.CreateTaskAsync(task);
+
+        // Act
+        await service.ExecutePlanAsync(task);
+
+        // Assert - cleanup should be called even on failure
+        cloner.CleanupWasCalled.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ExecutePlanAsync_WithMissingToken_UsesEmptyToken() {
+        // Arrange
+        var tokenProvider = new TestTokenProviderReturningEmpty();
+        var cloner = new TestRepositoryCloner();
+        var executor = new TestCommandExecutor();
+        var gitHubService = new TestGitHubService();
+        var taskStore = new InMemoryAgentTaskStore();
+        var service = new ExecutorService(
+            tokenProvider,
+            cloner,
+            executor,
+            gitHubService,
+            taskStore,
+            new TestLogger<ExecutorService>());
+
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Plan = new AgentPlan {
+                ProblemSummary = "Test",
+                Steps = new List<PlanStep>()
+            }
+        };
+
+        await taskStore.CreateTaskAsync(task);
+
+        // Act
+        await service.ExecutePlanAsync(task);
+
+        // Assert
+        cloner.CloneWasCalled.ShouldBeTrue();
+    }
+
     // Test helper classes
     private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -364,6 +478,38 @@ public class ExecutorServiceTests {
         public Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default) {
             CommentPosted = true;
             return Task.CompletedTask;
+        }
+    }
+
+    private class TestTokenProviderReturningEmpty : IGitHubAppTokenProvider {
+        public Task<string> GetInstallationTokenAsync(long installationId, CancellationToken cancellationToken = default) {
+            return Task.FromResult("");
+        }
+    }
+
+    private class TestRepositoryClonerThatFails : IRepositoryCloner {
+        public Task<string> CloneRepositoryAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default) {
+            throw new InvalidOperationException("Clone failed");
+        }
+
+        public void CleanupRepository(string localPath) {
+            // No cleanup needed
+        }
+    }
+
+    private class TestCommandExecutorThatFails : ICommandExecutor {
+        public Task<CommandResult> ExecuteCommandAsync(string workingDirectory, string command, string[] args, CancellationToken cancellationToken = default) {
+            // Only fail for non-git commands to test step execution failures
+            if (command != "git") {
+                throw new InvalidOperationException("Command execution failed");
+            }
+            
+            // Return success for git commands
+            return Task.FromResult(new CommandResult {
+                ExitCode = 0,
+                Output = "",
+                Error = ""
+            });
         }
     }
 }
