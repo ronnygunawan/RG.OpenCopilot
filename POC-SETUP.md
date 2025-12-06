@@ -2,6 +2,15 @@
 
 This guide explains how to set up and test RG.OpenCopilot.
 
+## Platform Support
+
+RG.OpenCopilot supports both **Windows** and **Linux** host systems. The executor service always runs code changes in Linux-based Docker containers, ensuring consistent behavior regardless of the host operating system.
+
+**Requirements:**
+- .NET 10.0 SDK
+- Docker Desktop (Windows) or Docker Engine (Linux)
+- Git
+
 ## What's Implemented
 
 The implementation includes the following key components:

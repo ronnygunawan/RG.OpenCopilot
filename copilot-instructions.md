@@ -50,6 +50,27 @@
 - Keep README.md and documentation files up-to-date
 - Document significant architectural decisions
 
+### Platform Support and Path Handling
+- **Windows and Linux hosts are supported** - The application can run on both Windows and Linux
+- **Container paths are always Linux paths** - The executor always uses Linux containers, regardless of host OS
+- **Important path handling rules:**
+  - Container paths (e.g., `/workspace/src/file.cs`) always use forward slashes (`/`)
+  - Use `CombineContainerPath()` helper method for combining container paths, not `Path.Combine()`
+  - Never use `Path.GetFullPath()` or `Path.GetDirectoryName()` on container paths
+  - Host paths (e.g., temp directories, working directories) should use `Path.Combine()` and standard .NET Path APIs
+  - Always validate container paths to prevent directory traversal attacks
+- **Example:**
+  ```csharp
+  // ✅ CORRECT - For container paths
+  var containerPath = CombineContainerPath("/workspace", "src/MyClass.cs");
+  
+  // ❌ WRONG - Don't use Path.Combine for container paths
+  var wrongPath = Path.Combine("/workspace", "src/MyClass.cs"); // Returns "\workspace\src\MyClass.cs" on Windows
+  
+  // ✅ CORRECT - For host paths
+  var hostPath = Path.Combine(Path.GetTempPath(), "myfile.txt");
+  ```
+
 ### LLM Integration
 - Use Microsoft Semantic Kernel for LLM integration
 - Use temperature 0.2-0.3 for deterministic tasks like code generation and planning

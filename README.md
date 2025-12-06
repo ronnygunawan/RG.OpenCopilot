@@ -78,6 +78,8 @@ The FileAnalyzer enables the executor to understand repository code structure be
 
 ## Quick Start
 
+**Supported Platforms**: Windows and Linux hosts (executor always runs in Linux containers)
+
 Build the solution:
 
 ```bash
