@@ -38,6 +38,13 @@
 - Use **Moq** for mocking dependencies
 - Each test class should have its own `TestLogger<T>` implementation
 - Always assert exception messages when testing for exceptions
+- **Comprehensive Test Coverage - Test ALL code paths:**
+  - **Happy path tests**: Test all operations with valid inputs and expected success scenarios
+  - **Negative case handling**: Test all error paths, validation failures, null inputs, and exceptional conditions
+  - **NEVER use "edge case" terminology** - Every code path is either a happy path or negative case that must be tested
+  - Achieve 90%+ code coverage on all new code
+  - Test every branch, including all if/else statements, early returns, and exception throws
+  - Example: If a method can throw 3 different exceptions, write 3 tests for those paths
 
 ### Error Handling
 - Use appropriate exception types
@@ -49,6 +56,27 @@
 - Use XML documentation comments (`///`) for public APIs
 - Keep README.md and documentation files up-to-date
 - Document significant architectural decisions
+
+### Platform Support and Path Handling
+- **Windows and Linux hosts are supported** - The application can run on both Windows and Linux
+- **Container paths are always Linux paths** - The executor always uses Linux containers, regardless of host OS
+- **Important path handling rules:**
+  - Container paths (e.g., `/workspace/src/file.cs`) always use forward slashes (`/`)
+  - Use `CombineContainerPath()` helper method for combining container paths, not `Path.Combine()`
+  - Never use `Path.GetFullPath()` or `Path.GetDirectoryName()` on container paths
+  - Host paths (e.g., temp directories, working directories) should use `Path.Combine()` and standard .NET Path APIs
+  - Always validate container paths to prevent directory traversal attacks
+- **Example:**
+  ```csharp
+  // ✅ CORRECT - For container paths
+  var containerPath = CombineContainerPath("/workspace", "src/MyClass.cs");
+  
+  // ❌ WRONG - Don't use Path.Combine for container paths
+  var wrongPath = Path.Combine("/workspace", "src/MyClass.cs"); // Returns "\workspace\src\MyClass.cs" on Windows
+  
+  // ✅ CORRECT - For host paths
+  var hostPath = Path.Combine(Path.GetTempPath(), "myfile.txt");
+  ```
 
 ### LLM Integration
 - Use Microsoft Semantic Kernel for LLM integration

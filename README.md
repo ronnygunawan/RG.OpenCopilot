@@ -78,6 +78,8 @@ The FileAnalyzer enables the executor to understand repository code structure be
 
 ## Quick Start
 
+**Supported Platforms**: Windows and Linux hosts (executor always runs in Linux containers)
+
 Build the solution:
 
 ```bash
@@ -87,7 +89,11 @@ dotnet build
 Run tests:
 
 ```bash
+# All tests (requires Docker with Linux container support)
 dotnet test
+
+# Unit tests only (no Docker required, works on Windows)
+dotnet test --filter "FullyQualifiedName!~IntegrationTests"
 ```
 
 Run the web app:

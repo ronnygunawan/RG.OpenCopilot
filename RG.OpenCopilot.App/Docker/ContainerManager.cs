@@ -91,7 +91,7 @@ public sealed class DockerContainerManager : IContainerManager {
     }
 
     public async Task<string> ReadFileInContainerAsync(string containerId, string filePath, CancellationToken cancellationToken = default) {
-        var fullPath = Path.Combine(WorkDir, filePath.TrimStart('/'));
+        var fullPath = CombineContainerPath(WorkDir, filePath.TrimStart('/'));
 
         var result = await _commandExecutor.ExecuteCommandAsync(
             workingDirectory: Directory.GetCurrentDirectory(),
@@ -107,7 +107,7 @@ public sealed class DockerContainerManager : IContainerManager {
     }
 
     public async Task WriteFileInContainerAsync(string containerId, string filePath, string content, CancellationToken cancellationToken = default) {
-        var fullPath = Path.Combine(WorkDir, filePath.TrimStart('/'));
+        var fullPath = CombineContainerPath(WorkDir, filePath.TrimStart('/'));
 
         // Escape single quotes in content and use printf to write the file
         var escapedContent = content.Replace("'", "'\\''");
@@ -194,7 +194,7 @@ public sealed class DockerContainerManager : IContainerManager {
 
     public async Task CreateDirectoryAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
         ValidateWorkspacePath(dirPath);
-        var fullPath = Path.Combine(WorkDir, dirPath.TrimStart('/'));
+        var fullPath = CombineContainerPath(WorkDir, dirPath.TrimStart('/'));
 
         var result = await _commandExecutor.ExecuteCommandAsync(
             workingDirectory: Directory.GetCurrentDirectory(),
@@ -211,7 +211,7 @@ public sealed class DockerContainerManager : IContainerManager {
 
     public async Task<bool> DirectoryExistsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
         ValidateWorkspacePath(dirPath);
-        var fullPath = Path.Combine(WorkDir, dirPath.TrimStart('/'));
+        var fullPath = CombineContainerPath(WorkDir, dirPath.TrimStart('/'));
 
         var result = await _commandExecutor.ExecuteCommandAsync(
             workingDirectory: Directory.GetCurrentDirectory(),
@@ -226,8 +226,8 @@ public sealed class DockerContainerManager : IContainerManager {
         ValidateWorkspacePath(source);
         ValidateWorkspacePath(dest);
 
-        var fullSource = Path.Combine(WorkDir, source.TrimStart('/'));
-        var fullDest = Path.Combine(WorkDir, dest.TrimStart('/'));
+        var fullSource = CombineContainerPath(WorkDir, source.TrimStart('/'));
+        var fullDest = CombineContainerPath(WorkDir, dest.TrimStart('/'));
 
         var result = await _commandExecutor.ExecuteCommandAsync(
             workingDirectory: Directory.GetCurrentDirectory(),
@@ -246,8 +246,8 @@ public sealed class DockerContainerManager : IContainerManager {
         ValidateWorkspacePath(source);
         ValidateWorkspacePath(dest);
 
-        var fullSource = Path.Combine(WorkDir, source.TrimStart('/'));
-        var fullDest = Path.Combine(WorkDir, dest.TrimStart('/'));
+        var fullSource = CombineContainerPath(WorkDir, source.TrimStart('/'));
+        var fullDest = CombineContainerPath(WorkDir, dest.TrimStart('/'));
 
         var result = await _commandExecutor.ExecuteCommandAsync(
             workingDirectory: Directory.GetCurrentDirectory(),
@@ -264,7 +264,7 @@ public sealed class DockerContainerManager : IContainerManager {
 
     public async Task DeleteAsync(string containerId, string path, bool recursive = false, CancellationToken cancellationToken = default) {
         ValidateWorkspacePath(path);
-        var fullPath = Path.Combine(WorkDir, path.TrimStart('/'));
+        var fullPath = CombineContainerPath(WorkDir, path.TrimStart('/'));
 
         var args = new List<string> { "exec", containerId, "rm" };
         if (recursive) {
@@ -289,7 +289,7 @@ public sealed class DockerContainerManager : IContainerManager {
 
     public async Task<List<string>> ListContentsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
         ValidateWorkspacePath(dirPath);
-        var fullPath = Path.Combine(WorkDir, dirPath.TrimStart('/'));
+        var fullPath = CombineContainerPath(WorkDir, dirPath.TrimStart('/'));
 
         var result = await _commandExecutor.ExecuteCommandAsync(
             workingDirectory: Directory.GetCurrentDirectory(),
@@ -310,6 +310,29 @@ public sealed class DockerContainerManager : IContainerManager {
         return contents;
     }
 
+    /// <summary>
+    /// Combines container paths using forward slashes regardless of host OS.
+    /// Container paths are always Linux-style paths.
+    /// </summary>
+    private static string CombineContainerPath(string basePath, string relativePath) {
+        if (string.IsNullOrEmpty(basePath)) {
+            throw new ArgumentException("Base path cannot be null or empty", nameof(basePath));
+        }
+        if (relativePath == null) {
+            throw new ArgumentNullException(nameof(relativePath));
+        }
+        
+        // Replace backslashes with forward slashes for consistency
+        var normalizedBase = basePath.Replace('\\', '/').TrimEnd('/');
+        var normalizedRelative = relativePath.Replace('\\', '/').TrimStart('/');
+        
+        if (string.IsNullOrEmpty(normalizedRelative)) {
+            return normalizedBase;
+        }
+        
+        return normalizedBase + "/" + normalizedRelative;
+    }
+
     private static void ValidateWorkspacePath(string path) {
         if (string.IsNullOrWhiteSpace(path)) {
             throw new InvalidOperationException("Path cannot be null or empty.");
@@ -318,13 +341,64 @@ public sealed class DockerContainerManager : IContainerManager {
         // Remove leading slash for consistency
         var cleanPath = path.TrimStart('/');
         
-        // Normalize the path to prevent directory traversal
-        var normalizedPath = Path.GetFullPath(Path.Combine(WorkDir, cleanPath));
+        // Normalize the container path to prevent directory traversal
+        // Note: WorkDir is a container path (always Linux), not a host path
+        // We use forward slashes for all container paths regardless of host OS
+        var normalizedPath = NormalizeContainerPath(WorkDir, cleanPath);
         
         // Ensure the path is within the workspace (must start with /workspace and either end there or continue with /)
         if (!normalizedPath.Equals(WorkDir, StringComparison.Ordinal) && 
-            !normalizedPath.StartsWith(WorkDir + Path.DirectorySeparatorChar, StringComparison.Ordinal)) {
+            !normalizedPath.StartsWith(WorkDir + "/", StringComparison.Ordinal)) {
             throw new InvalidOperationException($"Path {path} is outside the workspace directory. Only paths within /workspace are allowed.");
         }
+    }
+
+    /// <summary>
+    /// Normalizes a container path to prevent directory traversal attacks.
+    /// Container paths are always Linux-style (forward slashes) regardless of host OS.
+    /// </summary>
+    private static string NormalizeContainerPath(string basePath, string relativePath) {
+        if (string.IsNullOrEmpty(basePath)) {
+            throw new ArgumentException("Base path cannot be null or empty", nameof(basePath));
+        }
+        if (relativePath == null) {
+            throw new ArgumentNullException(nameof(relativePath));
+        }
+        
+        // Replace backslashes with forward slashes for consistency
+        var normalizedRelative = relativePath.Replace('\\', '/');
+        
+        // Combine paths using forward slashes
+        var normalizedBase = basePath.TrimEnd('/');
+        var trimmedRelative = normalizedRelative.TrimStart('/');
+        var combined = string.IsNullOrEmpty(trimmedRelative) 
+            ? normalizedBase 
+            : normalizedBase + "/" + trimmedRelative;
+        
+        // Split into components and resolve . and ..
+        var components = combined.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var resolvedComponents = new List<string>();
+        
+        foreach (var component in components) {
+            if (component == ".") {
+                // Current directory - skip
+                continue;
+            } else if (component == "..") {
+                // Parent directory - remove last component if possible
+                if (resolvedComponents.Count > 0) {
+                    resolvedComponents.RemoveAt(resolvedComponents.Count - 1);
+                }
+                // If no components left, we're trying to go above root
+                // The resulting path will be validated to ensure it's within workspace
+            } else {
+                resolvedComponents.Add(component);
+            }
+        }
+        
+        // Reconstruct the path
+        if (resolvedComponents.Count == 0) {
+            return "/";
+        }
+        return "/" + string.Join("/", resolvedComponents);
     }
 }

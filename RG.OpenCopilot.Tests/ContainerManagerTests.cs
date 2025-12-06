@@ -387,6 +387,740 @@ public class ContainerManagerTests {
             c.Args.Contains("remote") && c.Args.Contains("set-url"));
     }
 
+    [Fact]
+    public async Task CreateDirectoryAsync_HandlesWindowsStylePaths() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act - Test that Windows-style paths with backslashes work
+        await manager.CreateDirectoryAsync(
+            containerId: "test-container",
+            dirPath: "src\\subdir");
+
+        // Assert - Verify the path was normalized to forward slashes for the container
+        var mkdirCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mkdir"));
+        mkdirCommand.ShouldNotBeNull();
+        var pathArg = mkdirCommand.Args.Last();
+        pathArg.ShouldContain("/");
+        pathArg.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_PreventsDotDotTraversal() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert - Attempt to use .. to escape workspace should throw
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: "../../etc"));
+
+        exception.Message.ShouldContain("outside the workspace directory");
+    }
+
+    [Fact]
+    public async Task ReadFileInContainerAsync_UsesLinuxPathsRegardlessOfHost() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.ReadFileInContainerAsync(
+            containerId: "test-container",
+            filePath: "src/MyClass.cs");
+
+        // Assert - Verify the command uses forward slashes (Linux container path)
+        var catCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("cat"));
+        catCommand.ShouldNotBeNull();
+        var pathArg = catCommand.Args.Last();
+        pathArg.ShouldStartWith("/workspace/");
+        pathArg.ShouldContain("/");
+        pathArg.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task WriteFileInContainerAsync_NormalizesWindowsPaths() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.WriteFileInContainerAsync(
+            containerId: "test-container",
+            filePath: "src\\test\\file.txt",
+            content: "test content");
+
+        // Assert - Verify the path was normalized
+        var writeCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("sh"));
+        writeCommand.ShouldNotBeNull();
+        var shCommand = writeCommand.Args.Last();
+        shCommand.ShouldContain("/workspace/src/test/file.txt");
+        shCommand.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task MoveAsync_HandlesWindowsStylePaths() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.MoveAsync(
+            containerId: "test-container",
+            source: "src\\old.txt",
+            dest: "dest\\new.txt");
+
+        // Assert
+        var mvCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mv"));
+        mvCommand.ShouldNotBeNull();
+        var sourceArg = mvCommand.Args[mvCommand.Args.ToList().IndexOf("mv") + 1];
+        var destArg = mvCommand.Args[mvCommand.Args.ToList().IndexOf("mv") + 2];
+        sourceArg.ShouldContain("/");
+        sourceArg.ShouldNotContain("\\");
+        destArg.ShouldContain("/");
+        destArg.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task CopyAsync_HandlesWindowsStylePaths() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CopyAsync(
+            containerId: "test-container",
+            source: "src\\file.txt",
+            dest: "dest\\file.txt");
+
+        // Assert
+        var cpCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("cp"));
+        cpCommand.ShouldNotBeNull();
+        var sourceArg = cpCommand.Args[cpCommand.Args.ToList().IndexOf("cp") + 2];
+        var destArg = cpCommand.Args[cpCommand.Args.ToList().IndexOf("cp") + 3];
+        sourceArg.ShouldContain("/");
+        sourceArg.ShouldNotContain("\\");
+        destArg.ShouldContain("/");
+        destArg.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_HandlesWindowsStylePaths() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.DeleteAsync(
+            containerId: "test-container",
+            path: "src\\file.txt");
+
+        // Assert
+        var rmCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("rm"));
+        rmCommand.ShouldNotBeNull();
+        var pathArg = rmCommand.Args.Last();
+        pathArg.ShouldContain("/");
+        pathArg.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task ListContentsAsync_HandlesWindowsStylePaths() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.ListContentsAsync(
+            containerId: "test-container",
+            dirPath: "src\\subdir");
+
+        // Assert
+        var lsCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("ls"));
+        lsCommand.ShouldNotBeNull();
+        var pathArg = lsCommand.Args.Last();
+        pathArg.ShouldContain("/");
+        pathArg.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task DirectoryExistsAsync_HandlesWindowsStylePaths() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.DirectoryExistsAsync(
+            containerId: "test-container",
+            dirPath: "src\\subdir");
+
+        // Assert
+        var testCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("test"));
+        testCommand.ShouldNotBeNull();
+        var pathArg = testCommand.Args.Last();
+        pathArg.ShouldContain("/");
+        pathArg.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_HandlesDotInPath() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateDirectoryAsync(
+            containerId: "test-container",
+            dirPath: "src/./subdir");
+
+        // Assert - paths are passed through, validation ensures they're safe
+        var mkdirCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mkdir"));
+        mkdirCommand.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_HandlesValidDotDotPath() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act - this should be allowed as it resolves within workspace
+        await manager.CreateDirectoryAsync(
+            containerId: "test-container",
+            dirPath: "src/sub/../../valid");
+
+        // Assert - paths are validated but not normalized in the command
+        var mkdirCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mkdir"));
+        mkdirCommand.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_ThrowsOnNullOrEmptyPath() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert - null path
+        var exception1 = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: null!));
+        exception1.Message.ShouldContain("cannot be null or empty");
+
+        // Act & Assert - empty path
+        var exception2 = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: ""));
+        exception2.Message.ShouldContain("cannot be null or empty");
+
+        // Act & Assert - whitespace path
+        var exception3 = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: "   "));
+        exception3.Message.ShouldContain("cannot be null or empty");
+    }
+
+    [Fact]
+    public async Task ReadFileInContainerAsync_HandlesEmptyRelativePath() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.ReadFileInContainerAsync(
+            containerId: "test-container",
+            filePath: "/");
+
+        // Assert - Should handle empty relative path after trimming leading slash
+        var catCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("cat"));
+        catCommand.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_HandlesLeadingSlashes() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateDirectoryAsync(
+            containerId: "test-container",
+            dirPath: "/src/subdir");
+
+        // Assert
+        var mkdirCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mkdir"));
+        mkdirCommand.ShouldNotBeNull();
+        var pathArg = mkdirCommand.Args.Last();
+        pathArg.ShouldBe("/workspace/src/subdir");
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_HandlesOnlyDotDotPath() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert - Path that resolves to root should throw
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: "../.."));
+
+        exception.Message.ShouldContain("outside the workspace directory");
+    }
+
+    [Fact]
+    public async Task ReadFileInContainerAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.ReadFileInContainerAsync(
+                containerId: "test-container",
+                filePath: "test.txt"));
+
+        exception.Message.ShouldContain("Failed to read file");
+    }
+
+    [Fact]
+    public async Task WriteFileInContainerAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.WriteFileInContainerAsync(
+                containerId: "test-container",
+                filePath: "test.txt",
+                content: "content"));
+
+        exception.Message.ShouldContain("Failed to write file");
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: "test"));
+
+        exception.Message.ShouldContain("Failed to create directory");
+    }
+
+    [Fact]
+    public async Task MoveAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.MoveAsync(
+                containerId: "test-container",
+                source: "src.txt",
+                dest: "dest.txt"));
+
+        exception.Message.ShouldContain("Failed to move");
+    }
+
+    [Fact]
+    public async Task CopyAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CopyAsync(
+                containerId: "test-container",
+                source: "src.txt",
+                dest: "dest.txt"));
+
+        exception.Message.ShouldContain("Failed to copy");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.DeleteAsync(
+                containerId: "test-container",
+                path: "test.txt"));
+
+        exception.Message.ShouldContain("Failed to delete");
+    }
+
+    [Fact]
+    public async Task ListContentsAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.ListContentsAsync(
+                containerId: "test-container",
+                dirPath: "test"));
+
+        exception.Message.ShouldContain("Failed to list contents");
+    }
+
+    [Fact]
+    public async Task WriteFileInContainerAsync_EscapesSingleQuotes() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.WriteFileInContainerAsync(
+            containerId: "test-container",
+            filePath: "test.txt",
+            content: "It's a test");
+
+        // Assert
+        var shCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("sh"));
+        shCommand.ShouldNotBeNull();
+        var commandArg = shCommand.Args.Last();
+        commandArg.ShouldContain("'\\''");  // Single quotes should be escaped
+    }
+
+    [Fact]
+    public async Task DirectoryExistsAsync_ReturnsTrueWhenExists() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var result = await manager.DirectoryExistsAsync(
+            containerId: "test-container",
+            dirPath: "test");
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task DirectoryExistsAsync_ReturnsFalseWhenNotExists() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var result = await manager.DirectoryExistsAsync(
+            containerId: "test-container",
+            dirPath: "test");
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithRecursiveFlag() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.DeleteAsync(
+            containerId: "test-container",
+            path: "test",
+            recursive: true);
+
+        // Assert
+        var rmCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("rm"));
+        rmCommand.ShouldNotBeNull();
+        rmCommand.Args.ShouldContain("-rf");
+    }
+
+    [Fact]
+    public async Task MoveAsync_ThrowsOnInvalidSource() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert - Source outside workspace
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.MoveAsync(
+                containerId: "test-container",
+                source: "../../etc/passwd",
+                dest: "dest.txt"));
+
+        exception.Message.ShouldContain("outside the workspace directory");
+    }
+
+    [Fact]
+    public async Task CopyAsync_ThrowsOnInvalidDest() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert - Dest outside workspace
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CopyAsync(
+                containerId: "test-container",
+                source: "src.txt",
+                dest: "../../etc/passwd"));
+
+        exception.Message.ShouldContain("outside the workspace directory");
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_AllowsWorkspaceRoot() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act - Creating at workspace root should be allowed
+        await manager.CreateDirectoryAsync(
+            containerId: "test-container",
+            dirPath: "/");
+
+        // Assert
+        var mkdirCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mkdir"));
+        mkdirCommand.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task ReadFileInContainerAsync_HandlesMultipleLeadingSlashes() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.ReadFileInContainerAsync(
+            containerId: "test-container",
+            filePath: "///test.txt");
+
+        // Assert
+        var catCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("cat"));
+        catCommand.ShouldNotBeNull();
+        var pathArg = catCommand.Args.Last();
+        pathArg.ShouldBe("/workspace/test.txt");
+    }
+
+    [Fact]
+    public async Task WriteFileInContainerAsync_HandlesBackslashInBasePath() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act - Even with mixed slashes, should normalize
+        await manager.WriteFileInContainerAsync(
+            containerId: "test-container",
+            filePath: "dir\\subdir\\file.txt",
+            content: "test");
+
+        // Assert
+        var shCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("sh"));
+        shCommand.ShouldNotBeNull();
+        var commandArg = shCommand.Args.Last();
+        commandArg.ShouldContain("/workspace/dir/subdir/file.txt");
+        commandArg.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_HandlesConsecutiveDots() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act - Path with consecutive dots should work
+        await manager.CreateDirectoryAsync(
+            containerId: "test-container",
+            dirPath: "src/../dest");
+
+        // Assert
+        var mkdirCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mkdir"));
+        mkdirCommand.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task MoveAsync_HandlesComplexPath() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.MoveAsync(
+            containerId: "test-container",
+            source: "/a/b/c/../d.txt",
+            dest: "x/y/z.txt");
+
+        // Assert - Both paths should be normalized
+        var mvCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mv"));
+        mvCommand.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithoutRecursiveFlag() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.DeleteAsync(
+            containerId: "test-container",
+            path: "test.txt",
+            recursive: false);
+
+        // Assert
+        var rmCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("rm"));
+        rmCommand.ShouldNotBeNull();
+        rmCommand.Args.ShouldContain("-f");
+        rmCommand.Args.ShouldNotContain("-rf");
+    }
+
+    [Fact]
+    public async Task ListContentsAsync_ParsesOutput() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var result = await manager.ListContentsAsync(
+            containerId: "test-container",
+            dirPath: "test");
+
+        // Assert - Should return parsed list (TestCommandExecutor returns empty success)
+        result.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_HandlesOnlySlashes() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act - Just slashes should resolve to workspace root
+        await manager.CreateDirectoryAsync(
+            containerId: "test-container",
+            dirPath: "///");
+
+        // Assert
+        var mkdirCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mkdir"));
+        mkdirCommand.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task CopyAsync_BothPathsWithBackslashes() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CopyAsync(
+            containerId: "test-container",
+            source: "src\\dir\\file.txt",
+            dest: "dest\\dir\\file.txt");
+
+        // Assert - Both paths should be normalized
+        var cpCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("cp"));
+        cpCommand.ShouldNotBeNull();
+        var sourceArg = cpCommand.Args[cpCommand.Args.ToList().IndexOf("cp") + 2];
+        var destArg = cpCommand.Args[cpCommand.Args.ToList().IndexOf("cp") + 3];
+        sourceArg.ShouldNotContain("\\");
+        destArg.ShouldNotContain("\\");
+    }
+
     // Test helper classes
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;

@@ -27,10 +27,14 @@ jobs:
           extra_args: --only-verified
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     
     permissions:
       contents: read
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Checkout
@@ -48,7 +52,13 @@ jobs:
         run: dotnet build RG.OpenCopilot.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test RG.OpenCopilot.slnx --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            dotnet test RG.OpenCopilot.slnx --configuration Release --no-build --verbosity normal --filter "FullyQualifiedName!~IntegrationTests" --collect:"XPlat Code Coverage"
+          else
+            dotnet test RG.OpenCopilot.slnx --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+          fi
+        shell: bash
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
