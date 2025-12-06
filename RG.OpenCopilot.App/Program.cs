@@ -117,7 +117,8 @@ public partial class Program {
                     }
                 }
 
-                logger.LogInformation("Received webhook: {EventType}", context.Request.Headers["X-GitHub-Event"].ToString());
+                var eventTypeSanitized = context.Request.Headers["X-GitHub-Event"].ToString().Replace("\r", "").Replace("\n", "");
+                logger.LogInformation("Received webhook: {EventType}", eventTypeSanitized);
 
                 // Check if this is an issues event
                 var eventType = context.Request.Headers["X-GitHub-Event"].ToString();
