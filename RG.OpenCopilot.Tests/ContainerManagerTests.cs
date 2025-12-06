@@ -387,6 +387,65 @@ public class ContainerManagerTests {
             c.Args.Contains("remote") && c.Args.Contains("set-url"));
     }
 
+    [Fact]
+    public async Task CreateDirectoryAsync_HandlesWindowsStylePaths() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act - Test that Windows-style paths with backslashes work
+        await manager.CreateDirectoryAsync(
+            containerId: "test-container",
+            dirPath: "src\\subdir");
+
+        // Assert - Verify the path was normalized to forward slashes for the container
+        var mkdirCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("mkdir"));
+        mkdirCommand.ShouldNotBeNull();
+        var pathArg = mkdirCommand.Args.Last();
+        pathArg.ShouldContain("/");
+        pathArg.ShouldNotContain("\\");
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_PreventsDotDotTraversal() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert - Attempt to use .. to escape workspace should throw
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: "../../etc"));
+
+        exception.Message.ShouldContain("outside the workspace directory");
+    }
+
+    [Fact]
+    public async Task ReadFileInContainerAsync_UsesLinuxPathsRegardlessOfHost() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.ReadFileInContainerAsync(
+            containerId: "test-container",
+            filePath: "src/MyClass.cs");
+
+        // Assert - Verify the command uses forward slashes (Linux container path)
+        var catCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("cat"));
+        catCommand.ShouldNotBeNull();
+        var pathArg = catCommand.Args.Last();
+        pathArg.ShouldStartWith("/workspace/");
+        pathArg.ShouldContain("/");
+        pathArg.ShouldNotContain("\\");
+    }
+
     // Test helper classes
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;

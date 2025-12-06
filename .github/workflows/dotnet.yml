@@ -27,10 +27,14 @@ jobs:
           extra_args: --only-verified
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     
     permissions:
       contents: read
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Checkout
