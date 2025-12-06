@@ -684,6 +684,268 @@ public class ContainerManagerTests {
         pathArg.ShouldBe("/workspace/src/subdir");
     }
 
+    [Fact]
+    public async Task CreateDirectoryAsync_HandlesOnlyDotDotPath() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert - Path that resolves to root should throw
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: "../.."));
+
+        exception.Message.ShouldContain("outside the workspace directory");
+    }
+
+    [Fact]
+    public async Task ReadFileInContainerAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.ReadFileInContainerAsync(
+                containerId: "test-container",
+                filePath: "test.txt"));
+
+        exception.Message.ShouldContain("Failed to read file");
+    }
+
+    [Fact]
+    public async Task WriteFileInContainerAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.WriteFileInContainerAsync(
+                containerId: "test-container",
+                filePath: "test.txt",
+                content: "content"));
+
+        exception.Message.ShouldContain("Failed to write file");
+    }
+
+    [Fact]
+    public async Task CreateDirectoryAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: "test"));
+
+        exception.Message.ShouldContain("Failed to create directory");
+    }
+
+    [Fact]
+    public async Task MoveAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.MoveAsync(
+                containerId: "test-container",
+                source: "src.txt",
+                dest: "dest.txt"));
+
+        exception.Message.ShouldContain("Failed to move");
+    }
+
+    [Fact]
+    public async Task CopyAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CopyAsync(
+                containerId: "test-container",
+                source: "src.txt",
+                dest: "dest.txt"));
+
+        exception.Message.ShouldContain("Failed to copy");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.DeleteAsync(
+                containerId: "test-container",
+                path: "test.txt"));
+
+        exception.Message.ShouldContain("Failed to delete");
+    }
+
+    [Fact]
+    public async Task ListContentsAsync_ThrowsOnFailure() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.ListContentsAsync(
+                containerId: "test-container",
+                dirPath: "test"));
+
+        exception.Message.ShouldContain("Failed to list contents");
+    }
+
+    [Fact]
+    public async Task WriteFileInContainerAsync_EscapesSingleQuotes() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.WriteFileInContainerAsync(
+            containerId: "test-container",
+            filePath: "test.txt",
+            content: "It's a test");
+
+        // Assert
+        var shCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("sh"));
+        shCommand.ShouldNotBeNull();
+        var commandArg = shCommand.Args.Last();
+        commandArg.ShouldContain("'\\''");  // Single quotes should be escaped
+    }
+
+    [Fact]
+    public async Task DirectoryExistsAsync_ReturnsTrueWhenExists() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var result = await manager.DirectoryExistsAsync(
+            containerId: "test-container",
+            dirPath: "test");
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task DirectoryExistsAsync_ReturnsFalseWhenNotExists() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var result = await manager.DirectoryExistsAsync(
+            containerId: "test-container",
+            dirPath: "test");
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithRecursiveFlag() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.DeleteAsync(
+            containerId: "test-container",
+            path: "test",
+            recursive: true);
+
+        // Assert
+        var rmCommand = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("rm"));
+        rmCommand.ShouldNotBeNull();
+        rmCommand.Args.ShouldContain("-rf");
+    }
+
+    [Fact]
+    public async Task MoveAsync_ThrowsOnInvalidSource() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert - Source outside workspace
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.MoveAsync(
+                containerId: "test-container",
+                source: "../../etc/passwd",
+                dest: "dest.txt"));
+
+        exception.Message.ShouldContain("outside the workspace directory");
+    }
+
+    [Fact]
+    public async Task CopyAsync_ThrowsOnInvalidDest() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert - Dest outside workspace
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CopyAsync(
+                containerId: "test-container",
+                source: "src.txt",
+                dest: "../../etc/passwd"));
+
+        exception.Message.ShouldContain("outside the workspace directory");
+    }
+
     // Test helper classes
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
