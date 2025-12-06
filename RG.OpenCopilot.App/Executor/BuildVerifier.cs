@@ -487,15 +487,16 @@ public sealed class BuildVerifier : IBuildVerifier {
                 ResponseFormat = "json_object"
             };
 
-            var response = await _chatService.GetChatMessageContentAsync(
+            var response = await _chatService.GetChatMessageContentsAsync(
                 chatHistory,
                 executionSettings,
                 _kernel,
                 cancellationToken);
 
-            _logger.LogDebug("LLM response: {Response}", response.Content);
+            var responseContent = response.FirstOrDefault()?.Content ?? "{}";
+            _logger.LogDebug("LLM response: {Response}", responseContent);
 
-            var fixes = ParseFixesFromResponse(response.Content ?? "{}");
+            var fixes = ParseFixesFromResponse(responseContent);
             _logger.LogInformation("Generated {FixCount} fixes from LLM", fixes.Count);
             return fixes;
         }
