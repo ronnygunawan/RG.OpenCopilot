@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Octokit;
 using RG.OpenCopilot.Agent;
 
 namespace RG.OpenCopilot.App.CodeGeneration;
@@ -11,13 +12,19 @@ public sealed class CodeGenerator : ICodeGenerator {
     private readonly Kernel _kernel;
     private readonly ILogger<CodeGenerator> _logger;
     private readonly IChatCompletionService _chatService;
+    private readonly IGitHubClient _gitHubClient;
+    private string? _cachedRepositoryInstructions;
+    private string? _cachedRepositoryOwner;
+    private string? _cachedRepositoryName;
 
     public CodeGenerator(
         Kernel kernel,
-        ILogger<CodeGenerator> logger) {
+        ILogger<CodeGenerator> logger,
+        IGitHubClient gitHubClient) {
         _kernel = kernel;
         _logger = logger;
         _chatService = kernel.GetRequiredService<IChatCompletionService>();
+        _gitHubClient = gitHubClient;
     }
 
     public async Task<string> GenerateCodeAsync(
@@ -31,9 +38,10 @@ public sealed class CodeGenerator : ICodeGenerator {
 
         try {
             var prompt = BuildCodePrompt(request, existingCode);
+            var systemPrompt = await BuildSystemPromptAsync(request, cancellationToken);
 
             var chatHistory = new ChatHistory();
-            chatHistory.AddSystemMessage(GetSystemPrompt());
+            chatHistory.AddSystemMessage(systemPrompt);
             chatHistory.AddUserMessage(prompt);
 
             var executionSettings = new OpenAIPromptExecutionSettings {
@@ -111,34 +119,104 @@ public sealed class CodeGenerator : ICodeGenerator {
         }
     }
 
-    private static string GetSystemPrompt() {
-        return """
-            You are an expert software developer with deep knowledge of multiple programming languages and best practices.
-            
-            Your role is to generate high-quality, production-ready code based on requirements.
-            
-            Guidelines:
-            - Write clean, maintainable, and well-structured code
-            - Follow language-specific conventions and best practices
-            - Include appropriate error handling
-            - Add clear comments for complex logic
-            - Match the style of any provided existing code
-            - Use modern language features appropriately
-            - Consider edge cases and validation
-            - Write code that is testable and follows SOLID principles
-            
-            When modifying existing code:
-            - Preserve the original code style and structure
-            - Only make the minimal necessary changes
-            - Maintain consistency with existing patterns
-            - Keep existing comments unless they're outdated
-            
-            Response format:
-            - Return ONLY the code, without markdown code blocks or explanations
-            - Do not include ```language``` markers
-            - Do not add explanatory text before or after the code
-            - Start directly with the code
-            """;
+    private async Task<string> BuildSystemPromptAsync(
+        LlmCodeGenerationRequest request,
+        CancellationToken cancellationToken) {
+        var promptBuilder = new StringBuilder();
+
+        // 1. Core role and responsibility
+        promptBuilder.AppendLine("You are an expert software developer with deep knowledge of multiple programming languages and best practices.");
+        promptBuilder.AppendLine();
+        promptBuilder.AppendLine("Your role is to generate high-quality, production-ready code based on requirements.");
+        promptBuilder.AppendLine();
+
+        // 2. General best practices (curated from community standards)
+        promptBuilder.AppendLine(CodeGenerationPrompts.GetBestPractices());
+        promptBuilder.AppendLine();
+
+        // 3. Technology-specific prompts based on the language
+        var technologyPrompt = CodeGenerationPrompts.GetTechnologyPrompt(request.Language);
+        promptBuilder.AppendLine(technologyPrompt);
+        promptBuilder.AppendLine();
+
+        // 4. Repository-specific instructions from copilot-instructions.md
+        var repoInstructions = await LoadRepositoryInstructionsAsync(request, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(repoInstructions)) {
+            promptBuilder.AppendLine("# Repository-Specific Instructions");
+            promptBuilder.AppendLine();
+            promptBuilder.AppendLine(repoInstructions);
+            promptBuilder.AppendLine();
+        }
+
+        // 5. Code modification guidelines
+        promptBuilder.AppendLine("# When Modifying Existing Code");
+        promptBuilder.AppendLine("- Preserve the original code style and structure");
+        promptBuilder.AppendLine("- Only make the minimal necessary changes");
+        promptBuilder.AppendLine("- Maintain consistency with existing patterns");
+        promptBuilder.AppendLine("- Keep existing comments unless they're outdated");
+        promptBuilder.AppendLine();
+
+        // 6. Response format requirements
+        promptBuilder.AppendLine("# Response Format");
+        promptBuilder.AppendLine("- Return ONLY the code, without markdown code blocks or explanations");
+        promptBuilder.AppendLine("- Do not include ```language``` markers");
+        promptBuilder.AppendLine("- Do not add explanatory text before or after the code");
+        promptBuilder.AppendLine("- Start directly with the code");
+
+        return promptBuilder.ToString();
+    }
+
+    private async Task<string?> LoadRepositoryInstructionsAsync(
+        LlmCodeGenerationRequest request,
+        CancellationToken cancellationToken) {
+        // Extract repository info from context if provided
+        if (!request.Context.TryGetValue("RepositoryOwner", out var owner) ||
+            !request.Context.TryGetValue("RepositoryName", out var repo)) {
+            return null;
+        }
+
+        // Use cached instructions if loading from the same repository
+        if (owner == _cachedRepositoryOwner && 
+            repo == _cachedRepositoryName && 
+            _cachedRepositoryInstructions != null) {
+            return _cachedRepositoryInstructions;
+        }
+
+        try {
+            // Try to load copilot-instructions.md from the repository
+            var contents = await _gitHubClient.Repository.Content.GetAllContents(
+                owner: owner,
+                name: repo,
+                path: "copilot-instructions.md");
+
+            if (contents != null && contents.Count > 0 && !string.IsNullOrEmpty(contents[0].Content)) {
+                _logger.LogInformation(
+                    "Loaded repository instructions from {Owner}/{Repo}/copilot-instructions.md",
+                    owner,
+                    repo);
+
+                _cachedRepositoryOwner = owner;
+                _cachedRepositoryName = repo;
+                _cachedRepositoryInstructions = contents[0].Content;
+
+                return _cachedRepositoryInstructions;
+            }
+        }
+        catch (NotFoundException) {
+            _logger.LogDebug(
+                "No copilot-instructions.md found in {Owner}/{Repo}",
+                owner,
+                repo);
+        }
+        catch (Exception ex) {
+            _logger.LogWarning(
+                ex,
+                "Error loading repository instructions from {Owner}/{Repo}",
+                owner,
+                repo);
+        }
+
+        return null;
     }
 
     private string BuildCodePrompt(LlmCodeGenerationRequest request, string? existingCode) {

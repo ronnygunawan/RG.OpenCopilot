@@ -120,9 +120,52 @@ builder.Services.AddSingleton<ICodeGenerator, CodeGenerator>();
 
 ## Prompt Engineering
 
-### System Prompt
+### Enhanced Multi-Source System Prompt
 
-The CodeGenerator uses a carefully crafted system prompt that instructs the LLM to:
+The CodeGenerator uses an advanced, multi-source system prompt that combines:
+
+1. **General Best Practices** - Curated industry standards covering:
+   - Code quality (DRY, SOLID, clean code)
+   - Error handling and validation
+   - Security practices (input validation, SQL injection prevention, XSS protection)
+   - Performance considerations
+   - Testing and maintainability
+   - Modern programming practices
+
+2. **Technology-Specific Prompts** - Language-specific guidelines based on the target language:
+   - **C#**: Microsoft conventions, nullable types, async/await, LINQ, XML docs
+   - **JavaScript**: ES6+ syntax, const/let, arrow functions, JSDoc
+   - **TypeScript**: Strong typing, interfaces, generics, type guards
+   - **Python**: PEP 8, type hints, docstrings, comprehensions
+   - **Java**: Java conventions, streams, Optional, JavaDoc
+   - **Go**: Effective Go, error handling, goroutines, defer
+   - **Rust**: Ownership, borrowing, Result/Option, traits
+
+3. **Repository-Specific Instructions** - Loaded from `copilot-instructions.md` in the repository:
+   - Project-specific architecture patterns
+   - Naming conventions
+   - Testing requirements
+   - Security guidelines
+   - Any custom rules for your codebase
+
+To use repository-specific instructions, include repository context in your request:
+
+```csharp
+var request = new LlmCodeGenerationRequest {
+    Description = "Create a service class",
+    Language = "C#",
+    Context = new Dictionary<string, string> {
+        { "RepositoryOwner", "your-org" },
+        { "RepositoryName", "your-repo" }
+    }
+};
+```
+
+The CodeGenerator will automatically load and cache the `copilot-instructions.md` file from the repository root.
+
+### System Prompt Components
+
+The final system prompt includes all these elements in order:
 
 - Write clean, maintainable code following best practices
 - Include appropriate error handling and validation

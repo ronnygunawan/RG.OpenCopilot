@@ -34,7 +34,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         var request = new LlmCodeGenerationRequest {
             Description = """
@@ -77,7 +78,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         var request = new LlmCodeGenerationRequest {
             Description = """
@@ -115,7 +117,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         var request = new LlmCodeGenerationRequest {
             Description = """
@@ -158,7 +161,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         var existingCode = """
             public class Calculator {
@@ -205,7 +209,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         // Act
         var result = await generator.GenerateClassAsync(
@@ -236,7 +241,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         // Act
         var result = await generator.GenerateFunctionAsync(
@@ -265,7 +271,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         var request = new LlmCodeGenerationRequest {
             Description = "Create a service class that uses Entity Framework Core to query users from database",
@@ -302,7 +309,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         var request = new LlmCodeGenerationRequest {
             Description = "Create a database context class",
@@ -338,7 +346,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         var request = new LlmCodeGenerationRequest {
             Description = """
@@ -378,7 +387,8 @@ public class CodeGeneratorIntegrationTests {
         // Arrange
         var kernel = CreateKernel();
         var logger = new TestLogger<CodeGenerator>();
-        var generator = new CodeGenerator(kernel, logger);
+        var gitHubClient = new Octokit.GitHubClient(new Octokit.ProductHeaderValue("RG-OpenCopilot-Test"));
+        var generator = new CodeGenerator(kernel, logger, gitHubClient);
 
         var request = new LlmCodeGenerationRequest {
             Description = """
