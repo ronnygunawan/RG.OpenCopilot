@@ -153,6 +153,17 @@ public class FeatureTests {
   - Example: A mocked plan should have 5-8 detailed steps with comprehensive descriptions, not just 1-2 minimal steps
 - When mocking other services, use realistic data that represents actual usage patterns
 
+### Comprehensive Test Coverage
+- **Test ALL code paths:**
+  - **Happy path tests**: Test all operations with valid inputs and expected success scenarios
+  - **Negative case handling**: Test all error paths, validation failures, null inputs, and exceptional conditions
+  - **NEVER use "edge case" terminology** - Every code path is either a happy path or negative case that must be tested
+  - Achieve 90%+ code coverage on all new code
+  - Test every branch, including all if/else statements, early returns, and exception throws
+  - Example: If a method can throw 3 different exceptions, write 3 tests for those paths
+- Each test class should have its own `TestLogger<T>` implementation
+- Always assert exception messages when testing for exceptions
+
 ## Architecture Patterns
 
 ### Project Organization
@@ -180,6 +191,27 @@ public class FeatureTests {
 - Use `async`/`await` for all I/O operations
 - Accept `CancellationToken` with default value in async methods
 - Return `Task<T>` or `Task` from async methods
+
+### Platform Support and Path Handling
+- **Windows and Linux hosts are supported** - The application can run on both Windows and Linux
+- **Container paths are always Linux paths** - The executor always uses Linux containers, regardless of host OS
+- **Important path handling rules:**
+  - Container paths (e.g., `/workspace/src/file.cs`) always use forward slashes (`/`)
+  - Use `CombineContainerPath()` helper method for combining container paths, not `Path.Combine()`
+  - Never use `Path.GetFullPath()` or `Path.GetDirectoryName()` on container paths
+  - Host paths (e.g., temp directories, working directories) should use `Path.Combine()` and standard .NET Path APIs
+  - Always validate container paths to prevent directory traversal attacks
+- **Example:**
+  ```csharp
+  // ✅ CORRECT - For container paths
+  var containerPath = CombineContainerPath("/workspace", "src/MyClass.cs");
+  
+  // ❌ WRONG - Don't use Path.Combine for container paths
+  var wrongPath = Path.Combine("/workspace", "src/MyClass.cs"); // Returns "\workspace\src\MyClass.cs" on Windows
+  
+  // ✅ CORRECT - For host paths
+  var hostPath = Path.Combine(Path.GetTempPath(), "myfile.txt");
+  ```
 
 ### Anti-Corruption Layer
 - `GitHubApiAdapter` provides an anti-corruption layer over Octokit
@@ -257,6 +289,11 @@ See `LLM-CONFIGURATION.md` for detailed LLM setup instructions.
 - Use environment variables for sensitive configuration
 - Validate all external inputs (especially webhooks)
 - Use HMAC-SHA256 for webhook signature validation
+
+## Global Usings
+
+- Add new feature namespaces to GlobalUsings.cs files in respective projects
+- Keep global usings organized by project dependency order
 
 ## Additional Resources
 
