@@ -292,7 +292,7 @@ public class FileEditorIntegrationTests {
         }
 
         public async Task<string> ReadFileInContainerAsync(string containerId, string filePath, CancellationToken cancellationToken = default) {
-            var fullPath = Path.Combine(WorkDir, filePath.TrimStart('/'));
+            var fullPath = Path.Join(WorkDir, filePath.TrimStart('/'));
 
             var result = await _commandExecutor.ExecuteCommandAsync(
                 workingDirectory: Directory.GetCurrentDirectory(),
@@ -314,7 +314,7 @@ public class FileEditorIntegrationTests {
         }
 
         public async Task WriteFileInContainerAsync(string containerId, string filePath, string content, CancellationToken cancellationToken = default) {
-            var fullPath = Path.Combine(WorkDir, filePath.TrimStart('/'));
+            var fullPath = Path.Join(WorkDir, filePath.TrimStart('/'));
 
             // Create parent directory if needed
             var directory = Path.GetDirectoryName(fullPath);
@@ -365,21 +365,30 @@ public class FileEditorIntegrationTests {
         public async Task CleanupContainerAsync(string containerId, CancellationToken cancellationToken = default) {
             _logger.LogInformation("Cleaning up test container {ContainerId}", containerId);
 
-            // Stop the container
-            await _commandExecutor.ExecuteCommandAsync(
+            // Stop the container - attempt even if it fails
+            var stopResult = await _commandExecutor.ExecuteCommandAsync(
                 workingDirectory: Directory.GetCurrentDirectory(),
                 command: "docker",
                 args: new[] { "stop", containerId },
                 cancellationToken: cancellationToken);
 
-            // Remove the container
-            await _commandExecutor.ExecuteCommandAsync(
+            if (!stopResult.Success) {
+                _logger.LogWarning("Failed to stop container {ContainerId}: {Error}", containerId, stopResult.Error);
+            }
+
+            // Remove the container - attempt even if stop failed
+            var removeResult = await _commandExecutor.ExecuteCommandAsync(
                 workingDirectory: Directory.GetCurrentDirectory(),
                 command: "docker",
                 args: new[] { "rm", containerId },
                 cancellationToken: cancellationToken);
 
-            _logger.LogInformation("Cleaned up test container {ContainerId}", containerId);
+            if (!removeResult.Success) {
+                _logger.LogWarning("Failed to remove container {ContainerId}: {Error}", containerId, removeResult.Error);
+            }
+            else {
+                _logger.LogInformation("Cleaned up test container {ContainerId}", containerId);
+            }
         }
     }
 }
