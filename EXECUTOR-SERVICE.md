@@ -42,6 +42,7 @@ Manages the lifecycle of Docker containers used for task execution.
 - Clones repositories inside containers with Git authentication
 - Executes commands in containers with proper output capture
 - Supports file read/write operations inside containers
+- **Directory operations** with workspace safety validation (see below)
 - Commits and pushes changes from containers
 - Automatic container cleanup
 
@@ -57,11 +58,94 @@ CommandResult result = await containerManager.ExecuteInContainerAsync(containerI
 string content = await containerManager.ReadFileInContainerAsync(containerId, "Program.cs");
 await containerManager.WriteFileInContainerAsync(containerId, "NewFile.cs", content);
 
+// Directory operations (all paths validated to be within /workspace)
+await containerManager.CreateDirectoryAsync(containerId, "src/components");
+bool exists = await containerManager.DirectoryExistsAsync(containerId, "src");
+await containerManager.MoveAsync(containerId, "old-dir", "new-dir");
+await containerManager.CopyAsync(containerId, "template", "feature");
+await containerManager.DeleteAsync(containerId, "temp-dir", recursive: true);
+List<string> files = await containerManager.ListContentsAsync(containerId, "src");
+
 // Commit and push changes
 await containerManager.CommitAndPushAsync(containerId, "Implement feature", owner, repo, branch, token);
 
 // Cleanup
 await containerManager.CleanupContainerAsync(containerId);
+```
+
+#### Directory Operations
+
+The `DockerContainerManager` implements the `IDirectoryOperations` interface, providing comprehensive directory management capabilities for container file systems.
+
+**Available Operations:**
+
+1. **CreateDirectoryAsync** - Creates directories with parent support (`mkdir -p`)
+   ```csharp
+   // Creates nested directories in one call
+   await manager.CreateDirectoryAsync(containerId, "src/components/ui");
+   ```
+
+2. **DirectoryExistsAsync** - Checks if a directory exists
+   ```csharp
+   bool exists = await manager.DirectoryExistsAsync(containerId, "src/components");
+   ```
+
+3. **MoveAsync** - Moves or renames files and directories
+   ```csharp
+   // Rename a directory
+   await manager.MoveAsync(containerId, "old-name", "new-name");
+   
+   // Move a file to a different directory
+   await manager.MoveAsync(containerId, "file.txt", "archive/file.txt");
+   ```
+
+4. **CopyAsync** - Copies files and directories recursively
+   ```csharp
+   // Copy a directory with all its contents
+   await manager.CopyAsync(containerId, "template-dir", "new-feature-dir");
+   
+   // Copy a single file
+   await manager.CopyAsync(containerId, "config.json", "config.backup.json");
+   ```
+
+5. **DeleteAsync** - Deletes files or directories
+   ```csharp
+   // Delete a file
+   await manager.DeleteAsync(containerId, "temp-file.txt");
+   
+   // Delete a directory recursively
+   await manager.DeleteAsync(containerId, "build-output", recursive: true);
+   ```
+
+6. **ListContentsAsync** - Lists directory contents
+   ```csharp
+   List<string> files = await manager.ListContentsAsync(containerId, "src");
+   // Returns: ["Program.cs", "Utils.cs", "Models"]
+   ```
+
+**Security Features:**
+
+All directory operations include robust path validation to prevent directory traversal attacks:
+
+- Paths are normalized using `Path.GetFullPath`
+- All operations are restricted to the `/workspace` directory
+- Attempts to access paths outside `/workspace` throw `InvalidOperationException`
+- Null or empty paths are rejected with clear error messages
+
+**Example Usage:**
+
+```csharp
+// Organize code into a new feature structure
+await manager.CreateDirectoryAsync(containerId, "src/Features/Authentication");
+await manager.CopyAsync(containerId, "src/Templates/Feature", "src/Features/Authentication");
+await manager.MoveAsync(containerId, "src/OldAuth.cs", "src/Features/Authentication/AuthService.cs");
+
+// Clean up temporary files
+await manager.DeleteAsync(containerId, "obj", recursive: true);
+await manager.DeleteAsync(containerId, "bin", recursive: true);
+
+// Verify structure
+var files = await manager.ListContentsAsync(containerId, "src/Features/Authentication");
 ```
 
 ### 3. GitHubAppTokenProvider
@@ -201,10 +285,16 @@ For development without a GitHub App:
 3. **Installation Tokens**: Automatically expire after 1 hour
 4. **No Host Access**: Containers run with limited privileges and no access to host filesystem
 5. **Token Handling**: Tokens are never logged or exposed in error messages
+6. **Path Validation**: Directory operations enforce workspace-only access to prevent directory traversal attacks
 
 ## Testing
 
 The executor service includes comprehensive tests:
+
+**Container Manager Tests:**
+- `ContainerManagerTests.*` - 24 tests for core container operations
+- `DirectoryOperationsTests.*` - 25 unit tests for directory operations
+- `DirectoryOperationsIntegrationTests.*` - 12 integration tests with real Docker containers
 
 **Container Executor Tests:**
 - `ContainerExecutorServiceTests.ExecutePlanAsync_ThrowsWhenPlanIsNull`
@@ -216,12 +306,17 @@ The executor service includes comprehensive tests:
 **Legacy Executor Tests (for comparison):**
 - `ExecutorServiceTests.ExecutePlanAsync_*` (8 tests)
 
+**Directory Operations Coverage:**
+- All operations (Create, Exists, Move, Copy, Delete, List) have dedicated tests
+- Security validation tests ensure paths stay within `/workspace`
+- Integration tests verify operations work with actual Docker containers
+
 Run tests with:
 ```bash
 dotnet test
 ```
 
-All 44 tests pass successfully.
+All 268 tests pass successfully.
 
 ## Limitations & Future Enhancements
 

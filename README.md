@@ -48,6 +48,7 @@ The codebase follows **SOLID principles** and **DDD patterns** with feature-base
 - **Docker Integration**: Executes code changes in isolated Docker containers
 - **Repository Cloning**: Automatic repository cloning inside containers
 - **File Operations**: Read and write files in containers using Docker exec
+- **Directory Operations**: Create, move, copy, delete directories and files with workspace safety validation
 - **Build & Test**: Automatic detection and execution of .NET, Node.js, and Python projects
 - **Git Integration**: Commits and pushes changes from containers
 
