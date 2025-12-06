@@ -5,3 +5,5 @@ global using RG.OpenCopilot.Agent.Execution.Models;
 global using RG.OpenCopilot.Agent.Execution.Services;
 global using RG.OpenCopilot.Agent.FileOperations.Models;
 global using RG.OpenCopilot.Agent.FileOperations.Services;
+global using RG.OpenCopilot.Agent.CodeGeneration.Models;
+global using RG.OpenCopilot.Agent.CodeGeneration.Services;

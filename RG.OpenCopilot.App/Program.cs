@@ -4,6 +4,7 @@ using Microsoft.SemanticKernel;
 using Octokit;
 using RG.OpenCopilot.Agent;
 using RG.OpenCopilot.App;
+using RG.OpenCopilot.App.CodeGeneration;
 
 public partial class Program {
     [ExcludeFromCodeCoverage]
@@ -51,6 +52,7 @@ public partial class Program {
         var kernel = kernelBuilder.Build();
         builder.Services.AddSingleton(kernel);
         builder.Services.AddSingleton<IPlannerService, LlmPlannerService>();
+        builder.Services.AddSingleton<ICodeGenerator, CodeGenerator>();
 
         // Configure other services
         builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
