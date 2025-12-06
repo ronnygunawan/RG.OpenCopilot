@@ -559,7 +559,7 @@ public sealed class TestGenerator : ITestGenerator {
         if (content.Contains("using NUnit.Framework;") || content.Contains("[Test]")) {
             return "NUnit";
         }
-        if (content.Contains("using Microsoft.VisualStudio.TestTools") || content.Contains("[TestMethod]")) {
+        if (content.Contains("using Microsoft.VisualStudio.TestTools.UnitTesting") || content.Contains("[TestMethod]")) {
             return "MSTest";
         }
         if (content.Contains("describe(") && content.Contains("it(")) {
