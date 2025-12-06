@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace RG.OpenCopilot.App.GitHub.Webhook;
+namespace RG.OpenCopilot.App.GitHub.Webhook.Services;
 
 public interface IWebhookValidator {
     bool ValidateSignature(string payload, string signature, string secret);

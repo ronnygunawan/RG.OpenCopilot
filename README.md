@@ -20,12 +20,26 @@ See **[POC-SETUP.md](POC-SETUP.md)** for setup and testing instructions.
 ## Solution Structure
 
 - `RG.OpenCopilot.slnx` – root solution
-- `RG.OpenCopilot.App` – ASP.NET Core minimal API for GitHub App webhooks and health checks
-- `RG.OpenCopilot.Agent` – shared domain models and planner/executor abstractions
+- `RG.OpenCopilot.Agent` – shared domain models and service abstractions
+  - Organized into `Models/` and `Services/` folders
+  - Models include AgentPlan, AgentTask, FileStructure, and related types
+  - Services define core interfaces: IPlannerService, IExecutorService, IFileAnalyzer, IFileEditor
+- `RG.OpenCopilot.App` – ASP.NET Core minimal API organized by feature
+  - **Planner/**: Planning services (LlmPlannerService, SimplePlannerService)
+  - **Executor/**: Execution services (ExecutorService, ContainerExecutorService)
+  - **Docker/**: Container management (ContainerManager, FileAnalyzer, FileEditor)
+  - **GitHub/**: GitHub integration
+    - `Git/`: Git operations with adapters and services
+    - `Repository/`: Repository analysis (RepositoryAnalyzer, InstructionsLoader)
+    - `Authentication/`: GitHub App authentication (GitHubAppTokenProvider)
+    - `Webhook/`: Webhook handling (models and services)
+  - **Infrastructure/**: Cross-cutting concerns (CommandExecutor, RepositoryCloner, AgentTaskStore)
 - `RG.OpenCopilot.Runner` – console app to run the agent locally for testing
 - `RG.OpenCopilot.Tests` – xUnit tests using Shouldly assertions
 
 All projects target `.NET 10.0` with nullable reference types and implicit usings enabled.
+
+The codebase follows **SOLID principles** and **DDD patterns** with feature-based organization, anti-corruption layers for external dependencies, and clear separation of concerns.
 
 ## Features
 
