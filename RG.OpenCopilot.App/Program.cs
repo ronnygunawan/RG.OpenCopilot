@@ -15,48 +15,42 @@ public partial class Program {
 
         // Configure LLM provider based on configuration
         var llmProvider = builder.Configuration["LLM:Provider"] ?? "OpenAI";
-        var apiKey = builder.Configuration["LLM:ApiKey"];
+        var apiKey = builder.Configuration["LLM:ApiKey"] ?? throw new InvalidProgramException("Unconfigured LLM:ApiKey");
         var modelId = builder.Configuration["LLM:ModelId"] ?? "gpt-4o";
 
-        if (string.IsNullOrEmpty(apiKey)) {
-            // For development/testing, use SimplePlannerService if no API key is configured
-            builder.Services.AddSingleton<IPlannerService, SimplePlannerService>();
-        }
-        else {
-            // Configure the appropriate LLM provider
-            switch (llmProvider.ToLowerInvariant()) {
-                case "openai":
-                    // Supports GPT-4o, GPT-5, GPT-5-Codex, GPT-5.1, GPT-5.1-Codex (when available)
-                    kernelBuilder.AddOpenAIChatCompletion(
-                        modelId: modelId,
-                        apiKey: apiKey);
-                    break;
+        // Configure the appropriate LLM provider
+        switch (llmProvider.ToLowerInvariant()) {
+            case "openai":
+                // Supports GPT-4o, GPT-5, GPT-5-Codex, GPT-5.1, GPT-5.1-Codex (when available)
+                kernelBuilder.AddOpenAIChatCompletion(
+                    modelId: modelId,
+                    apiKey: apiKey);
+                break;
 
-                case "azureopenai":
-                    var azureEndpoint = builder.Configuration["LLM:AzureEndpoint"];
-                    var azureDeployment = builder.Configuration["LLM:AzureDeployment"];
+            case "azureopenai":
+                var azureEndpoint = builder.Configuration["LLM:AzureEndpoint"];
+                var azureDeployment = builder.Configuration["LLM:AzureDeployment"];
 
-                    if (string.IsNullOrEmpty(azureEndpoint) || string.IsNullOrEmpty(azureDeployment)) {
-                        throw new InvalidOperationException(
-                            "Azure OpenAI requires LLM:AzureEndpoint and LLM:AzureDeployment configuration");
-                    }
-
-                    kernelBuilder.AddAzureOpenAIChatCompletion(
-                        deploymentName: azureDeployment,
-                        endpoint: azureEndpoint,
-                        apiKey: apiKey);
-                    break;
-
-                default:
+                if (string.IsNullOrEmpty(azureEndpoint) || string.IsNullOrEmpty(azureDeployment)) {
                     throw new InvalidOperationException(
-                        $"Unsupported LLM provider: {llmProvider}. Supported providers: OpenAI, AzureOpenAI. " +
-                        $"For Claude or Gemini models, use OpenAI-compatible endpoints or extend with custom connectors.");
-            }
+                        "Azure OpenAI requires LLM:AzureEndpoint and LLM:AzureDeployment configuration");
+                }
 
-            var kernel = kernelBuilder.Build();
-            builder.Services.AddSingleton(kernel);
-            builder.Services.AddSingleton<IPlannerService, LlmPlannerService>();
+                kernelBuilder.AddAzureOpenAIChatCompletion(
+                    deploymentName: azureDeployment,
+                    endpoint: azureEndpoint,
+                    apiKey: apiKey);
+                break;
+
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported LLM provider: {llmProvider}. Supported providers: OpenAI, AzureOpenAI. " +
+                    $"For Claude or Gemini models, use OpenAI-compatible endpoints or extend with custom connectors.");
         }
+
+        var kernel = kernelBuilder.Build();
+        builder.Services.AddSingleton(kernel);
+        builder.Services.AddSingleton<IPlannerService, LlmPlannerService>();
 
         // Configure other services
         builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
@@ -71,6 +65,7 @@ public partial class Program {
         builder.Services.AddSingleton<IInstructionsLoader, InstructionsLoader>();
         builder.Services.AddSingleton<IFileAnalyzer, FileAnalyzer>();
         builder.Services.AddSingleton<IFileEditor, FileEditor>();
+        builder.Services.AddSingleton<IStepAnalyzer, StepAnalyzer>();
 
         // Configure GitHub client
         builder.Services.AddSingleton<IGitHubClient>(sp => {
