@@ -370,12 +370,17 @@ public sealed class DockerContainerManager : IContainerManager {
                 if (resolvedComponents.Count > 0) {
                     resolvedComponents.RemoveAt(resolvedComponents.Count - 1);
                 }
+                // If no components left, we're trying to go above root
+                // The resulting path will be validated to ensure it's within workspace
             } else {
                 resolvedComponents.Add(component);
             }
         }
         
         // Reconstruct the path
+        if (resolvedComponents.Count == 0) {
+            return "/";
+        }
         return "/" + string.Join("/", resolvedComponents);
     }
 }
