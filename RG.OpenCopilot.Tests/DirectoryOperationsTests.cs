@@ -358,7 +358,6 @@ public class DirectoryOperationsTests {
                 file1.txt
                 file2.txt
                 folder1
-                
                 """
         };
         var logger = new TestLogger<DockerContainerManager>();
