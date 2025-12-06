@@ -9,6 +9,23 @@ on:
       - master
 
 jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@v3.91.2
+        with:
+          extra_args: --only-verified
+
   build:
     runs-on: ubuntu-latest
     
