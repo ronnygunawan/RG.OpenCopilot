@@ -209,6 +209,102 @@ public class LlmPlannerServiceTests {
     }
 
     [Fact]
+    public async Task CreatePlanAsync_WhenLlmReturnsEmptyJsonArray_ReturnsFallbackPlan() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<LlmPlannerService>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var context = new AgentTaskContext {
+            IssueTitle = "Fix empty array handling",
+            IssueBody = "Handle LLM hallucination with empty array"
+        };
+
+        var emptyArrayJson = "[]";
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, emptyArrayJson);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var service = new LlmPlannerService(kernel, mockLogger.Object);
+
+        // Act
+        var plan = await service.CreatePlanAsync(context);
+
+        // Assert
+        plan.ShouldNotBeNull();
+        plan.ProblemSummary.ShouldContain("Fix empty array handling");
+        plan.Steps.Count.ShouldBeGreaterThan(0);
+        plan.Checklist.Count.ShouldBeGreaterThan(0);
+        plan.Constraints.Count.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task CreatePlanAsync_WhenLlmReturnsWrongPropertyNames_UsesDefaultValues() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<LlmPlannerService>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var context = new AgentTaskContext {
+            IssueTitle = "Handle property name hallucination",
+            IssueBody = "LLM used wrong property names"
+        };
+
+        // LLM hallucinates and uses wrong property names - all properties will be null
+        var wrongPropertyNamesJson = """
+            {
+                "summary": "This uses wrong property name instead of problemSummary",
+                "limitations": ["Wrong property instead of constraints"],
+                "actions": [
+                    {
+                        "stepId": "1",
+                        "name": "Wrong properties",
+                        "description": "Wrong property names",
+                        "completed": false
+                    }
+                ],
+                "verificationItems": ["Wrong property instead of checklist"],
+                "targetFiles": ["Wrong property instead of fileTargets"]
+            }
+            """;
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, wrongPropertyNamesJson);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var service = new LlmPlannerService(kernel, mockLogger.Object);
+
+        // Act
+        var plan = await service.CreatePlanAsync(context);
+
+        // Assert
+        plan.ShouldNotBeNull();
+        // When all properties are null due to wrong names, defaults are used
+        plan.ProblemSummary.ShouldBe("Task implementation"); // Default value
+        plan.Steps.ShouldBeEmpty(); // Empty list default
+        plan.Checklist.ShouldBeEmpty(); // Empty list default
+        plan.Constraints.ShouldBeEmpty(); // Empty list default
+        plan.FileTargets.ShouldBeEmpty(); // Empty list default
+    }
+
+    [Fact]
     public async Task CreatePlanAsync_IncludesRepositorySummaryInPrompt() {
         // Arrange
         var mockLogger = new Mock<ILogger<LlmPlannerService>>();
