@@ -592,6 +592,598 @@ public class StepAnalyzerTests {
             msg.Contains("Repository context built") && msg.Contains("Language=csharp"));
     }
 
+    [Fact]
+    public async Task AnalyzeStepAsync_LlmReturnsEmptyList_ThrowsException() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var step = new PlanStep {
+            Id = "step-1",
+            Title = "Test step",
+            Details = "Test details"
+        };
+        var context = new RepositoryContext { Language = "csharp" };
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent>());
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await service.AnalyzeStepAsync(step: step, context: context));
+
+        exception.Message.ShouldContain("LLM service returned no response");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_JavaProject_DetectsMaven() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-java";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "src/main/java/App.java",
+                "src/test/java/AppTest.java",
+                "pom.xml"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.Language.ShouldBe("java");
+        result.Files.Count.ShouldBe(3);
+        result.BuildTool.ShouldBe("maven");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_GoProject_DetectsGoMod() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-go";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "main.go",
+                "handler.go",
+                "go.mod"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.Language.ShouldBe("go");
+        result.BuildTool.ShouldBe("go");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_CSharpWithNUnit_DetectsNUnit() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-nunit";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "Program.cs",
+                "Tests/ProgramTests.cs",
+                "MyApp.csproj"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(
+                containerId: containerId,
+                filePath: "MyApp.csproj",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync("<Project><ItemGroup><PackageReference Include=\"NUnit\" /></ItemGroup></Project>");
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.TestFramework.ShouldBe("NUnit");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_CSharpWithMSTest_DetectsMSTest() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-mstest";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "Program.cs",
+                "Tests/ProgramTests.cs",
+                "MyApp.csproj"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(
+                containerId: containerId,
+                filePath: "MyApp.csproj",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync("<Project><ItemGroup><PackageReference Include=\"MSTest\" /></ItemGroup></Project>");
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.TestFramework.ShouldBe("MSTest");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_JavaScriptWithMocha_DetectsMocha() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-mocha";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "index.js",
+                "test/index.test.js",
+                "package.json"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(
+                containerId: containerId,
+                filePath: "package.json",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync("""{"devDependencies": {"mocha": "^10.0.0"}}""");
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.TestFramework.ShouldBe("Mocha");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_TypeScriptWithJasmine_DetectsJasmine() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-jasmine";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "index.ts",
+                "test/index.spec.ts",
+                "package.json"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(
+                containerId: containerId,
+                filePath: "package.json",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync("""{"devDependencies": {"jasmine": "^4.0.0"}}""");
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.Language.ShouldBe("typescript");
+        result.TestFramework.ShouldBe("Jasmine");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_PythonWithUnittest_DetectsUnittest() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-unittest";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "main.py",
+                "unittest/main_tests.py",
+                "requirements.txt"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.Language.ShouldBe("python");
+        result.TestFramework.ShouldBe("unittest");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_RubyProject_DetectsRuby() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-ruby";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "app.rb",
+                "lib/helper.rb"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.Language.ShouldBe("ruby");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_CppProject_DetectsCpp() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-cpp";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "main.cpp",
+                "utils.cc",
+                "header.h"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.Language.ShouldBe("cpp");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_RustProject_DetectsCargo() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-rust";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "main.rs",
+                "lib.rs",
+                "Cargo.toml"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.BuildTool.ShouldBe("cargo");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_GradleProject_DetectsGradle() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-gradle";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "src/main/java/App.java",
+                "build.gradle"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.BuildTool.ShouldBe("gradle");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_WithSolutionFile_DetectsDotnet() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-sln";
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = [
+                "Program.cs",
+                "MyApp.sln"
+            ]
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        // Act
+        var result = await service.BuildContextAsync(containerId: containerId);
+
+        // Assert
+        result.BuildTool.ShouldBe("dotnet");
+    }
+
+    [Fact]
+    public async Task BuildContextAsync_ManyFiles_IncludesCountMessage() {
+        // Arrange
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var logger = new TestLogger<StepAnalyzer>();
+
+        var containerId = "test-container-many";
+
+        // Create 60 files to exceed the 50 file limit
+        var manyFiles = Enumerable.Range(1, 60).Select(i => $"File{i}.cs").ToList();
+
+        var fileTree = new FileTree {
+            Root = new FileTreeNode { Name = ".", Path = ".", IsDirectory = true },
+            AllFiles = manyFiles
+        };
+
+        mockFileAnalyzer
+            .Setup(f => f.BuildFileTreeAsync(
+                containerId: containerId,
+                rootPath: ".",
+                cancellationToken: It.IsAny<CancellationToken>()))
+            .ReturnsAsync(fileTree);
+
+        var service = CreateService(
+            mockChatService: mockChatService.Object,
+            mockFileAnalyzer: mockFileAnalyzer.Object,
+            mockContainerManager: mockContainerManager.Object,
+            logger: logger);
+
+        var step = new PlanStep {
+            Id = "step-1",
+            Title = "Test",
+            Details = "Test"
+        };
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, """
+            {
+              "actions": [],
+              "prerequisites": [],
+              "requiresTests": false,
+              "testFile": null,
+              "mainFile": null
+            }
+            """);
+        SetupMockLlmResponse(mockChatService, chatContent);
+
+        var context = await service.BuildContextAsync(containerId: containerId);
+
+        // Act - this will use BuildAnalysisPrompt internally
+        var result = await service.AnalyzeStepAsync(step: step, context: context);
+
+        // Assert
+        context.Files.Count.ShouldBe(60);
+        result.ShouldNotBeNull();
+    }
+
     private static StepAnalyzer CreateService(
         IChatCompletionService mockChatService,
         IFileAnalyzer mockFileAnalyzer,
