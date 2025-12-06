@@ -370,9 +370,10 @@ public sealed class DockerContainerManager : IContainerManager {
         
         // Combine paths using forward slashes
         var normalizedBase = basePath.TrimEnd('/');
-        var combined = string.IsNullOrEmpty(normalizedRelative.TrimStart('/')) 
+        var trimmedRelative = normalizedRelative.TrimStart('/');
+        var combined = string.IsNullOrEmpty(trimmedRelative) 
             ? normalizedBase 
-            : normalizedBase + "/" + normalizedRelative.TrimStart('/');
+            : normalizedBase + "/" + trimmedRelative;
         
         // Split into components and resolve . and ..
         var components = combined.Split('/', StringSplitOptions.RemoveEmptyEntries);

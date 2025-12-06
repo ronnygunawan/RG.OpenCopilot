@@ -319,7 +319,7 @@ public class FileEditorIntegrationTests {
             // Create parent directory if needed
             // For container paths, use forward slashes regardless of host OS
             var lastSlash = fullPath.LastIndexOf('/');
-            // Use > 0 to avoid trying to create directory for root or when no slash found
+            // Check if there's a directory path (lastSlash > 0 excludes root "/" and not-found -1)
             var directory = lastSlash > 0 ? fullPath[..lastSlash] : null;
             if (!string.IsNullOrEmpty(directory) && directory != WorkDir) {
                 await _commandExecutor.ExecuteCommandAsync(
