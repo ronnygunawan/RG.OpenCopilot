@@ -252,7 +252,8 @@ public class ContainerManagerTests {
     }
 
     private class TestCommandExecutor : ICommandExecutor {
-        public List<ExecutedCommand> Commands { get; } = [];
+        private readonly List<ExecutedCommand> _commands = [];
+        public IReadOnlyList<ExecutedCommand> Commands => _commands;
         public string? FailOnCommand { get; set; }
         public string[]? FailOnArgs { get; set; }
         public bool ReturnNonEmptyStatusOnce { get; set; }
@@ -263,7 +264,7 @@ public class ContainerManagerTests {
             string command,
             string[] args,
             CancellationToken cancellationToken = default) {
-            Commands.Add(new ExecutedCommand {
+            _commands.Add(new ExecutedCommand {
                 WorkingDirectory = workingDirectory,
                 Command = command,
                 Args = args
@@ -311,6 +312,6 @@ public class ContainerManagerTests {
     private class ExecutedCommand {
         public string WorkingDirectory { get; init; } = "";
         public string Command { get; init; } = "";
-        public string[] Args { get; init; } = Array.Empty<string>();
+        public IReadOnlyList<string> Args { get; init; } = Array.Empty<string>();
     }
 }
