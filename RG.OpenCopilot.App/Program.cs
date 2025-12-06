@@ -55,6 +55,7 @@ else {
 }
 
 // Configure other services
+builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddSingleton<IGitHubAppTokenProvider, GitHubAppTokenProvider>();
 builder.Services.AddSingleton<IContainerManager, DockerContainerManager>();
 builder.Services.AddSingleton<ICommandExecutor, ProcessCommandExecutor>();
@@ -79,6 +80,16 @@ builder.Services.AddSingleton<IGitHubClient>(sp => {
 
     return client;
 });
+
+// Register GitHub API adapters
+builder.Services.AddSingleton<IGitHubRepositoryAdapter>(sp => 
+    new GitHubRepositoryAdapter(sp.GetRequiredService<IGitHubClient>()));
+builder.Services.AddSingleton<IGitHubGitAdapter>(sp => 
+    new GitHubGitAdapter(sp.GetRequiredService<IGitHubClient>()));
+builder.Services.AddSingleton<IGitHubPullRequestAdapter>(sp => 
+    new GitHubPullRequestAdapter(sp.GetRequiredService<IGitHubClient>()));
+builder.Services.AddSingleton<IGitHubIssueAdapter>(sp => 
+    new GitHubIssueAdapter(sp.GetRequiredService<IGitHubClient>()));
 
 builder.Services.AddSingleton<IGitHubService, GitHubService>();
 

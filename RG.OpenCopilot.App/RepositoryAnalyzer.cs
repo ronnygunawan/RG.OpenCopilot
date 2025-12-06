@@ -14,18 +14,12 @@ public sealed class RepositoryAnalysis {
     public string Summary { get; set; } = "";
 }
 
-internal sealed class ContentInfo {
-    public string Name { get; set; } = "";
-    public string Path { get; set; } = "";
-    public bool IsDirectory { get; set; }
-}
-
 public sealed class RepositoryAnalyzer : IRepositoryAnalyzer {
-    private readonly IGitHubClient _client;
+    private readonly IGitHubRepositoryAdapter _repositoryAdapter;
     private readonly ILogger<RepositoryAnalyzer> _logger;
 
-    public RepositoryAnalyzer(IGitHubClient client, ILogger<RepositoryAnalyzer> logger) {
-        _client = client;
+    public RepositoryAnalyzer(IGitHubRepositoryAdapter repositoryAdapter, ILogger<RepositoryAnalyzer> logger) {
+        _repositoryAdapter = repositoryAdapter;
         _logger = logger;
     }
 
@@ -36,21 +30,14 @@ public sealed class RepositoryAnalyzer : IRepositoryAnalyzer {
 
         try {
             // Get language breakdown
-            var languages = await _client.Repository.GetAllLanguages(owner, repo);
+            var languages = await _repositoryAdapter.GetLanguagesAsync(owner, repo, cancellationToken);
             foreach (var lang in languages) {
-                analysis.Languages[lang.Name] = lang.NumberOfBytes;
+                analysis.Languages[lang.Name] = lang.Bytes;
             }
 
             // Get repository content to find key files
-            var contents = await _client.Repository.Content.GetAllContents(owner, repo);
+            var contentData = await _repositoryAdapter.GetContentsAsync(owner, repo, cancellationToken);
             var keyFiles = new List<string>();
-            
-            // Extract data from RepositoryContent immediately to avoid holding references
-            var contentData = contents.Select(c => new ContentInfo {
-                Name = c.Name,
-                Path = c.Path,
-                IsDirectory = c.Type == ContentType.Dir
-            }).ToList();
 
             foreach (var content in contentData) {
                 if (IsKeyFile(content.Name)) {
@@ -126,7 +113,7 @@ public sealed class RepositoryAnalyzer : IRepositoryAnalyzer {
         return false;
     }
 
-    private static string? DetectTestFramework(List<string> keyFiles, List<ContentInfo> contentData) {
+    private static string? DetectTestFramework(List<string> keyFiles, IReadOnlyList<ContentInfo> contentData) {
         // Check for package.json for JS/TS projects
         var packageJson = contentData.FirstOrDefault(c => c.Name.Equals("package.json", StringComparison.OrdinalIgnoreCase));
         if (packageJson != null) {
