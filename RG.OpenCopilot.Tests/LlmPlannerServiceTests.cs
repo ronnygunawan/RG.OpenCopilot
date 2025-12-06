@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Moq;
 using RG.OpenCopilot.Agent;
 using RG.OpenCopilot.App;
@@ -373,6 +374,254 @@ public class LlmPlannerServiceTests {
 
         // Assert
         capturedToken.ShouldBe(cts.Token);
+    }
+
+    [Fact]
+    public async Task CreatePlanAsync_LogsInformationMessages() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<LlmPlannerService>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var context = new AgentTaskContext {
+            IssueTitle = "Test logging",
+            IssueBody = "Verify logging behavior"
+        };
+
+        var llmResponseJson = """
+            {
+                "problemSummary": "Test logging functionality",
+                "constraints": ["Log all operations"],
+                "steps": [
+                    {
+                        "id": "step-1",
+                        "title": "Log test",
+                        "details": "Test logging details",
+                        "done": false
+                    }
+                ],
+                "checklist": ["Logging verified"],
+                "fileTargets": ["Logger.cs"]
+            }
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponseJson);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var service = new LlmPlannerService(kernel, mockLogger.Object);
+
+        // Act
+        var plan = await service.CreatePlanAsync(context);
+
+        // Assert
+        plan.ShouldNotBeNull();
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Creating LLM-powered plan for issue")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Plan created with")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreatePlanAsync_WithNullResponseContent_UsesFallbackPlan() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<LlmPlannerService>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var context = new AgentTaskContext {
+            IssueTitle = "Handle null response",
+            IssueBody = "Test null content handling"
+        };
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, content: null as string);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var service = new LlmPlannerService(kernel, mockLogger.Object);
+
+        // Act
+        var plan = await service.CreatePlanAsync(context);
+
+        // Assert
+        plan.ShouldNotBeNull();
+        plan.ProblemSummary.ShouldBe("Task implementation"); // Default value for empty JSON
+        plan.Steps.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task CreatePlanAsync_ConfiguresOpenAISettings() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<LlmPlannerService>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var context = new AgentTaskContext {
+            IssueTitle = "Test settings",
+            IssueBody = "Verify OpenAI settings configuration"
+        };
+
+        var llmResponseJson = """
+            {
+                "problemSummary": "Test",
+                "constraints": [],
+                "steps": [],
+                "checklist": [],
+                "fileTargets": []
+            }
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponseJson);
+        PromptExecutionSettings? capturedSettings = null;
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (_, settings, _, _) => capturedSettings = settings)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var service = new LlmPlannerService(kernel, mockLogger.Object);
+
+        // Act
+        await service.CreatePlanAsync(context);
+
+        // Assert
+        capturedSettings.ShouldNotBeNull();
+        capturedSettings.ShouldBeOfType<OpenAIPromptExecutionSettings>();
+        var openAISettings = (OpenAIPromptExecutionSettings)capturedSettings;
+        openAISettings.Temperature.ShouldBe(0.3);
+        openAISettings.MaxTokens.ShouldBe(4000);
+        openAISettings.ResponseFormat.ShouldBe("json_object");
+    }
+
+    [Fact]
+    public async Task CreatePlanAsync_LogsErrorAndReturnsFallbackOnException() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<LlmPlannerService>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var context = new AgentTaskContext {
+            IssueTitle = "Test error handling",
+            IssueBody = "Verify error logging"
+        };
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("LLM service error"));
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var service = new LlmPlannerService(kernel, mockLogger.Object);
+
+        // Act
+        var plan = await service.CreatePlanAsync(context);
+
+        // Assert
+        plan.ShouldNotBeNull();
+        plan.ProblemSummary.ShouldContain("Test error handling");
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error creating plan with LLM")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CreatePlanAsync_BuildsChatHistoryCorrectly() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<LlmPlannerService>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var context = new AgentTaskContext {
+            IssueTitle = "Test chat history",
+            IssueBody = "Verify chat history construction"
+        };
+
+        var llmResponseJson = """
+            {
+                "problemSummary": "Test",
+                "constraints": [],
+                "steps": [],
+                "checklist": [],
+                "fileTargets": []
+            }
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponseJson);
+        ChatHistory? capturedChatHistory = null;
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => capturedChatHistory = ch)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var service = new LlmPlannerService(kernel, mockLogger.Object);
+
+        // Act
+        await service.CreatePlanAsync(context);
+
+        // Assert
+        capturedChatHistory.ShouldNotBeNull();
+        capturedChatHistory.Count.ShouldBe(2); // System message + User message
+        capturedChatHistory[0].Role.ShouldBe(AuthorRole.System);
+        capturedChatHistory[0].Content.ShouldContain("software development planning assistant");
+        capturedChatHistory[1].Role.ShouldBe(AuthorRole.User);
+        capturedChatHistory[1].Content.ShouldContain("Test chat history");
     }
 
 
