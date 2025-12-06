@@ -37,12 +37,14 @@ public class ContainerManagerTests {
         var manager = new DockerContainerManager(commandExecutor, logger);
 
         // Act & Assert
-        await Should.ThrowAsync<InvalidOperationException>(
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
             async () => await manager.CreateContainerAsync(
                 owner: "test-owner",
                 repo: "test-repo",
                 token: "test-token",
                 branch: "main"));
+
+        exception.Message.ShouldBe("Failed to create container: Command failed");
     }
 
     [Fact]
@@ -56,12 +58,14 @@ public class ContainerManagerTests {
         var manager = new DockerContainerManager(commandExecutor, logger);
 
         // Act & Assert
-        await Should.ThrowAsync<InvalidOperationException>(
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
             async () => await manager.CreateContainerAsync(
                 owner: "test-owner",
                 repo: "test-repo",
                 token: "test-token",
                 branch: "main"));
+
+        exception.Message.ShouldBe("Failed to clone repository: Command failed");
 
         // Verify cleanup was called
         commandExecutor.Commands.ShouldContain(c => c.Command == "docker" && c.Args.Contains("stop"));
@@ -115,10 +119,12 @@ public class ContainerManagerTests {
         var manager = new DockerContainerManager(commandExecutor, logger);
 
         // Act & Assert
-        await Should.ThrowAsync<InvalidOperationException>(
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
             async () => await manager.ReadFileInContainerAsync(
                 containerId: "test-container",
                 filePath: "test.txt"));
+
+        exception.Message.ShouldBe("Failed to read file test.txt: Command failed");
     }
 
     [Fact]
@@ -152,11 +158,13 @@ public class ContainerManagerTests {
         var manager = new DockerContainerManager(commandExecutor, logger);
 
         // Act & Assert
-        await Should.ThrowAsync<InvalidOperationException>(
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
             async () => await manager.WriteFileInContainerAsync(
                 containerId: "test-container",
                 filePath: "test.txt",
                 content: "test content"));
+
+        exception.Message.ShouldBe("Failed to write file test.txt: Command failed");
     }
 
     [Fact]
@@ -219,7 +227,7 @@ public class ContainerManagerTests {
         var manager = new DockerContainerManager(commandExecutor, logger);
 
         // Act & Assert
-        await Should.ThrowAsync<InvalidOperationException>(
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
             async () => await manager.CommitAndPushAsync(
                 containerId: "test-container",
                 commitMessage: "Test commit",
@@ -227,6 +235,8 @@ public class ContainerManagerTests {
                 repo: "test-repo",
                 branch: "main",
                 token: "test-token"));
+
+        exception.Message.ShouldBe("Failed to commit: Command failed");
     }
 
     [Fact]
