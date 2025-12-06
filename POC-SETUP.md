@@ -156,14 +156,23 @@ curl -X POST http://localhost:5272/github/webhook \
 
 ## Running Tests
 
+### All Tests (Requires Docker)
 ```bash
 dotnet test
 ```
+
+### Unit Tests Only (No Docker Required)
+```bash
+dotnet test --filter "FullyQualifiedName!~IntegrationTests"
+```
+
+**Note:** Integration tests require Docker with Linux container support. On Windows, the CI automatically runs only unit tests since Windows containers are not supported. On Linux/macOS with Docker installed, all tests including integration tests will run.
 
 All tests should pass. Current test coverage includes:
 - `AgentPlanTests` - Tests for domain models
 - `WebhookHandlerTests` - Tests for webhook processing
 - `WebhookValidatorTests` - Tests for signature validation
+- Integration tests - Tests requiring Docker containers (Linux only)
 
 ## Using with GitHub
 
