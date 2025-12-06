@@ -315,6 +315,13 @@ public sealed class DockerContainerManager : IContainerManager {
     /// Container paths are always Linux-style paths.
     /// </summary>
     private static string CombineContainerPath(string basePath, string relativePath) {
+        if (string.IsNullOrEmpty(basePath)) {
+            throw new ArgumentException("Base path cannot be null or empty", nameof(basePath));
+        }
+        if (relativePath == null) {
+            throw new ArgumentNullException(nameof(relativePath));
+        }
+        
         // Replace backslashes with forward slashes for consistency
         var normalizedBase = basePath.Replace('\\', '/').TrimEnd('/');
         var normalizedRelative = relativePath.Replace('\\', '/').TrimStart('/');
@@ -351,11 +358,21 @@ public sealed class DockerContainerManager : IContainerManager {
     /// Container paths are always Linux-style (forward slashes) regardless of host OS.
     /// </summary>
     private static string NormalizeContainerPath(string basePath, string relativePath) {
+        if (string.IsNullOrEmpty(basePath)) {
+            throw new ArgumentException("Base path cannot be null or empty", nameof(basePath));
+        }
+        if (relativePath == null) {
+            throw new ArgumentNullException(nameof(relativePath));
+        }
+        
         // Replace backslashes with forward slashes for consistency
         var normalizedRelative = relativePath.Replace('\\', '/');
         
         // Combine paths using forward slashes
-        var combined = basePath.TrimEnd('/') + "/" + normalizedRelative.TrimStart('/');
+        var normalizedBase = basePath.TrimEnd('/');
+        var combined = string.IsNullOrEmpty(normalizedRelative.TrimStart('/')) 
+            ? normalizedBase 
+            : normalizedBase + "/" + normalizedRelative.TrimStart('/');
         
         // Split into components and resolve . and ..
         var components = combined.Split('/', StringSplitOptions.RemoveEmptyEntries);
