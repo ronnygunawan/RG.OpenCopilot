@@ -7,6 +7,10 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 namespace RG.OpenCopilot.App.CodeGeneration;
 
 public sealed class TestGenerator : ITestGenerator {
+    private const int MaxTestFilesToAnalyze = 5;
+    private const int MaxLinesPerTestSample = 50;
+    private const int MaxLinesForImportAnalysis = 30;
+    
     private readonly IContainerManager _containerManager;
     private readonly IFileAnalyzer _fileAnalyzer;
     private readonly Kernel _kernel;
@@ -165,8 +169,8 @@ public sealed class TestGenerator : ITestGenerator {
             foreach (var pattern in patterns) {
                 var files = await _fileAnalyzer.ListFilesAsync(containerId, pattern, cancellationToken);
                 
-                // Limit to first 5 test files to avoid overwhelming the LLM
-                foreach (var file in files.Take(5)) {
+                // Limit to first MaxTestFilesToAnalyze test files to avoid overwhelming the LLM
+                foreach (var file in files.Take(MaxTestFilesToAnalyze)) {
                     try {
                         var content = await _containerManager.ReadFileInContainerAsync(containerId, file, cancellationToken);
                         var framework = DetectFrameworkFromContent(content);
@@ -182,7 +186,7 @@ public sealed class TestGenerator : ITestGenerator {
                     }
                 }
 
-                if (testFiles.Count >= 5) {
+                if (testFiles.Count >= MaxTestFilesToAnalyze) {
                     break; // We have enough examples
                 }
             }
@@ -417,11 +421,11 @@ public sealed class TestGenerator : ITestGenerator {
             var test = existingTests[i];
             prompt.AppendLine($"## Test File {i + 1}: {test.Path}");
             prompt.AppendLine("```");
-            // Limit content to first 50 lines to avoid token limits
+            // Limit content to MaxLinesPerTestSample lines to avoid token limits
             var lines = test.Content.Split('\n');
-            var limitedContent = string.Join('\n', lines.Take(50));
+            var limitedContent = string.Join('\n', lines.Take(MaxLinesPerTestSample));
             prompt.AppendLine(limitedContent);
-            if (lines.Length > 50) {
+            if (lines.Length > MaxLinesPerTestSample) {
                 prompt.AppendLine("... (truncated)");
             }
             prompt.AppendLine("```");
@@ -533,7 +537,7 @@ public sealed class TestGenerator : ITestGenerator {
 
         // Extract common imports (simple heuristic)
         var lines = combinedContent.Split('\n');
-        foreach (var line in lines.Take(30)) { // Look at first 30 lines
+        foreach (var line in lines.Take(MaxLinesForImportAnalysis)) { // Look at first lines for imports
             if (line.Trim().StartsWith("using ") || line.Trim().StartsWith("import ")) {
                 imports.Add(line.Trim());
             }
