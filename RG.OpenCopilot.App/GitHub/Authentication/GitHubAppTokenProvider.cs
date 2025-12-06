@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 using Octokit;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.GitHub.Authentication;
 
 /// <summary>
 /// Provides GitHub App installation tokens for authentication

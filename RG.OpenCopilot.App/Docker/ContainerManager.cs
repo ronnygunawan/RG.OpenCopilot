@@ -1,7 +1,7 @@
 using System.Text;
 using RG.OpenCopilot.Agent;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.Docker;
 
 /// <summary>
 /// Manages Docker containers for executing agent tasks in isolated environments

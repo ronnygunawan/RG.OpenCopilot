@@ -1,4 +1,4 @@
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.GitHub.Webhook;
 
 public sealed class GitHubIssueEventPayload {
     public string Action { get; set; } = "";

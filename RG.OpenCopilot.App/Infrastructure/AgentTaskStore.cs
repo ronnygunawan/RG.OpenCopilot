@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using RG.OpenCopilot.Agent;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.Infrastructure;
 
 public interface IAgentTaskStore {
     Task<AgentTask?> GetTaskAsync(string id, CancellationToken cancellationToken = default);

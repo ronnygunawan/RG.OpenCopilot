@@ -1,6 +1,6 @@
 using Octokit;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.GitHub.Repository;
 
 public interface IRepositoryAnalyzer {
     Task<RepositoryAnalysis> AnalyzeAsync(string owner, string repo, CancellationToken cancellationToken = default);
