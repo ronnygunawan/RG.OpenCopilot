@@ -122,8 +122,9 @@ public partial class Program {
 
                 // Check if this is an issues event
                 var eventType = context.Request.Headers["X-GitHub-Event"].ToString();
+                var eventTypeSanitizedForLog = eventType.Replace("\r", "").Replace("\n", "");
                 if (eventType != "issues") {
-                    logger.LogInformation("Ignoring non-issues event: {EventType}", eventType);
+                    logger.LogInformation("Ignoring non-issues event: {EventType}", eventTypeSanitizedForLog);
                     return Results.Ok();
                 }
 
