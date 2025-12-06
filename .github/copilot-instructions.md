@@ -145,6 +145,7 @@ public class FeatureTests {
 
 ### Mocking and Test Data
 - Use **Moq** for mocking dependencies and external services
+- Each test class should have its own `TestLogger<T>` implementation
 - When mocking LLM responses or other AI-generated content:
   - **Generate realistic, comprehensive responses** that represent actual LLM behavior
   - Include detailed steps, thorough explanations, and complete information
@@ -161,8 +162,6 @@ public class FeatureTests {
   - Achieve 90%+ code coverage on all new code
   - Test every branch, including all if/else statements, early returns, and exception throws
   - Example: If a method can throw 3 different exceptions, write 3 tests for those paths
-- Each test class should have its own `TestLogger<T>` implementation
-- Always assert exception messages when testing for exceptions
 
 ## Architecture Patterns
 
