@@ -4,9 +4,9 @@
 
 | Metric | Coverage |
 |:---|---:|
-| **Line Coverage** | **33%** (284 of 859) |
-| **Branch Coverage** | **16%** (24 of 150) |
-| **Test Count** | **31 tests** |
+| **Line Coverage** | **56.9%** (898 of 1576) |
+| **Branch Coverage** | **53%** (220 of 415) |
+| **Test Count** | **99 tests** |
 | **All Tests Passing** | ✅ Yes |
 
 ## Coverage by Assembly
@@ -18,20 +18,34 @@ All agent domain models have complete test coverage:
 - AgentTask: 100%
 - AgentTaskContext: 100%
 - PlanStep: 100%
+- FileChange: 100%
+- FileStructure: 100%
+- FileTree: 100%
+- FileTreeNode: 100%
 
-### RG.OpenCopilot.App - 31.4%
+### RG.OpenCopilot.App - 55.9%
 
 | Component | Line Coverage | Status |
 |:---|---:|:---|
 | SimplePlannerService | 100% | ✅ Fully tested |
 | WebhookValidator | 100% | ✅ Fully tested |
-| WebhookHandler | 88% | ✅ Well tested |
-| InMemoryAgentTaskStore | 86.6% | ✅ Well tested |
+| CommandResult | 100% | ✅ Fully tested |
 | RepositoryAnalysis | 100% | ✅ Fully tested |
+| **DockerContainerManager** | **99%** | ✅ **Fully tested** |
+| ProcessCommandExecutor | 97.6% | ✅ Well tested |
+| FileEditor | 97.9% | ✅ Well tested |
+| FileAnalyzer | 93% | ✅ Well tested |
+| WebhookHandler | 90.6% | ✅ Well tested |
+| InMemoryAgentTaskStore | 87.5% | ✅ Well tested |
+| GitHubRepository | 75% | ✅ Well tested |
+| ContainerExecutorService | 72.4% | ✅ Well tested |
+| ExecutorService | 59.5% | ⚠️ Partially tested |
 | GitHubService | 0% | ⚠️ Integration class, requires GitHub API |
 | InstructionsLoader | 0% | ⚠️ Integration class, requires GitHub API |
 | LlmPlannerService | 0% | ⚠️ Integration class, requires LLM API |
 | RepositoryAnalyzer | 0% | ⚠️ Integration class, requires GitHub API |
+| GitCommandRepositoryCloner | 0% | ⚠️ Integration class, requires git commands |
+| GitHubAppTokenProvider | 0% | ⚠️ Integration class, requires GitHub App |
 | Program | 0% | ℹ️ Startup code, not tested |
 
 ## Test Files
@@ -41,6 +55,13 @@ All agent domain models have complete test coverage:
 3. **WebhookValidatorTests.cs** - Tests for signature validation (8 tests)
 4. **RepositoryAnalyzerTests.cs** - Tests for repository analysis logic (10 tests)
 5. **LlmPlannerServiceTests.cs** - Tests for LLM planner logic (10 tests)
+6. **ContainerManagerTests.cs** - Tests for Docker container manager (12 tests)
+7. **ContainerExecutorServiceTests.cs** - Tests for container executor service (5 tests)
+8. **ExecutorServiceTests.cs** - Tests for executor service
+9. **FileAnalyzerTests.cs** - Tests for file analyzer
+10. **FileAnalyzerIntegrationTests.cs** - Integration tests for file analyzer
+11. **FileEditorTests.cs** - Tests for file editor
+12. **FileEditorIntegrationTests.cs** - Integration tests for file editor
 
 ## Notes on Coverage
 
@@ -52,6 +73,8 @@ Several classes have 0% line coverage because they are **integration classes** t
 - **InstructionsLoader**: Requires GitHub API access
 - **LlmPlannerService**: Requires LLM API (OpenAI/Azure OpenAI)
 - **RepositoryAnalyzer**: Requires GitHub API access
+- **GitCommandRepositoryCloner**: Requires git commands and repository cloning
+- **GitHubAppTokenProvider**: Requires GitHub App authentication
 
 These classes:
 - Have well-defined interfaces
@@ -69,12 +92,12 @@ The test suite focuses on:
 ### Recent Improvements
 
 In this commit, we added:
-- **10 new tests** for more comprehensive coverage
-- Edge case tests for WebhookValidator (malformed signatures, empty values)
-- Additional RepositoryAnalyzer logic tests (empty analysis, file limiting)
-- Extended LlmPlannerService tests (context building, fallback plans)
+- **12 new tests** for DockerContainerManager (improving coverage from 0% to 99%)
+- Tests covering all public methods: CreateContainerAsync, ExecuteInContainerAsync, ReadFileInContainerAsync, WriteFileInContainerAsync, CommitAndPushAsync, CleanupContainerAsync
+- Success and failure scenarios for each method
+- Edge case tests (cleanup on clone failure, skip commit when no changes)
 
-This brought test count from 21 to 31 tests and improved overall reliability.
+This brought test count from 31 to 99 tests and overall line coverage from 33% to 56.9%.
 
 ## Running Tests
 

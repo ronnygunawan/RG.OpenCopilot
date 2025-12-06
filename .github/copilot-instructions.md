@@ -109,6 +109,23 @@ public class FeatureTests {
 - `value.ShouldNotBeNull()`
 - `string.ShouldBe(expected)` (for string comparisons)
 
+### Exception Testing
+- **Always assert exception messages** when testing for exceptions
+- Capture the exception and verify the message to ensure proper error reporting
+- Example:
+  ```csharp
+  var exception = await Should.ThrowAsync<InvalidOperationException>(
+      async () => await manager.MethodAsync());
+  
+  exception.Message.ShouldBe("Expected error message");
+  ```
+- NOT:
+  ```csharp
+  await Should.ThrowAsync<InvalidOperationException>(
+      async () => await manager.MethodAsync());
+  // Missing message assertion
+  ```
+
 ## Architecture Patterns
 
 ### Domain Models
