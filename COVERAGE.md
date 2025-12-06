@@ -4,9 +4,9 @@
 
 | Metric | Coverage |
 |:---|---:|
-| **Line Coverage** | **~60%** (estimated) |
-| **Branch Coverage** | **~55%** (estimated) |
-| **Test Count** | **105 tests** |
+| **Line Coverage** | **~63%** (estimated) |
+| **Branch Coverage** | **~58%** (estimated) |
+| **Test Count** | **110 tests** |
 | **All Tests Passing** | ✅ Yes |
 
 ## Coverage by Assembly
@@ -32,7 +32,7 @@ All agent domain models have complete test coverage:
 | CommandResult | 100% | ✅ Fully tested |
 | RepositoryAnalysis | 100% | ✅ Fully tested |
 | **DockerContainerManager** | **99%** | ✅ **Fully tested** |
-| **LlmPlannerService** | **~85%** | ✅ **Well tested with mocked LLM** |
+| **LlmPlannerService** | **~95%** | ✅ **Fully tested with mocked LLM** |
 | ProcessCommandExecutor | 97.6% | ✅ Well tested |
 | FileEditor | 97.9% | ✅ Well tested |
 | FileAnalyzer | 93% | ✅ Well tested |
@@ -54,7 +54,7 @@ All agent domain models have complete test coverage:
 2. **WebhookHandlerTests.cs** - Tests for webhook handling (3 tests)
 3. **WebhookValidatorTests.cs** - Tests for signature validation (8 tests)
 4. **RepositoryAnalyzerTests.cs** - Tests for repository analysis logic (10 tests)
-5. **LlmPlannerServiceTests.cs** - Tests for LLM planner logic (16 tests)
+5. **LlmPlannerServiceTests.cs** - Tests for LLM planner logic (22 tests)
 6. **ContainerManagerTests.cs** - Tests for Docker container manager (12 tests)
 7. **ContainerExecutorServiceTests.cs** - Tests for container executor service (5 tests)
 8. **ExecutorServiceTests.cs** - Tests for executor service
@@ -85,7 +85,11 @@ These classes:
 - Core `CreatePlanAsync` method tested with mocked LLM responses using Moq
 - Helper methods (parsing, prompt building, fallback plan) tested
 - Error handling and fallback scenarios verified
-- ~85% line coverage achieved through unit tests
+- Logging behavior verified (information and error logs)
+- OpenAI settings configuration tested (temperature, max tokens, response format)
+- Chat history construction verified
+- Null response content handling tested
+- ~95% line coverage achieved through unit tests
 
 ### Testing Philosophy
 
@@ -99,16 +103,21 @@ The test suite focuses on:
 ### Recent Improvements
 
 In this commit, we added:
-- **6 new tests** for LlmPlannerService (improving coverage from 0% to ~85%)
+- **11 new tests** for LlmPlannerService (improving coverage from 0% to ~95%)
 - Tests covering `CreatePlanAsync` with mocked LLM responses using Moq
 - Successful plan creation with valid LLM response
 - Fallback plan when LLM service fails
 - Fallback plan when LLM returns invalid JSON
 - Prompt building with repository summary and custom instructions
 - Cancellation token propagation
+- Logging behavior verification (LogInformation, LogError)
+- Null response content handling
+- OpenAI settings configuration (temperature, max tokens, response format)
+- Chat history construction (system + user messages)
+- Error handling with exception logging
 - Added Moq 4.20.72 to test dependencies
 
-This brought test count from 99 to 105 tests and overall line coverage from 56.9% to ~60%.
+This brought test count from 99 to 110 tests and overall line coverage from 56.9% to ~63%.
 
 ## Running Tests
 
