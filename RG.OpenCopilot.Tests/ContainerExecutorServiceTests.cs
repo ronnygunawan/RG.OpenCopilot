@@ -459,6 +459,30 @@ public class ContainerExecutorServiceTests {
             ContainerCleaned = true;
             return Task.CompletedTask;
         }
+
+        public Task CreateDirectoryAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> DirectoryExistsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.FromResult(true);
+        }
+
+        public Task MoveAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task CopyAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteAsync(string containerId, string path, bool recursive = false, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<List<string>> ListContentsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<string>());
+        }
     }
 
     private class TestGitHubService : IGitHubService {
@@ -520,6 +544,30 @@ public class ContainerExecutorServiceTests {
         public Task CleanupContainerAsync(string containerId, CancellationToken cancellationToken = default) {
             return Task.CompletedTask;
         }
+
+        public Task CreateDirectoryAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> DirectoryExistsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.FromResult(true);
+        }
+
+        public Task MoveAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task CopyAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteAsync(string containerId, string path, bool recursive = false, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<List<string>> ListContentsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<string>());
+        }
     }
 
     private class TestContainerManagerThatFailsExecution : IContainerManager {
@@ -548,6 +596,30 @@ public class ContainerExecutorServiceTests {
         public Task CleanupContainerAsync(string containerId, CancellationToken cancellationToken = default) {
             ContainerCleaned = true;
             return Task.CompletedTask;
+        }
+
+        public Task CreateDirectoryAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> DirectoryExistsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.FromResult(true);
+        }
+
+        public Task MoveAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task CopyAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteAsync(string containerId, string path, bool recursive = false, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<List<string>> ListContentsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<string>());
         }
     }
 
@@ -578,6 +650,30 @@ public class ContainerExecutorServiceTests {
 
         public Task CleanupContainerAsync(string containerId, CancellationToken cancellationToken = default) {
             return Task.CompletedTask;
+        }
+
+        public Task CreateDirectoryAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> DirectoryExistsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.FromResult(true);
+        }
+
+        public Task MoveAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task CopyAsync(string containerId, string source, string dest, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteAsync(string containerId, string path, bool recursive = false, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<List<string>> ListContentsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<string>());
         }
     }
 }
