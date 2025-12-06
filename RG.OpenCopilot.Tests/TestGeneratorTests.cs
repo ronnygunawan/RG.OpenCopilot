@@ -1376,4 +1376,511 @@ public class TestGeneratorTests {
         result[0].Path.ShouldBe("test_calculator.py");
         result[0].Framework.ShouldBe("pytest");
     }
+
+    [Fact]
+    public async Task RunTestsAsync_WithTypeScriptTests_ExecutesNpmTest() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<TestGenerator>>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var testOutput = """
+            PASS  src/calculator.test.ts
+              Calculator
+                ✓ adds two numbers (2 ms)
+            
+            Tests:       1 passed, 1 total
+            Time:        0.5 s
+            """;
+
+        mockContainerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                It.IsAny<string>(),
+                "npm",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = testOutput,
+                Error = ""
+            });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new TestGenerator(
+            mockContainerManager.Object,
+            mockFileAnalyzer.Object,
+            kernel,
+            mockLogger.Object);
+
+        // Act
+        var result = await generator.RunTestsAsync("test-container", "calculator.test.ts");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Success.ShouldBeTrue();
+        mockContainerManager.Verify(c => c.ExecuteInContainerAsync(
+            It.IsAny<string>(),
+            "npm",
+            It.Is<string[]>(args => args.Contains("test")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WhenExecutionFails_ReturnsFailureWithExceptionMessage() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<TestGenerator>>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        mockContainerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Container not found"));
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new TestGenerator(
+            mockContainerManager.Object,
+            mockFileAnalyzer.Object,
+            kernel,
+            mockLogger.Object);
+
+        // Act
+        var result = await generator.RunTestsAsync("test-container", "test.cs");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Success.ShouldBeFalse();
+        result.Output.ShouldBe("Container not found");
+    }
+
+    [Fact]
+    public async Task GenerateTestsAsync_WithNUnitFramework_UsesNUnitSpecificPrompt() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<TestGenerator>>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var generatedTests = """
+            using NUnit.Framework;
+
+            public class CalculatorTests {
+                [Test]
+                public void Add_WithPositiveNumbers_ReturnsSum() {
+                    var calculator = new Calculator();
+                    var result = calculator.Add(2, 3);
+                    Assert.AreEqual(5, result);
+                }
+            }
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, generatedTests);
+
+        ChatHistory? capturedChatHistory = null;
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => capturedChatHistory = ch)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new TestGenerator(
+            mockContainerManager.Object,
+            mockFileAnalyzer.Object,
+            kernel,
+            mockLogger.Object);
+
+        // Act
+        var result = await generator.GenerateTestsAsync(
+            containerId: "test-container",
+            codeFilePath: "Calculator.cs",
+            codeContent: "public class Calculator { }",
+            testFramework: "NUnit");
+
+        // Assert
+        result.ShouldNotBeNull();
+        capturedChatHistory.ShouldNotBeNull();
+        var systemMessage = capturedChatHistory.FirstOrDefault(m => m.Role == AuthorRole.System);
+        systemMessage.ShouldNotBeNull();
+        systemMessage.Content.ShouldContain("NUnit");
+        systemMessage.Content.ShouldContain("[Test]");
+        systemMessage.Content.ShouldContain("[SetUp]");
+    }
+
+    [Fact]
+    public async Task GenerateTestsAsync_WithMSTestFramework_UsesMSTestSpecificPrompt() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<TestGenerator>>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var generatedTests = """
+            using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+            [TestClass]
+            public class CalculatorTests {
+                [TestMethod]
+                public void Add_WithPositiveNumbers_ReturnsSum() {
+                    var calculator = new Calculator();
+                    var result = calculator.Add(2, 3);
+                    Assert.AreEqual(5, result);
+                }
+            }
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, generatedTests);
+
+        ChatHistory? capturedChatHistory = null;
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => capturedChatHistory = ch)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new TestGenerator(
+            mockContainerManager.Object,
+            mockFileAnalyzer.Object,
+            kernel,
+            mockLogger.Object);
+
+        // Act
+        var result = await generator.GenerateTestsAsync(
+            containerId: "test-container",
+            codeFilePath: "Calculator.cs",
+            codeContent: "public class Calculator { }",
+            testFramework: "MSTest");
+
+        // Assert
+        result.ShouldNotBeNull();
+        capturedChatHistory.ShouldNotBeNull();
+        var systemMessage = capturedChatHistory.FirstOrDefault(m => m.Role == AuthorRole.System);
+        systemMessage.ShouldNotBeNull();
+        systemMessage.Content.ShouldContain("MSTest");
+        systemMessage.Content.ShouldContain("[TestMethod]");
+        systemMessage.Content.ShouldContain("[TestInitialize]");
+    }
+
+    [Fact]
+    public async Task GenerateTestsAsync_WithJestFramework_UsesJestSpecificPrompt() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<TestGenerator>>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var generatedTests = """
+            describe('Calculator', () => {
+                test('adds two numbers', () => {
+                    const calculator = new Calculator();
+                    expect(calculator.add(2, 3)).toBe(5);
+                });
+            });
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, generatedTests);
+
+        ChatHistory? capturedChatHistory = null;
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => capturedChatHistory = ch)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new TestGenerator(
+            mockContainerManager.Object,
+            mockFileAnalyzer.Object,
+            kernel,
+            mockLogger.Object);
+
+        // Act
+        var result = await generator.GenerateTestsAsync(
+            containerId: "test-container",
+            codeFilePath: "calculator.js",
+            codeContent: "class Calculator { }",
+            testFramework: "Jest");
+
+        // Assert
+        result.ShouldNotBeNull();
+        capturedChatHistory.ShouldNotBeNull();
+        var systemMessage = capturedChatHistory.FirstOrDefault(m => m.Role == AuthorRole.System);
+        systemMessage.ShouldNotBeNull();
+        systemMessage.Content.ShouldContain("Jest");
+        systemMessage.Content.ShouldContain("describe()");
+        systemMessage.Content.ShouldContain("expect()");
+    }
+
+    [Fact]
+    public async Task GenerateTestsAsync_WithPytestFramework_UsesPytestSpecificPrompt() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<TestGenerator>>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var generatedTests = """
+            import pytest
+            
+            def test_add():
+                calculator = Calculator()
+                result = calculator.add(2, 3)
+                assert result == 5
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, generatedTests);
+
+        ChatHistory? capturedChatHistory = null;
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => capturedChatHistory = ch)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new TestGenerator(
+            mockContainerManager.Object,
+            mockFileAnalyzer.Object,
+            kernel,
+            mockLogger.Object);
+
+        // Act
+        var result = await generator.GenerateTestsAsync(
+            containerId: "test-container",
+            codeFilePath: "calculator.py",
+            codeContent: "class Calculator: pass",
+            testFramework: "pytest");
+
+        // Assert
+        result.ShouldNotBeNull();
+        capturedChatHistory.ShouldNotBeNull();
+        var systemMessage = capturedChatHistory.FirstOrDefault(m => m.Role == AuthorRole.System);
+        systemMessage.ShouldNotBeNull();
+        systemMessage.Content.ShouldContain("pytest");
+        systemMessage.Content.ShouldContain("test_");
+        systemMessage.Content.ShouldContain("fixtures");
+    }
+
+    [Fact]
+    public async Task GenerateTestsAsync_WithPatternHavingBaseTestClass_IncludesInPrompt() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<TestGenerator>>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        var existingTests = new List<TestFile> {
+            new TestFile {
+                Path = "CalculatorTests.cs",
+                Content = """
+                    using Xunit;
+                    
+                    public class CalculatorTests : BaseTestClass {
+                        [Fact]
+                        public void Test() { }
+                    }
+                    """,
+                Framework = "xUnit"
+            }
+        };
+
+        var analysisResponse = """
+            NamingConvention: MethodName_Scenario_ExpectedOutcome
+            AssertionStyle: Shouldly
+            UsesArrangeActAssert: yes
+            CommonImports: using Xunit;, using Shouldly;
+            BaseTestClass: BaseTestClass
+            """;
+
+        var generatedTests = "public class CalculatorTests : BaseTestClass { }";
+
+        var chatContent1 = new ChatMessageContent(AuthorRole.Assistant, analysisResponse);
+        var chatContent2 = new ChatMessageContent(AuthorRole.Assistant, generatedTests);
+
+        var callCount = 0;
+        ChatHistory? capturedUserPrompt = null;
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => {
+                    callCount++;
+                    if (callCount == 2) { // Second call is for test generation
+                        capturedUserPrompt = ch;
+                    }
+                })
+            .ReturnsAsync((ChatHistory ch, PromptExecutionSettings _, Kernel _, CancellationToken _) => {
+                return callCount == 1 
+                    ? new List<ChatMessageContent> { chatContent1 }
+                    : new List<ChatMessageContent> { chatContent2 };
+            });
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(It.IsAny<string>(), "*Tests.cs", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string> { "CalculatorTests.cs" });
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(It.IsAny<string>(), It.Is<string>(s => s != "*Tests.cs"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingTests[0].Content);
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new TestGenerator(
+            mockContainerManager.Object,
+            mockFileAnalyzer.Object,
+            kernel,
+            mockLogger.Object);
+
+        // Act
+        var result = await generator.GenerateTestsAsync(
+            containerId: "test-container",
+            codeFilePath: "Calculator.cs",
+            codeContent: "public class Calculator { }",
+            testFramework: null);
+
+        // Assert
+        result.ShouldNotBeNull();
+        capturedUserPrompt.ShouldNotBeNull();
+        var userMessage = capturedUserPrompt.LastOrDefault(m => m.Role == AuthorRole.User);
+        userMessage.ShouldNotBeNull();
+        userMessage.Content.ShouldContain("BaseTestClass");
+    }
+
+    [Fact]
+    public async Task FindExistingTestsAsync_WhenReadFileFails_ContinuesWithOtherFiles() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<TestGenerator>>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(It.IsAny<string>(), "*Tests.cs", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string> { "Test1.cs", "Test2.cs" });
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(It.IsAny<string>(), It.Is<string>(s => s != "*Tests.cs"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+
+        // First file throws exception, second succeeds
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(It.IsAny<string>(), "Test1.cs", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("File not accessible"));
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(It.IsAny<string>(), "Test2.cs", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("using Xunit; public class Test2 { }");
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new TestGenerator(
+            mockContainerManager.Object,
+            mockFileAnalyzer.Object,
+            kernel,
+            mockLogger.Object);
+
+        // Act
+        var result = await generator.FindExistingTestsAsync("test-container");
+
+        // Assert
+        result.ShouldNotBeEmpty();
+        result.Count.ShouldBe(1);
+        result[0].Path.ShouldBe("Test2.cs");
+    }
+
+    [Fact]
+    public async Task DetectTestFrameworkAsync_WhenExceptionOccurs_ReturnsNull() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<TestGenerator>>();
+        var mockContainerManager = new Mock<IContainerManager>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockChatService = new Mock<IChatCompletionService>();
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("File system error"));
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new TestGenerator(
+            mockContainerManager.Object,
+            mockFileAnalyzer.Object,
+            kernel,
+            mockLogger.Object);
+
+        // Act
+        var result = await generator.DetectTestFrameworkAsync("test-container");
+
+        // Assert
+        result.ShouldBeNull();
+    }
 }
