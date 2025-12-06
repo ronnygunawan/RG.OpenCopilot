@@ -59,13 +59,13 @@ public sealed class TestGenerator : ITestGenerator {
                 MaxTokens = 4000
             };
 
-            var response = await _chatService.GetChatMessageContentAsync(
+            var response = await _chatService.GetChatMessageContentsAsync(
                 chatHistory,
                 executionSettings,
                 _kernel,
                 cancellationToken);
 
-            var generatedTests = ExtractCode(response.Content ?? "");
+            var generatedTests = ExtractCode(response.FirstOrDefault()?.Content ?? "");
 
             _logger.LogInformation(
                 "Generated {LineCount} lines of test code for {CodeFilePath}",
@@ -226,13 +226,13 @@ public sealed class TestGenerator : ITestGenerator {
                 MaxTokens = 1000
             };
 
-            var response = await _chatService.GetChatMessageContentAsync(
+            var response = await _chatService.GetChatMessageContentsAsync(
                 chatHistory,
                 executionSettings,
                 _kernel,
                 cancellationToken);
 
-            var analysisResult = response.Content ?? "";
+            var analysisResult = response.FirstOrDefault()?.Content ?? "";
             
             // Parse the analysis result
             return ParsePatternAnalysis(analysisResult, existingTests);
@@ -579,11 +579,18 @@ public sealed class TestGenerator : ITestGenerator {
         var failures = new List<string>();
 
         // Parse .NET test results
-        var dotnetMatch = Regex.Match(output, @"Total tests: (\d+).*?Passed: (\d+).*?Failed: (\d+)", RegexOptions.Singleline);
-        if (dotnetMatch.Success) {
-            totalTests = int.Parse(dotnetMatch.Groups[1].Value);
-            passedTests = int.Parse(dotnetMatch.Groups[2].Value);
-            failedTests = int.Parse(dotnetMatch.Groups[3].Value);
+        var dotnetTotalMatch = Regex.Match(output, @"Total tests:\s*(\d+)", RegexOptions.Multiline);
+        var dotnetPassedMatch = Regex.Match(output, @"Passed:\s*(\d+)", RegexOptions.Multiline);
+        var dotnetFailedMatch = Regex.Match(output, @"Failed:\s*(\d+)", RegexOptions.Multiline);
+        
+        if (dotnetTotalMatch.Success) {
+            totalTests = int.Parse(dotnetTotalMatch.Groups[1].Value);
+            if (dotnetPassedMatch.Success) {
+                passedTests = int.Parse(dotnetPassedMatch.Groups[1].Value);
+            }
+            if (dotnetFailedMatch.Success) {
+                failedTests = int.Parse(dotnetFailedMatch.Groups[1].Value);
+            }
         }
 
         // Parse Jest results
