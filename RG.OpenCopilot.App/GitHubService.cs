@@ -12,26 +12,39 @@ public interface IGitHubService {
 }
 
 public sealed class GitHubService : IGitHubService {
-    private readonly IGitHubClient _client;
+    private readonly IGitHubRepositoryAdapter _repositoryAdapter;
+    private readonly IGitHubGitAdapter _gitAdapter;
+    private readonly IGitHubPullRequestAdapter _pullRequestAdapter;
+    private readonly IGitHubIssueAdapter _issueAdapter;
     private readonly ILogger<GitHubService> _logger;
 
-    public GitHubService(IGitHubClient client, ILogger<GitHubService> logger) {
-        _client = client;
+    public GitHubService(
+        IGitHubRepositoryAdapter repositoryAdapter,
+        IGitHubGitAdapter gitAdapter,
+        IGitHubPullRequestAdapter pullRequestAdapter,
+        IGitHubIssueAdapter issueAdapter,
+        ILogger<GitHubService> logger) {
+        _repositoryAdapter = repositoryAdapter;
+        _gitAdapter = gitAdapter;
+        _pullRequestAdapter = pullRequestAdapter;
+        _issueAdapter = issueAdapter;
         _logger = logger;
     }
 
     public async Task<string> CreateWorkingBranchAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default) {
         // Get the default branch reference
-        var defaultBranch = await _client.Repository.Get(owner: owner, name: repo);
-        var mainBranch = await _client.Git.Reference.Get(owner: owner, name: repo, reference: $"heads/{defaultBranch.DefaultBranch}");
+        var repository = await _repositoryAdapter.GetRepositoryAsync(owner, repo, cancellationToken);
+        var defaultBranchName = repository.DefaultBranch;
+        
+        var mainBranch = await _gitAdapter.GetReferenceAsync(owner, repo, $"heads/{defaultBranchName}", cancellationToken);
+        var sha = mainBranch.Sha;
 
         // Create new branch name
         var branchName = $"open-copilot/issue-{issueNumber}";
 
         try {
             // Create the new branch from the default branch
-            var newBranch = new NewReference(reference: $"refs/heads/{branchName}", sha: mainBranch.Object.Sha);
-            await _client.Git.Reference.Create(owner: owner, name: repo, reference: newBranch);
+            await _gitAdapter.CreateReferenceAsync(owner, repo, $"refs/heads/{branchName}", sha, cancellationToken);
 
             _logger.LogInformation("Created branch {BranchName} for issue #{IssueNumber}", branchName, issueNumber);
             return branchName;
@@ -45,13 +58,10 @@ public sealed class GitHubService : IGitHubService {
     }
 
     public async Task<int> CreateWipPullRequestAsync(string owner, string repo, string branchName, int issueNumber, string issueTitle, string issueBody, CancellationToken cancellationToken = default) {
-        var repository = await _client.Repository.Get(owner: owner, name: repo);
+        var repository = await _repositoryAdapter.GetRepositoryAsync(owner, repo, cancellationToken);
+        var defaultBranchName = repository.DefaultBranch;
 
-        var newPullRequest = new NewPullRequest(
-            title: $"[WIP] {issueTitle}",
-            head: branchName,
-            baseRef: repository.DefaultBranch) {
-            Body = $@"## Original Issue Prompt
+        var body = $@"## Original Issue Prompt
 
 **Issue #{issueNumber}: {issueTitle}**
 
@@ -60,32 +70,31 @@ public sealed class GitHubService : IGitHubService {
 ---
 
 _This PR was automatically created by RG.OpenCopilot._
-_The plan and progress will be updated here as the agent works on this issue._"
-        };
+_The plan and progress will be updated here as the agent works on this issue._";
 
-        var pr = await _client.PullRequest.Create(owner: owner, name: repo, newPullRequest: newPullRequest);
+        var pr = await _pullRequestAdapter.CreateAsync(
+            owner, 
+            repo, 
+            $"[WIP] {issueTitle}", 
+            branchName, 
+            defaultBranchName, 
+            body, 
+            cancellationToken);
+        
         _logger.LogInformation("Created WIP PR #{PrNumber} for issue #{IssueNumber}", pr.Number, issueNumber);
 
         return pr.Number;
     }
 
     public async Task UpdatePullRequestDescriptionAsync(string owner, string repo, int prNumber, string title, string body, CancellationToken cancellationToken = default) {
-        var update = new PullRequestUpdate {
-            Title = title,
-            Body = body
-        };
-
-        await _client.PullRequest.Update(owner, repo, prNumber, update);
+        await _pullRequestAdapter.UpdateAsync(owner, repo, prNumber, title, body, cancellationToken);
         _logger.LogInformation("Updated PR #{PrNumber} with new description", prNumber);
     }
 
     public async Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default) {
-        var pullRequests = await _client.PullRequest.GetAllForRepository(owner: owner, name: repo, request: new PullRequestRequest {
-            State = ItemStateFilter.Open,
-            Head = $"{owner}:{branchName}"
-        });
+        var pullRequests = await _pullRequestAdapter.GetAllForRepositoryAsync(owner, repo, cancellationToken);
 
-        var pr = pullRequests.FirstOrDefault();
+        var pr = pullRequests.FirstOrDefault(p => p.HeadRef == $"{owner}:{branchName}" || p.HeadRef == branchName);
         if (pr != null) {
             _logger.LogInformation("Found PR #{PrNumber} for branch {BranchName}", pr.Number, branchName);
             return pr.Number;
@@ -96,7 +105,7 @@ _The plan and progress will be updated here as the agent works on this issue._"
     }
 
     public async Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default) {
-        await _client.Issue.Comment.Create(owner: owner, name: repo, issueNumber: prNumber, newComment: comment);
+        await _issueAdapter.CreateCommentAsync(owner, repo, prNumber, comment, cancellationToken);
         _logger.LogInformation("Posted comment to PR #{PrNumber}", prNumber);
     }
 }

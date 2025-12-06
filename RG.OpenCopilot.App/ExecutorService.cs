@@ -99,10 +99,10 @@ public sealed class ExecutorService : IExecutorService {
             }
 
             // Commit and push changes if there are any
-            var hasChanges = await HasUncommittedChanges(localRepoPath, cancellationToken);
+            var hasChanges = await HasUncommittedChangesAsync(localRepoPath, cancellationToken);
             if (hasChanges) {
                 _logger.LogInformation("Committing and pushing changes");
-                await CommitAndPushChanges(localRepoPath, token, task, completedSteps, cancellationToken);
+                await CommitAndPushChangesAsync(localRepoPath, token, task, completedSteps, cancellationToken);
             }
 
             // Post progress comment to PR
@@ -154,7 +154,7 @@ public sealed class ExecutorService : IExecutorService {
         }
     }
 
-    private async Task<bool> HasUncommittedChanges(string repoPath, CancellationToken cancellationToken) {
+    private async Task<bool> HasUncommittedChangesAsync(string repoPath, CancellationToken cancellationToken) {
         var result = await _commandExecutor.ExecuteCommandAsync(
             workingDirectory: repoPath,
             command: "git",
@@ -164,7 +164,7 @@ public sealed class ExecutorService : IExecutorService {
         return !string.IsNullOrWhiteSpace(result.Output);
     }
 
-    private async Task CommitAndPushChanges(
+    private async Task CommitAndPushChangesAsync(
         string repoPath,
         string token,
         AgentTask task,

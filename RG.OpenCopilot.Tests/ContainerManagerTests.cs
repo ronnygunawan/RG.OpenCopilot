@@ -254,6 +254,139 @@ public class ContainerManagerTests {
         commandExecutor.Commands.ShouldContain(c => c.Command == "docker" && c.Args.Contains("rm"));
     }
 
+    [Fact]
+    public async Task CommitAndPushAsync_ThrowsWhenPushFails() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            ReturnNonEmptyStatusOnce = true,
+            FailOnPush = true
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CommitAndPushAsync(
+                containerId: "test-container",
+                commitMessage: "Test commit",
+                owner: "test-owner",
+                repo: "test-repo",
+                branch: "main",
+                token: "test-token"));
+
+        exception.Message.ShouldBe("Failed to push: Command failed");
+    }
+
+    [Fact]
+    public async Task WriteFileInContainerAsync_EscapesSingleQuotesInContent() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.WriteFileInContainerAsync(
+            containerId: "test-container",
+            filePath: "test.txt",
+            content: "It's a test with 'quotes'");
+
+        // Assert
+        var execCommand = commandExecutor.Commands.FirstOrDefault(c =>
+            c.Command == "docker" &&
+            c.Args.Contains("exec") &&
+            c.Args.Contains("sh"));
+        execCommand.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_InstallsGitInContainer() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main");
+
+        // Assert
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("apt-get") && c.Args.Contains("update"));
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("apt-get") && c.Args.Contains("install") && c.Args.Contains("git"));
+    }
+
+    [Fact]
+    public async Task ExecuteInContainerAsync_UsesWorkingDirectory() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.ExecuteInContainerAsync(
+            containerId: "test-container",
+            command: "ls",
+            args: new[] { "-la" });
+
+        // Assert
+        var execCommand = commandExecutor.Commands.FirstOrDefault(c =>
+            c.Command == "docker" && c.Args.Contains("exec"));
+        execCommand.ShouldNotBeNull();
+        execCommand.Args.ShouldContain("-w");
+    }
+
+    [Fact]
+    public async Task CommitAndPushAsync_ConfiguresGitUserBeforeCommit() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            ReturnNonEmptyStatusOnce = true
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CommitAndPushAsync(
+            containerId: "test-container",
+            commitMessage: "Test commit",
+            owner: "test-owner",
+            repo: "test-repo",
+            branch: "main",
+            token: "test-token");
+
+        // Assert
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("config") && c.Args.Contains("user.name") && c.Args.Contains("RG.OpenCopilot[bot]"));
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("config") && c.Args.Contains("user.email"));
+    }
+
+    [Fact]
+    public async Task CommitAndPushAsync_SetsRemoteUrlWithToken() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            ReturnNonEmptyStatusOnce = true
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CommitAndPushAsync(
+            containerId: "test-container",
+            commitMessage: "Test commit",
+            owner: "test-owner",
+            repo: "test-repo",
+            branch: "main",
+            token: "test-token");
+
+        // Assert
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("remote") && c.Args.Contains("set-url"));
+    }
+
     // Test helper classes
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -267,6 +400,7 @@ public class ContainerManagerTests {
         public string? FailOnCommand { get; set; }
         public string[]? FailOnArgs { get; set; }
         public bool ReturnNonEmptyStatusOnce { get; set; }
+        public bool FailOnPush { get; set; }
         private bool _statusReturned = false;
 
         public Task<CommandResult> ExecuteCommandAsync(
@@ -295,6 +429,15 @@ public class ContainerManagerTests {
                     ExitCode = 0,
                     Output = "",
                     Error = ""
+                });
+            }
+
+            // Special handling for git push failure
+            if (FailOnPush && args.Contains("git") && args.Contains("push")) {
+                return Task.FromResult(new CommandResult {
+                    ExitCode = 1,
+                    Output = "",
+                    Error = "Command failed"
                 });
             }
 

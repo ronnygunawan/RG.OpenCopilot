@@ -107,6 +107,114 @@ public class WebhookHandlerTests {
         task.Plan.ShouldNotBeNull();
     }
 
+    [Fact]
+    public async Task HandleIssuesEventAsync_SkipsWhenTaskAlreadyExists() {
+        // Arrange
+        var taskStore = new InMemoryAgentTaskStore();
+        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
+        var gitHubService = new TestGitHubService();
+        var repositoryAnalyzer = new TestRepositoryAnalyzer();
+        var instructionsLoader = new TestInstructionsLoader();
+        var handler = new WebhookHandler(
+            taskStore,
+            planner,
+            gitHubService,
+            repositoryAnalyzer,
+            instructionsLoader,
+            new TestLogger<WebhookHandler>());
+
+        // Create an existing task
+        var existingTask = new AgentTask {
+            Id = "owner/test/issues/99",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "test",
+            IssueNumber = 99,
+            Status = AgentTaskStatus.Planned
+        };
+        await taskStore.CreateTaskAsync(task: existingTask);
+
+        var payload = new GitHubIssueEventPayload {
+            Action = "labeled",
+            Label = new GitHubLabel { Name = "copilot-assisted" },
+            Issue = new GitHubIssue { Number = 99, Title = "Updated Issue", Body = "Updated body" },
+            Repository = new GitHubRepository { Name = "test", Full_Name = "owner/test", Owner = new GitHubOwner { Login = "owner" } },
+            Installation = new GitHubInstallation { Id = 123 }
+        };
+
+        // Act
+        await handler.HandleIssuesEventAsync(payload: payload);
+
+        // Assert
+        // Should not create a new branch or PR since task already exists
+        gitHubService.BranchCreated.ShouldBeFalse();
+        gitHubService.PrCreated.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task HandleIssuesEventAsync_IgnoresUnlabeledAction() {
+        // Arrange
+        var taskStore = new InMemoryAgentTaskStore();
+        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
+        var gitHubService = new TestGitHubService();
+        var repositoryAnalyzer = new TestRepositoryAnalyzer();
+        var instructionsLoader = new TestInstructionsLoader();
+        var handler = new WebhookHandler(
+            taskStore,
+            planner,
+            gitHubService,
+            repositoryAnalyzer,
+            instructionsLoader,
+            new TestLogger<WebhookHandler>());
+
+        var payload = new GitHubIssueEventPayload {
+            Action = "unlabeled",
+            Label = new GitHubLabel { Name = "copilot-assisted" },
+            Issue = new GitHubIssue { Number = 1, Title = "Test", Body = "Test body" },
+            Repository = new GitHubRepository { Name = "test", Full_Name = "owner/test", Owner = new GitHubOwner { Login = "owner" } },
+            Installation = new GitHubInstallation { Id = 123 }
+        };
+
+        // Act
+        await handler.HandleIssuesEventAsync(payload: payload);
+
+        // Assert
+        gitHubService.BranchCreated.ShouldBeFalse();
+        gitHubService.PrCreated.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task HandleIssuesEventAsync_IgnoresNonCopilotAssistedLabel() {
+        // Arrange
+        var taskStore = new InMemoryAgentTaskStore();
+        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
+        var gitHubService = new TestGitHubService();
+        var repositoryAnalyzer = new TestRepositoryAnalyzer();
+        var instructionsLoader = new TestInstructionsLoader();
+        var handler = new WebhookHandler(
+            taskStore,
+            planner,
+            gitHubService,
+            repositoryAnalyzer,
+            instructionsLoader,
+            new TestLogger<WebhookHandler>());
+
+        var payload = new GitHubIssueEventPayload {
+            Action = "labeled",
+            Label = new GitHubLabel { Name = "bug" },
+            Issue = new GitHubIssue { Number = 1, Title = "Test", Body = "Test body" },
+            Repository = new GitHubRepository { Name = "test", Full_Name = "owner/test", Owner = new GitHubOwner { Login = "owner" } },
+            Installation = new GitHubInstallation { Id = 123 }
+        };
+
+        // Act
+        await handler.HandleIssuesEventAsync(payload: payload);
+
+        // Assert
+        gitHubService.BranchCreated.ShouldBeFalse();
+        gitHubService.PrCreated.ShouldBeFalse();
+    }
+
     private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
