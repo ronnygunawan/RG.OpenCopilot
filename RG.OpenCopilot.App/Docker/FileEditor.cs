@@ -1,6 +1,6 @@
 using RG.OpenCopilot.Agent;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.Docker;
 
 /// <summary>
 /// Manages file operations in Docker containers with change tracking for commit message generation

@@ -1,6 +1,6 @@
 using Octokit;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.GitHub.Repository;
 
 public interface IInstructionsLoader {
     Task<string?> LoadInstructionsAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default);

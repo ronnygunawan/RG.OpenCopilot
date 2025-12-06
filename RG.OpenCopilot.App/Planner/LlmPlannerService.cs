@@ -4,7 +4,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using RG.OpenCopilot.Agent;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.Planner;
 
 public sealed class LlmPlannerService : IPlannerService {
     private readonly Kernel _kernel;

@@ -1,6 +1,6 @@
 using RG.OpenCopilot.Agent;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.Planner;
 
 public sealed class SimplePlannerService : IPlannerService {
     private readonly ILogger<SimplePlannerService> _logger;

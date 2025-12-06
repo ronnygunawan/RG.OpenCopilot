@@ -1,7 +1,7 @@
 using System.Text;
 using RG.OpenCopilot.Agent;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.Executor;
 
 /// <summary>
 /// Container-based executor service that runs in isolated Docker containers

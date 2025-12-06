@@ -1,7 +1,7 @@
 using System.Text.Json;
 using RG.OpenCopilot.Agent;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.GitHub.Webhook.Services;
 
 public interface IWebhookHandler {
     Task HandleIssuesEventAsync(GitHubIssueEventPayload payload, CancellationToken cancellationToken = default);

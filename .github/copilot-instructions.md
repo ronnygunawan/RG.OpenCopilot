@@ -7,8 +7,25 @@ RG.OpenCopilot is a C#/.NET 10 solution that provides a GitHub Enterprise–host
 ## Solution Structure
 
 - **RG.OpenCopilot.slnx** – root solution file
-- **RG.OpenCopilot.App** – ASP.NET Core minimal API for GitHub App webhooks and health checks
-- **RG.OpenCopilot.Agent** – shared domain models and planner/executor abstractions
+- **RG.OpenCopilot.Agent** – shared domain models and service abstractions
+  - Organized by feature first, then by layer (Models/, Services/)
+  - `Planning/` – Planning domain (AgentPlan, PlanStep, AgentTaskContext, IPlannerService)
+  - `Execution/` – Execution domain (AgentTask, AgentTaskStatus, IExecutorService)
+  - `FileOperations/` – File operations domain (FileStructure, FileTree, FileChange, IFileAnalyzer, IFileEditor)
+  - Uses global usings for all feature namespaces
+- **RG.OpenCopilot.App** – ASP.NET Core minimal API organized by features
+  - `Planner/` – Planning services (LlmPlannerService, SimplePlannerService)
+  - `Executor/` – Execution services (ExecutorService, ContainerExecutorService)
+  - `Docker/` – Container management (ContainerManager, FileAnalyzer, FileEditor)
+  - `GitHub/Git/` – Git operations
+    - `Adapters/` – GitHub API adapters with anti-corruption layer
+    - `Services/` – GitHubService for high-level operations
+  - `GitHub/Repository/` – Repository analysis (RepositoryAnalyzer, InstructionsLoader)
+  - `GitHub/Authentication/` – Authentication (GitHubAppTokenProvider, JwtTokenGenerator)
+  - `GitHub/Webhook/` – Webhook handling
+    - `Models/` – Webhook payload models
+    - `Services/` – WebhookHandler, WebhookValidator
+  - `Infrastructure/` – Cross-cutting concerns (CommandExecutor, RepositoryCloner, AgentTaskStore)
 - **RG.OpenCopilot.Runner** – console app to run the agent locally for testing
 - **RG.OpenCopilot.Tests** – xUnit tests using Shouldly assertions
 
@@ -138,22 +155,49 @@ public class FeatureTests {
 
 ## Architecture Patterns
 
+### Project Organization
+- **Feature-based organization**: Code is organized by feature/domain (Planner, Executor, Docker, GitHub, etc.)
+- **Layered architecture within features**: Features are further organized into Models/, Services/, Adapters/ as needed
+- **SOLID principles**: Single responsibility, dependency inversion, interface segregation
+- **DDD concepts**: Domain models in Agent project, application services in App project
+
 ### Domain Models
-- Located in `RG.OpenCopilot.Agent/AgentModels.cs`
+- Located in feature-specific folders in `RG.OpenCopilot.Agent/`
+- **Planning**: `Planning/Models/` (AgentPlan, PlanStep, AgentTaskContext)
+- **Execution**: `Execution/Models/` (AgentTask, AgentTaskStatus)
+- **FileOperations**: `FileOperations/Models/` (FileStructure, FileTree, FileChange, etc.)
+- Each model in its own file for clarity
 - Use `sealed` classes for concrete types
 - Use `init` accessors for immutable properties
 - Initialize collections in property initializers
 
 ### Services and Abstractions
-- Define interfaces in `RG.OpenCopilot.Agent`
+- Service interfaces defined in feature-specific folders in `RG.OpenCopilot.Agent/Services/`
+- **Planning**: `Planning/Services/` (IPlannerService)
+- **Execution**: `Execution/Services/` (IExecutorService)
+- **FileOperations**: `FileOperations/Services/` (IFileAnalyzer, IFileEditor)
+- Service implementations in feature-specific folders in `RG.OpenCopilot.App/`
 - Use `async`/`await` for all I/O operations
 - Accept `CancellationToken` with default value in async methods
 - Return `Task<T>` or `Task` from async methods
 
+### Anti-Corruption Layer
+- `GitHubApiAdapter` provides an anti-corruption layer over Octokit
+- Simple DTOs (RepositoryInfo, ReferenceInfo, PullRequestInfo, etc.) prevent Octokit types from leaking
+- Adapters translate between external libraries and domain models
+
+### Repository Pattern
+- `IAgentTaskStore` interface defines repository operations
+- `InMemoryAgentTaskStore` provides in-memory implementation for POC
+- Can be replaced with persistent storage implementation
+
 ### Key Interfaces
-- `IPlannerService` – creates structured plans using premium LLM models
-- `IExecutorService` – executes plans and makes code changes
-- Both interfaces are defined in `AgentModels.cs`
+- `IPlannerService` – creates structured plans using LLM models (in `RG.OpenCopilot.Agent/Planning/Services/`)
+- `IExecutorService` – executes plans and makes code changes (in `RG.OpenCopilot.Agent/Execution/Services/`)
+- `IFileAnalyzer` – analyzes files in containers (in `RG.OpenCopilot.Agent/FileOperations/Services/`)
+- `IFileEditor` – modifies files with change tracking (in `RG.OpenCopilot.Agent/FileOperations/Services/`)
+- `IGitHubService` – high-level GitHub operations (in `RG.OpenCopilot.App/GitHub/Git/Services/`)
+- `IContainerManager` – Docker container management (in `RG.OpenCopilot.App/Docker/`)
 
 ## LLM Integration
 

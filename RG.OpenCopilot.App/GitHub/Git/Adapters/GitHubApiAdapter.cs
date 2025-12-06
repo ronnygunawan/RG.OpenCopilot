@@ -1,6 +1,6 @@
 using Octokit;
 
-namespace RG.OpenCopilot.App;
+namespace RG.OpenCopilot.App.GitHub.Git.Adapters;
 
 // Anti-corruption layer: Simple DTOs without Octokit dependencies
 public sealed class RepositoryInfo {
