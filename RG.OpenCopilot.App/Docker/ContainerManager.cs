@@ -311,11 +311,19 @@ public sealed class DockerContainerManager : IContainerManager {
     }
 
     private static void ValidateWorkspacePath(string path) {
-        // Normalize the path to prevent directory traversal
-        var normalizedPath = Path.GetFullPath(Path.Combine(WorkDir, path.TrimStart('/')));
+        if (string.IsNullOrWhiteSpace(path)) {
+            throw new InvalidOperationException("Path cannot be null or empty.");
+        }
+
+        // Remove leading slash for consistency
+        var cleanPath = path.TrimStart('/');
         
-        // Ensure the path is within the workspace
-        if (!normalizedPath.StartsWith(WorkDir, StringComparison.Ordinal)) {
+        // Normalize the path to prevent directory traversal
+        var normalizedPath = Path.GetFullPath(Path.Combine(WorkDir, cleanPath));
+        
+        // Ensure the path is within the workspace (must start with /workspace and either end there or continue with /)
+        if (!normalizedPath.Equals(WorkDir, StringComparison.Ordinal) && 
+            !normalizedPath.StartsWith(WorkDir + Path.DirectorySeparatorChar, StringComparison.Ordinal)) {
             throw new InvalidOperationException($"Path {path} is outside the workspace directory. Only paths within /workspace are allowed.");
         }
     }

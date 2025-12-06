@@ -471,6 +471,22 @@ public class DirectoryOperationsTests {
             c.Args.Contains("/workspace/dest/new/file.txt"));
     }
 
+    [Fact]
+    public async Task CreateDirectoryAsync_ThrowsWhenPathIsEmpty() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await manager.CreateDirectoryAsync(
+                containerId: "test-container",
+                dirPath: ""));
+
+        exception.Message.ShouldBe("Path cannot be null or empty.");
+    }
+
     // Test helper classes
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
