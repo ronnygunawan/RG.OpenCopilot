@@ -21,9 +21,10 @@ See **[POC-SETUP.md](POC-SETUP.md)** for setup and testing instructions.
 
 - `RG.OpenCopilot.slnx` – root solution
 - `RG.OpenCopilot.Agent` – shared domain models and service abstractions
-  - Organized into `Models/` and `Services/` folders
-  - Models include AgentPlan, AgentTask, FileStructure, and related types
-  - Services define core interfaces: IPlannerService, IExecutorService, IFileAnalyzer, IFileEditor
+  - Organized by feature first, then by layer (Models/, Services/)
+  - **Planning/**: Planning domain (AgentPlan, PlanStep, AgentTaskContext, IPlannerService)
+  - **Execution/**: Execution domain (AgentTask, AgentTaskStatus, IExecutorService)
+  - **FileOperations/**: File operations domain (FileStructure, FileTree, FileChange, IFileAnalyzer, IFileEditor)
 - `RG.OpenCopilot.App` – ASP.NET Core minimal API organized by feature
   - **Planner/**: Planning services (LlmPlannerService, SimplePlannerService)
   - **Executor/**: Execution services (ExecutorService, ContainerExecutorService)
@@ -39,7 +40,7 @@ See **[POC-SETUP.md](POC-SETUP.md)** for setup and testing instructions.
 
 All projects target `.NET 10.0` with nullable reference types and implicit usings enabled.
 
-The codebase follows **SOLID principles** and **DDD patterns** with feature-based organization, anti-corruption layers for external dependencies, and clear separation of concerns.
+The codebase follows **SOLID principles** and **DDD patterns** with feature-based organization (organized by feature first, then by architectural layer), anti-corruption layers for external dependencies, and clear separation of concerns.
 
 ## Features
 

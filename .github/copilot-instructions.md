@@ -8,9 +8,11 @@ RG.OpenCopilot is a C#/.NET 10 solution that provides a GitHub Enterprise–host
 
 - **RG.OpenCopilot.slnx** – root solution file
 - **RG.OpenCopilot.Agent** – shared domain models and service abstractions
-  - `Models/` – Domain models (AgentPlan, AgentTask, FileStructure, etc.)
-  - `Services/` – Service interfaces (IPlannerService, IExecutorService, IFileAnalyzer, IFileEditor)
-  - Uses global usings for Models and Services namespaces
+  - Organized by feature first, then by layer (Models/, Services/)
+  - `Planning/` – Planning domain (AgentPlan, PlanStep, AgentTaskContext, IPlannerService)
+  - `Execution/` – Execution domain (AgentTask, AgentTaskStatus, IExecutorService)
+  - `FileOperations/` – File operations domain (FileStructure, FileTree, FileChange, IFileAnalyzer, IFileEditor)
+  - Uses global usings for all feature namespaces
 - **RG.OpenCopilot.App** – ASP.NET Core minimal API organized by features
   - `Planner/` – Planning services (LlmPlannerService, SimplePlannerService)
   - `Executor/` – Execution services (ExecutorService, ContainerExecutorService)
@@ -160,14 +162,20 @@ public class FeatureTests {
 - **DDD concepts**: Domain models in Agent project, application services in App project
 
 ### Domain Models
-- Located in `RG.OpenCopilot.Agent/Models/`
+- Located in feature-specific folders in `RG.OpenCopilot.Agent/`
+- **Planning**: `Planning/Models/` (AgentPlan, PlanStep, AgentTaskContext)
+- **Execution**: `Execution/Models/` (AgentTask, AgentTaskStatus)
+- **FileOperations**: `FileOperations/Models/` (FileStructure, FileTree, FileChange, etc.)
 - Each model in its own file for clarity
 - Use `sealed` classes for concrete types
 - Use `init` accessors for immutable properties
 - Initialize collections in property initializers
 
 ### Services and Abstractions
-- Service interfaces defined in `RG.OpenCopilot.Agent/Services/`
+- Service interfaces defined in feature-specific folders in `RG.OpenCopilot.Agent/Services/`
+- **Planning**: `Planning/Services/` (IPlannerService)
+- **Execution**: `Execution/Services/` (IExecutorService)
+- **FileOperations**: `FileOperations/Services/` (IFileAnalyzer, IFileEditor)
 - Service implementations in feature-specific folders in `RG.OpenCopilot.App/`
 - Use `async`/`await` for all I/O operations
 - Accept `CancellationToken` with default value in async methods
@@ -184,10 +192,10 @@ public class FeatureTests {
 - Can be replaced with persistent storage implementation
 
 ### Key Interfaces
-- `IPlannerService` – creates structured plans using LLM models (in `RG.OpenCopilot.Agent/Services/`)
-- `IExecutorService` – executes plans and makes code changes (in `RG.OpenCopilot.Agent/Services/`)
-- `IFileAnalyzer` – analyzes files in containers (in `RG.OpenCopilot.Agent/Services/`)
-- `IFileEditor` – modifies files with change tracking (in `RG.OpenCopilot.Agent/Services/`)
+- `IPlannerService` – creates structured plans using LLM models (in `RG.OpenCopilot.Agent/Planning/Services/`)
+- `IExecutorService` – executes plans and makes code changes (in `RG.OpenCopilot.Agent/Execution/Services/`)
+- `IFileAnalyzer` – analyzes files in containers (in `RG.OpenCopilot.Agent/FileOperations/Services/`)
+- `IFileEditor` – modifies files with change tracking (in `RG.OpenCopilot.Agent/FileOperations/Services/`)
 - `IGitHubService` – high-level GitHub operations (in `RG.OpenCopilot.App/GitHub/Git/Services/`)
 - `IContainerManager` – Docker container management (in `RG.OpenCopilot.App/Docker/`)
 

@@ -1,6 +1,6 @@
-using RG.OpenCopilot.Agent.Models;
+using RG.OpenCopilot.Agent.FileOperations.Models;
 
-namespace RG.OpenCopilot.Agent.Services;
+namespace RG.OpenCopilot.Agent.FileOperations.Services;
 
 /// <summary>
 /// Service for creating, modifying, and deleting files in containers with change tracking

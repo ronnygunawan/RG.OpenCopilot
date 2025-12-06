@@ -1,4 +1,4 @@
-namespace RG.OpenCopilot.Agent.Models;
+namespace RG.OpenCopilot.Agent.Planning.Models;
 
 public sealed class AgentTaskContext {
     public string IssueTitle { get; init; } = "";

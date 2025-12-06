@@ -1,4 +1,4 @@
-namespace RG.OpenCopilot.Agent.Models;
+namespace RG.OpenCopilot.Agent.FileOperations.Models;
 
 /// <summary>
 /// Represents a tracked file change with old and new content

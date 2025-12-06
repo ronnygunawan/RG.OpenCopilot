@@ -1,10 +1,11 @@
 // This file provides backwards compatibility.
-// All types have been moved to Models/ and Services/ folders.
+// All types have been moved to feature-based folders.
 // Types are globally available via GlobalUsings.cs
 
 namespace RG.OpenCopilot.Agent;
 
 // This file intentionally left empty for backwards compatibility.
-// All model and service types have been moved to:
-// - RG.OpenCopilot.Agent.Models namespace (for data models)
-// - RG.OpenCopilot.Agent.Services namespace (for service interfaces)
+// All model and service types have been moved to feature-based organization:
+// - RG.OpenCopilot.Agent.Planning (AgentPlan, PlanStep, AgentTaskContext, IPlannerService)
+// - RG.OpenCopilot.Agent.Execution (AgentTask, AgentTaskStatus, IExecutorService)
+// - RG.OpenCopilot.Agent.FileOperations (FileStructure, FileTree, FileChange, IFileAnalyzer, IFileEditor)

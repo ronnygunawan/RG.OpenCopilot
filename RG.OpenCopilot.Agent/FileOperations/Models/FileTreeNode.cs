@@ -1,4 +1,4 @@
-namespace RG.OpenCopilot.Agent.Models;
+namespace RG.OpenCopilot.Agent.FileOperations.Models;
 
 /// <summary>
 /// Represents a node in the file tree

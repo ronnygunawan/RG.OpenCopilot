@@ -1,4 +1,4 @@
-namespace RG.OpenCopilot.Agent.Models;
+namespace RG.OpenCopilot.Agent.FileOperations.Models;
 
 /// <summary>
 /// Represents the structure of a file including its classes, functions, and other elements

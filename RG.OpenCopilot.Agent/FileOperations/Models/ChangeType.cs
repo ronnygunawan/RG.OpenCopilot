@@ -1,4 +1,4 @@
-namespace RG.OpenCopilot.Agent.Models;
+namespace RG.OpenCopilot.Agent.FileOperations.Models;
 
 /// <summary>
 /// Type of file change operation
