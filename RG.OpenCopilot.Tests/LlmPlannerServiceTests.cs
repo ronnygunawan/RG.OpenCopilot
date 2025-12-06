@@ -24,24 +24,72 @@ public class LlmPlannerServiceTests {
 
         var llmResponseJson = """
             {
-                "problemSummary": "Implement user authentication system",
-                "constraints": ["Use secure password hashing", "Follow OWASP guidelines"],
+                "problemSummary": "Implement a comprehensive user authentication system with secure password handling, user registration, and login functionality following industry best practices.",
+                "constraints": [
+                    "Use secure password hashing with bcrypt or similar algorithm",
+                    "Follow OWASP authentication guidelines and security best practices",
+                    "Ensure passwords are never stored in plain text",
+                    "Implement proper input validation and sanitization",
+                    "Add rate limiting to prevent brute force attacks",
+                    "Use HTTPS for all authentication endpoints"
+                ],
                 "steps": [
                     {
                         "id": "step-1",
-                        "title": "Create user model",
-                        "details": "Define user entity with username and password",
+                        "title": "Create user model and database schema",
+                        "details": "Define the User entity with properties for username, hashed password, email, creation date, and last login. Create the corresponding database table with proper indexing on username and email fields for performance. Include fields for password reset tokens and account status.",
                         "done": false
                     },
                     {
                         "id": "step-2",
-                        "title": "Implement authentication service",
-                        "details": "Create login and registration methods",
+                        "title": "Implement password hashing service",
+                        "details": "Create a secure password hashing service using bcrypt or Argon2. Implement methods for hashing passwords during registration and verifying passwords during login. Use appropriate work factors (cost parameter) to balance security and performance.",
+                        "done": false
+                    },
+                    {
+                        "id": "step-3",
+                        "title": "Build user registration endpoint",
+                        "details": "Create a registration API endpoint that validates input (username format, password strength, email validity), checks for existing users, hashes the password, and creates the new user record. Return appropriate success or error responses with clear messages.",
+                        "done": false
+                    },
+                    {
+                        "id": "step-4",
+                        "title": "Implement login authentication endpoint",
+                        "details": "Create a login API endpoint that accepts username/email and password, retrieves the user from the database, verifies the password hash, and generates a JWT token or session upon successful authentication. Include proper error handling for invalid credentials.",
+                        "done": false
+                    },
+                    {
+                        "id": "step-5",
+                        "title": "Add authentication middleware",
+                        "details": "Implement middleware to protect authenticated routes, validate JWT tokens or sessions, and attach user information to requests. Ensure unauthorized requests receive appropriate 401 responses.",
+                        "done": false
+                    },
+                    {
+                        "id": "step-6",
+                        "title": "Write comprehensive tests",
+                        "details": "Create unit tests for password hashing, registration validation, login authentication, and middleware. Add integration tests for the complete authentication flow including edge cases like duplicate usernames, weak passwords, and invalid tokens.",
                         "done": false
                     }
                 ],
-                "checklist": ["All tests pass", "Password stored securely"],
-                "fileTargets": ["Models/User.cs", "Services/AuthService.cs"]
+                "checklist": [
+                    "All tests pass successfully",
+                    "Passwords are securely hashed using bcrypt or Argon2",
+                    "Input validation prevents SQL injection and XSS attacks",
+                    "Rate limiting is implemented on login endpoint",
+                    "Authentication endpoints use HTTPS only",
+                    "Error messages don't leak sensitive information",
+                    "Documentation is updated with authentication flow",
+                    "Security review completed by team"
+                ],
+                "fileTargets": [
+                    "Models/User.cs",
+                    "Services/PasswordHashingService.cs", 
+                    "Services/AuthenticationService.cs",
+                    "Controllers/AuthController.cs",
+                    "Middleware/AuthenticationMiddleware.cs",
+                    "Tests/AuthenticationTests.cs",
+                    "Database/Migrations/AddUsersTable.cs"
+                ]
             }
             """;
 
@@ -66,15 +114,15 @@ public class LlmPlannerServiceTests {
 
         // Assert
         plan.ShouldNotBeNull();
-        plan.ProblemSummary.ShouldBe("Implement user authentication system");
-        plan.Constraints.Count.ShouldBe(2);
-        plan.Constraints[0].ShouldBe("Use secure password hashing");
-        plan.Steps.Count.ShouldBe(2);
+        plan.ProblemSummary.ShouldContain("comprehensive user authentication system");
+        plan.Constraints.Count.ShouldBe(6);
+        plan.Constraints[0].ShouldBe("Use secure password hashing with bcrypt or similar algorithm");
+        plan.Steps.Count.ShouldBe(6);
         plan.Steps[0].Id.ShouldBe("step-1");
-        plan.Steps[0].Title.ShouldBe("Create user model");
+        plan.Steps[0].Title.ShouldBe("Create user model and database schema");
         plan.Steps[0].Done.ShouldBeFalse();
-        plan.Checklist.Count.ShouldBe(2);
-        plan.FileTargets.Count.ShouldBe(2);
+        plan.Checklist.Count.ShouldBe(8);
+        plan.FileTargets.Count.ShouldBe(7);
 
         // Verify LLM was called
         mockChatService.Verify(s => s.GetChatMessageContentsAsync(

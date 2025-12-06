@@ -126,6 +126,16 @@ public class FeatureTests {
   // Missing message assertion
   ```
 
+### Mocking and Test Data
+- Use **Moq** for mocking dependencies and external services
+- When mocking LLM responses or other AI-generated content:
+  - **Generate realistic, comprehensive responses** that represent actual LLM behavior
+  - Include detailed steps, thorough explanations, and complete information
+  - Mock responses should reflect the quality and depth an actual LLM would produce
+  - Avoid minimal or simplified data just to make tests pass
+  - Example: A mocked plan should have 5-8 detailed steps with comprehensive descriptions, not just 1-2 minimal steps
+- When mocking other services, use realistic data that represents actual usage patterns
+
 ## Architecture Patterns
 
 ### Domain Models
