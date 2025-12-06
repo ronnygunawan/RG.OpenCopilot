@@ -10,7 +10,7 @@ namespace RG.OpenCopilot.Tests;
 /// These tests require Docker to be available
 /// </summary>
 public class FileEditorIntegrationTests {
-    [Fact(Skip = "Requires Docker")]
+    [Fact]
     public async Task CreateFileAsync_IntegrationTest_CreatesFileInContainer() {
         // Arrange
         var containerManager = CreateRealContainerManager();
@@ -52,7 +52,7 @@ public class FileEditorIntegrationTests {
         }
     }
 
-    [Fact(Skip = "Requires Docker")]
+    [Fact]
     public async Task ModifyFileAsync_IntegrationTest_ModifiesExistingFile() {
         // Arrange
         var containerManager = CreateRealContainerManager();
@@ -94,7 +94,7 @@ public class FileEditorIntegrationTests {
         }
     }
 
-    [Fact(Skip = "Requires Docker")]
+    [Fact]
     public async Task DeleteFileAsync_IntegrationTest_DeletesFile() {
         // Arrange
         var containerManager = CreateRealContainerManager();
@@ -134,7 +134,7 @@ public class FileEditorIntegrationTests {
         }
     }
 
-    [Fact(Skip = "Requires Docker")]
+    [Fact]
     public async Task CompleteWorkflow_IntegrationTest_TracksMixedOperations() {
         // Arrange
         var containerManager = CreateRealContainerManager();
@@ -183,7 +183,7 @@ public class FileEditorIntegrationTests {
         }
     }
 
-    [Fact(Skip = "Requires Docker")]
+    [Fact]
     public async Task CreateFileAsync_IntegrationTest_CreatesNestedDirectories() {
         // Arrange
         var containerManager = CreateRealContainerManager();
@@ -218,7 +218,7 @@ public class FileEditorIntegrationTests {
 
     private static IContainerManager CreateRealContainerManager() {
         var commandExecutor = new ProcessCommandExecutor(CreateLogger<ProcessCommandExecutor>());
-        return new DockerContainerManager(commandExecutor, CreateLogger<DockerContainerManager>());
+        return new TestDockerContainerManager(commandExecutor, CreateLogger<TestDockerContainerManager>());
     }
 
     private static ILogger<T> CreateLogger<T>() {
@@ -227,5 +227,169 @@ public class FileEditorIntegrationTests {
             builder.SetMinimumLevel(LogLevel.Information);
         });
         return loggerFactory.CreateLogger<T>();
+    }
+
+    /// <summary>
+    /// Test-specific container manager that creates containers without cloning repositories
+    /// </summary>
+    private sealed class TestDockerContainerManager : IContainerManager {
+        private readonly ICommandExecutor _commandExecutor;
+        private readonly ILogger<TestDockerContainerManager> _logger;
+        private const string WorkDir = "/workspace";
+
+        public TestDockerContainerManager(ICommandExecutor commandExecutor, ILogger<TestDockerContainerManager> logger) {
+            _commandExecutor = commandExecutor;
+            _logger = logger;
+        }
+
+        public async Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default) {
+            // Create a unique container name
+            var containerName = $"opencopilot-test-{Guid.NewGuid():N}".ToLowerInvariant();
+
+            _logger.LogInformation("Creating test container {ContainerName}", containerName);
+
+            // Use a base image for testing - just need a container with basic shell commands
+            var result = await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: new[] {
+                    "run",
+                    "-d",
+                    "--name", containerName,
+                    "-w", WorkDir,
+                    "mcr.microsoft.com/dotnet/sdk:10.0",
+                    "sleep", "infinity"
+                },
+                cancellationToken: cancellationToken);
+
+            if (!result.Success) {
+                throw new InvalidOperationException($"Failed to create container: {result.Error}");
+            }
+
+            var containerId = result.Output.Trim();
+            _logger.LogInformation("Created test container {ContainerId}", containerId);
+
+            // Create the workspace directory
+            await ExecuteInContainerAsync(containerId: containerId, command: "mkdir", args: new[] { "-p", WorkDir }, cancellationToken: cancellationToken);
+
+            return containerId;
+        }
+
+        public async Task<CommandResult> ExecuteInContainerAsync(string containerId, string command, string[] args, CancellationToken cancellationToken = default) {
+            var dockerArgs = new List<string> { "exec", "-w", WorkDir, containerId, command };
+            dockerArgs.AddRange(args);
+
+            var result = await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: dockerArgs.ToArray(),
+                cancellationToken: cancellationToken);
+
+            _logger.LogDebug("Executed {Command} in container {ContainerId}: exit code {ExitCode}",
+                command, containerId, result.ExitCode);
+
+            return result;
+        }
+
+        public async Task<string> ReadFileInContainerAsync(string containerId, string filePath, CancellationToken cancellationToken = default) {
+            var fullPath = Path.Join(WorkDir, filePath.TrimStart('/'));
+
+            var result = await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: new[] { "exec", containerId, "cat", fullPath },
+                cancellationToken: cancellationToken);
+
+            if (!result.Success) {
+                throw new InvalidOperationException($"Failed to read file {filePath}: {result.Error}");
+            }
+
+            // cat command output includes any newlines in the file, but docker exec may add a trailing newline
+            // We need to preserve the exact content, so we only remove the final trailing newline if present
+            var output = result.Output;
+            if (output.EndsWith('\n')) {
+                output = output[..^1];
+            }
+            return output;
+        }
+
+        public async Task WriteFileInContainerAsync(string containerId, string filePath, string content, CancellationToken cancellationToken = default) {
+            var fullPath = Path.Join(WorkDir, filePath.TrimStart('/'));
+
+            // Create parent directory if needed
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(directory) && directory != WorkDir) {
+                await _commandExecutor.ExecuteCommandAsync(
+                    workingDirectory: Directory.GetCurrentDirectory(),
+                    command: "docker",
+                    args: new[] { "exec", containerId, "mkdir", "-p", directory },
+                    cancellationToken: cancellationToken);
+            }
+
+            // Use base64 encoding to safely transfer content without shell injection risks
+            // Base64 only produces alphanumeric characters plus '+', '/', and '=', so it's safe to use in shell commands
+            var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+            var base64Content = Convert.ToBase64String(bytes);
+
+            var result = await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: new[] {
+                    "exec",
+                    containerId,
+                    "sh",
+                    "-c",
+                    $"echo '{base64Content}' | base64 -d > {fullPath}"
+                },
+                cancellationToken: cancellationToken);
+
+            if (!result.Success) {
+                throw new InvalidOperationException($"Failed to write file {filePath}: {result.Error}");
+            }
+
+            _logger.LogInformation("Wrote file {FilePath} in container {ContainerId}", filePath, containerId);
+        }
+
+        public Task CommitAndPushAsync(
+            string containerId,
+            string commitMessage,
+            string owner,
+            string repo,
+            string branch,
+            string token,
+            CancellationToken cancellationToken = default) {
+            // No-op for tests - we don't push to GitHub in tests
+            _logger.LogInformation("Skipping commit and push in test container {ContainerId}", containerId);
+            return Task.CompletedTask;
+        }
+
+        public async Task CleanupContainerAsync(string containerId, CancellationToken cancellationToken = default) {
+            _logger.LogInformation("Cleaning up test container {ContainerId}", containerId);
+
+            // Stop the container - attempt even if it fails
+            var stopResult = await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: new[] { "stop", containerId },
+                cancellationToken: cancellationToken);
+
+            if (!stopResult.Success) {
+                _logger.LogWarning("Failed to stop container {ContainerId}: {Error}", containerId, stopResult.Error);
+            }
+
+            // Remove the container - attempt even if stop failed
+            var removeResult = await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: new[] { "rm", containerId },
+                cancellationToken: cancellationToken);
+
+            if (!removeResult.Success) {
+                _logger.LogWarning("Failed to remove container {ContainerId}: {Error}", containerId, removeResult.Error);
+            }
+            else {
+                _logger.LogInformation("Cleaned up test container {ContainerId}", containerId);
+            }
+        }
     }
 }
