@@ -508,7 +508,7 @@ public class BuildVerifierTests {
                 Output = "Program.cs(10,15): error CS1002: ; expected"
             });
 
-        SetupLlmFixGeneration(fixes: []);
+        SetupLlmFixGeneration();
 
         // Act
         var result = await _verifier.VerifyBuildAsync(
@@ -563,7 +563,7 @@ public class BuildVerifierTests {
         }
     }
 
-    private void SetupLlmFixGeneration(List<CodeFix> fixes) {
+    private void SetupLlmFixGeneration() {
         var chatContent = new ChatMessageContent(AuthorRole.Assistant, """
             {
               "fixes": []
