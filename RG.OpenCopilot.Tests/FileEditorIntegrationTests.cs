@@ -305,11 +305,10 @@ public class FileEditorIntegrationTests {
             }
 
             // cat command output includes any newlines in the file, but docker exec may add a trailing newline
-            // We need to preserve the exact content, so we return it as-is
-            // The issue is that docker exec's output handling adds a newline, so we trim it
+            // We need to preserve the exact content, so we only remove the final trailing newline if present
             var output = result.Output;
             if (output.EndsWith('\n')) {
-                output = output.TrimEnd('\n');
+                output = output[..^1];
             }
             return output;
         }
@@ -327,8 +326,9 @@ public class FileEditorIntegrationTests {
                     cancellationToken: cancellationToken);
             }
 
-            // Escape single quotes in content and use printf with -v to avoid trailing newline
-            var escapedContent = content.Replace("'", "'\\''");
+            // Use base64 encoding to safely transfer content without shell injection risks
+            var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+            var base64Content = Convert.ToBase64String(bytes);
 
             var result = await _commandExecutor.ExecuteCommandAsync(
                 workingDirectory: Directory.GetCurrentDirectory(),
@@ -338,7 +338,7 @@ public class FileEditorIntegrationTests {
                     containerId,
                     "sh",
                     "-c",
-                    $"printf '%s' '{escapedContent}' > {fullPath}"
+                    $"echo '{base64Content}' | base64 -d > {fullPath}"
                 },
                 cancellationToken: cancellationToken);
 
