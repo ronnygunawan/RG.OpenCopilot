@@ -405,6 +405,162 @@ public class ExecutorServiceTests {
         cloner.CloneWasCalled.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task ExecutePlanAsync_WithUncommittedChanges_CommitsAndPushes() {
+        // Arrange
+        var tokenProvider = new TestTokenProvider();
+        var cloner = new TestRepositoryCloner();
+        var executor = new TestCommandExecutorWithChanges();
+        var gitHubService = new TestGitHubService();
+        var taskStore = new InMemoryAgentTaskStore();
+        var service = new ExecutorService(
+            tokenProvider,
+            cloner,
+            executor,
+            gitHubService,
+            taskStore,
+            new TestLogger<ExecutorService>());
+
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Plan = new AgentPlan {
+                ProblemSummary = "Test",
+                Steps = new List<PlanStep>
+                {
+                    new() { Id = "1", Title = "Step 1", Details = "Do something" }
+                }
+            }
+        };
+
+        await taskStore.CreateTaskAsync(task);
+
+        // Act
+        await service.ExecutePlanAsync(task);
+
+        // Assert
+        var executorWithChanges = (TestCommandExecutorWithChanges)executor;
+        executorWithChanges.GitCommitCalled.ShouldBeTrue();
+        executorWithChanges.GitPushCalled.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ExecutePlanAsync_WithGitStatusFailure_ThrowsException() {
+        // Arrange
+        var tokenProvider = new TestTokenProvider();
+        var cloner = new TestRepositoryCloner();
+        var executor = new TestCommandExecutorThatFailsGitStatus();
+        var gitHubService = new TestGitHubService();
+        var taskStore = new InMemoryAgentTaskStore();
+        var service = new ExecutorService(
+            tokenProvider,
+            cloner,
+            executor,
+            gitHubService,
+            taskStore,
+            new TestLogger<ExecutorService>());
+
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Plan = new AgentPlan {
+                ProblemSummary = "Test",
+                Steps = new List<PlanStep>
+                {
+                    new() { Id = "1", Title = "Step 1", Details = "Do something" }
+                }
+            }
+        };
+
+        await taskStore.CreateTaskAsync(task);
+
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(
+            async () => await service.ExecutePlanAsync(task));
+    }
+
+    [Fact]
+    public async Task ExecutePlanAsync_WithGitCommitFailure_ThrowsException() {
+        // Arrange
+        var tokenProvider = new TestTokenProvider();
+        var cloner = new TestRepositoryCloner();
+        var executor = new TestCommandExecutorThatFailsGitCommit();
+        var gitHubService = new TestGitHubService();
+        var taskStore = new InMemoryAgentTaskStore();
+        var service = new ExecutorService(
+            tokenProvider,
+            cloner,
+            executor,
+            gitHubService,
+            taskStore,
+            new TestLogger<ExecutorService>());
+
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Plan = new AgentPlan {
+                ProblemSummary = "Test",
+                Steps = new List<PlanStep>
+                {
+                    new() { Id = "1", Title = "Step 1", Details = "Do something" }
+                }
+            }
+        };
+
+        await taskStore.CreateTaskAsync(task);
+
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(
+            async () => await service.ExecutePlanAsync(task));
+    }
+
+    [Fact]
+    public async Task ExecutePlanAsync_WithGitPushFailure_ThrowsException() {
+        // Arrange
+        var tokenProvider = new TestTokenProvider();
+        var cloner = new TestRepositoryCloner();
+        var executor = new TestCommandExecutorThatFailsGitPush();
+        var gitHubService = new TestGitHubService();
+        var taskStore = new InMemoryAgentTaskStore();
+        var service = new ExecutorService(
+            tokenProvider,
+            cloner,
+            executor,
+            gitHubService,
+            taskStore,
+            new TestLogger<ExecutorService>());
+
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Plan = new AgentPlan {
+                ProblemSummary = "Test",
+                Steps = new List<PlanStep>
+                {
+                    new() { Id = "1", Title = "Step 1", Details = "Do something" }
+                }
+            }
+        };
+
+        await taskStore.CreateTaskAsync(task);
+
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(
+            async () => await service.ExecutePlanAsync(task));
+    }
+
     // Test helper classes
     private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -505,6 +661,104 @@ public class ExecutorServiceTests {
             }
             
             // Return success for git commands
+            return Task.FromResult(new CommandResult {
+                ExitCode = 0,
+                Output = "",
+                Error = ""
+            });
+        }
+    }
+
+    private class TestCommandExecutorWithChanges : ICommandExecutor {
+        public bool GitCommitCalled { get; private set; }
+        public bool GitPushCalled { get; private set; }
+
+        public Task<CommandResult> ExecuteCommandAsync(string workingDirectory, string command, string[] args, CancellationToken cancellationToken = default) {
+            if (command == "git") {
+                if (args.Length > 0) {
+                    if (args[0] == "status") {
+                        // Return changes present
+                        return Task.FromResult(new CommandResult {
+                            ExitCode = 0,
+                            Output = "M file.txt\n",
+                            Error = ""
+                        });
+                    }
+                    else if (args[0] == "commit") {
+                        GitCommitCalled = true;
+                    }
+                    else if (args[0] == "push") {
+                        GitPushCalled = true;
+                    }
+                }
+            }
+
+            return Task.FromResult(new CommandResult {
+                ExitCode = 0,
+                Output = "success",
+                Error = ""
+            });
+        }
+    }
+
+    private class TestCommandExecutorThatFailsGitStatus : ICommandExecutor {
+        public Task<CommandResult> ExecuteCommandAsync(string workingDirectory, string command, string[] args, CancellationToken cancellationToken = default) {
+            if (command == "git" && args.Length > 0 && args[0] == "status") {
+                throw new InvalidOperationException("Git status failed");
+            }
+
+            return Task.FromResult(new CommandResult {
+                ExitCode = 0,
+                Output = "",
+                Error = ""
+            });
+        }
+    }
+
+    private class TestCommandExecutorThatFailsGitCommit : ICommandExecutor {
+        public Task<CommandResult> ExecuteCommandAsync(string workingDirectory, string command, string[] args, CancellationToken cancellationToken = default) {
+            if (command == "git") {
+                if (args.Length > 0) {
+                    if (args[0] == "status") {
+                        // Return changes present so commit is attempted
+                        return Task.FromResult(new CommandResult {
+                            ExitCode = 0,
+                            Output = "M file.txt\n",
+                            Error = ""
+                        });
+                    }
+                    else if (args[0] == "commit") {
+                        throw new InvalidOperationException("Git commit failed");
+                    }
+                }
+            }
+
+            return Task.FromResult(new CommandResult {
+                ExitCode = 0,
+                Output = "",
+                Error = ""
+            });
+        }
+    }
+
+    private class TestCommandExecutorThatFailsGitPush : ICommandExecutor {
+        public Task<CommandResult> ExecuteCommandAsync(string workingDirectory, string command, string[] args, CancellationToken cancellationToken = default) {
+            if (command == "git") {
+                if (args.Length > 0) {
+                    if (args[0] == "status") {
+                        // Return changes present
+                        return Task.FromResult(new CommandResult {
+                            ExitCode = 0,
+                            Output = "M file.txt\n",
+                            Error = ""
+                        });
+                    }
+                    else if (args[0] == "push") {
+                        throw new InvalidOperationException("Git push failed");
+                    }
+                }
+            }
+
             return Task.FromResult(new CommandResult {
                 ExitCode = 0,
                 Output = "",
