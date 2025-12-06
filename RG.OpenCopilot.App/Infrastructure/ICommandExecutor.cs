@@ -1,3 +1,5 @@
+using RG.OpenCopilot.Agent.Execution.Models;
+
 namespace RG.OpenCopilot.App.Infrastructure;
 
 public interface ICommandExecutor {

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using RG.OpenCopilot.Agent.Execution.Models;
 
 namespace RG.OpenCopilot.App.Infrastructure;
 

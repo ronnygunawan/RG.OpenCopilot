@@ -68,6 +68,7 @@ public partial class Program {
         builder.Services.AddSingleton<IFileAnalyzer, FileAnalyzer>();
         builder.Services.AddSingleton<IFileEditor, FileEditor>();
         builder.Services.AddSingleton<IStepAnalyzer, StepAnalyzer>();
+        builder.Services.AddSingleton<IBuildVerifier, BuildVerifier>();
 
         // Configure GitHub client
         builder.Services.AddSingleton<IGitHubClient>(sp => {
