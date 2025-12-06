@@ -783,4 +783,333 @@ public class CodeGeneratorTests {
         capturedChatHistory[1].Role.ShouldBe(AuthorRole.User);
         capturedChatHistory[1].Content.ShouldContain("Test chat history");
     }
+
+    [Fact]
+    public async Task GenerateCodeAsync_WithRepositoryContext_LoadsRepositoryInstructions() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CodeGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockGitHubClient = new Mock<IGitHubClient>();
+        var mockRepoContent = new Mock<IRepositoriesClient>();
+        var mockContent = new Mock<IRepositoryContentsClient>();
+
+        var repoInstructions = "# Repository Guidelines\nUse async/await patterns";
+        var contentFile = new RepositoryContent(
+            name: "copilot-instructions.md",
+            path: "copilot-instructions.md",
+            sha: "abc123",
+            size: repoInstructions.Length,
+            type: ContentType.File,
+            downloadUrl: "https://raw.githubusercontent.com/test/repo/main/copilot-instructions.md",
+            url: "https://api.github.com/repos/test/repo/contents/copilot-instructions.md",
+            gitUrl: "https://api.github.com/repos/test/repo/git/blobs/abc123",
+            htmlUrl: "https://github.com/test/repo/blob/main/copilot-instructions.md",
+            encoding: "utf-8",
+            encodedContent: Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(repoInstructions)),
+            target: null,
+            submoduleGitUrl: null);
+
+        mockContent
+            .Setup(c => c.GetAllContents("testowner", "testrepo", "copilot-instructions.md"))
+            .ReturnsAsync(new List<RepositoryContent> { contentFile });
+
+        mockRepoContent.Setup(r => r.Content).Returns(mockContent.Object);
+        mockGitHubClient.Setup(g => g.Repository).Returns(mockRepoContent.Object);
+
+        var request = new LlmCodeGenerationRequest {
+            Description = "Create a service",
+            Language = "C#",
+            Context = new Dictionary<string, string> {
+                { "RepositoryOwner", "testowner" },
+                { "RepositoryName", "testrepo" }
+            }
+        };
+
+        var llmResponse = "public class Service { }";
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponse);
+        ChatHistory? capturedChatHistory = null;
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => capturedChatHistory = ch)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+
+        // Act
+        await generator.GenerateCodeAsync(request);
+
+        // Assert
+        capturedChatHistory.ShouldNotBeNull();
+        var systemMessage = capturedChatHistory.FirstOrDefault(m => m.Role == AuthorRole.System);
+        systemMessage.ShouldNotBeNull();
+        systemMessage.Content.ShouldContain("Repository-Specific Instructions");
+        systemMessage.Content.ShouldContain("async/await patterns");
+    }
+
+    [Fact]
+    public async Task GenerateCodeAsync_WithoutRepositoryContext_DoesNotLoadRepositoryInstructions() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CodeGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockGitHubClient = new Mock<IGitHubClient>();
+
+        var request = new LlmCodeGenerationRequest {
+            Description = "Create a class",
+            Language = "C#"
+            // No repository context
+        };
+
+        var llmResponse = "public class Test { }";
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponse);
+        ChatHistory? capturedChatHistory = null;
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => capturedChatHistory = ch)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+
+        // Act
+        await generator.GenerateCodeAsync(request);
+
+        // Assert
+        capturedChatHistory.ShouldNotBeNull();
+        var systemMessage = capturedChatHistory.FirstOrDefault(m => m.Role == AuthorRole.System);
+        systemMessage.ShouldNotBeNull();
+        systemMessage.Content.ShouldNotContain("Repository-Specific Instructions");
+
+        // Verify GitHub client was never called
+        mockGitHubClient.Verify(
+            g => g.Repository.Content.GetAllContents(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GenerateCodeAsync_WithRepositoryInstructionsNotFound_ContinuesWithoutInstructions() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CodeGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockGitHubClient = new Mock<IGitHubClient>();
+        var mockRepoContent = new Mock<IRepositoriesClient>();
+        var mockContent = new Mock<IRepositoryContentsClient>();
+
+        mockContent
+            .Setup(c => c.GetAllContents("testowner", "testrepo", "copilot-instructions.md"))
+            .ThrowsAsync(new NotFoundException("Not found", System.Net.HttpStatusCode.NotFound));
+
+        mockRepoContent.Setup(r => r.Content).Returns(mockContent.Object);
+        mockGitHubClient.Setup(g => g.Repository).Returns(mockRepoContent.Object);
+
+        var request = new LlmCodeGenerationRequest {
+            Description = "Create a class",
+            Language = "C#",
+            Context = new Dictionary<string, string> {
+                { "RepositoryOwner", "testowner" },
+                { "RepositoryName", "testrepo" }
+            }
+        };
+
+        var llmResponse = "public class Test { }";
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponse);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+
+        // Act
+        var result = await generator.GenerateCodeAsync(request);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContain("class Test");
+    }
+
+    [Fact]
+    public async Task GenerateCodeAsync_CachesRepositoryInstructions() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CodeGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockGitHubClient = new Mock<IGitHubClient>();
+        var mockRepoContent = new Mock<IRepositoriesClient>();
+        var mockContent = new Mock<IRepositoryContentsClient>();
+
+        var repoInstructions = "# Cached Instructions";
+        var contentFile = new RepositoryContent(
+            name: "copilot-instructions.md",
+            path: "copilot-instructions.md",
+            sha: "abc123",
+            size: repoInstructions.Length,
+            type: ContentType.File,
+            downloadUrl: "https://raw.githubusercontent.com/test/repo/main/copilot-instructions.md",
+            url: "https://api.github.com/repos/test/repo/contents/copilot-instructions.md",
+            gitUrl: "https://api.github.com/repos/test/repo/git/blobs/abc123",
+            htmlUrl: "https://github.com/test/repo/blob/main/copilot-instructions.md",
+            encoding: "utf-8",
+            encodedContent: Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(repoInstructions)),
+            target: null,
+            submoduleGitUrl: null);
+
+        mockContent
+            .Setup(c => c.GetAllContents("testowner", "testrepo", "copilot-instructions.md"))
+            .ReturnsAsync(new List<RepositoryContent> { contentFile });
+
+        mockRepoContent.Setup(r => r.Content).Returns(mockContent.Object);
+        mockGitHubClient.Setup(g => g.Repository).Returns(mockRepoContent.Object);
+
+        var request = new LlmCodeGenerationRequest {
+            Description = "Create a class",
+            Language = "C#",
+            Context = new Dictionary<string, string> {
+                { "RepositoryOwner", "testowner" },
+                { "RepositoryName", "testrepo" }
+            }
+        };
+
+        var llmResponse = "public class Test { }";
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponse);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+
+        // Act - Call twice with same repository
+        await generator.GenerateCodeAsync(request);
+        await generator.GenerateCodeAsync(request);
+
+        // Assert - GitHub API should only be called once (cached on second call)
+        mockContent.Verify(
+            c => c.GetAllContents("testowner", "testrepo", "copilot-instructions.md"),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GenerateCodeAsync_SystemPrompt_IncludesBestPractices() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CodeGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockGitHubClient = new Mock<IGitHubClient>();
+
+        var request = new LlmCodeGenerationRequest {
+            Description = "Create a class",
+            Language = "C#"
+        };
+
+        var llmResponse = "public class Test { }";
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponse);
+        ChatHistory? capturedChatHistory = null;
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => capturedChatHistory = ch)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+
+        // Act
+        await generator.GenerateCodeAsync(request);
+
+        // Assert
+        capturedChatHistory.ShouldNotBeNull();
+        var systemMessage = capturedChatHistory.FirstOrDefault(m => m.Role == AuthorRole.System);
+        systemMessage.ShouldNotBeNull();
+        systemMessage.Content.ShouldContain("Best Practices");
+        systemMessage.Content.ShouldContain("Code Quality");
+        systemMessage.Content.ShouldContain("SOLID");
+    }
+
+    [Fact]
+    public async Task GenerateCodeAsync_SystemPrompt_IncludesTechnologySpecificGuidelines() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<CodeGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockGitHubClient = new Mock<IGitHubClient>();
+
+        var request = new LlmCodeGenerationRequest {
+            Description = "Create a class",
+            Language = "Python"
+        };
+
+        var llmResponse = "class Test:\n    pass";
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponse);
+        ChatHistory? capturedChatHistory = null;
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>(
+                (ch, _, _, _) => capturedChatHistory = ch)
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+
+        // Act
+        await generator.GenerateCodeAsync(request);
+
+        // Assert
+        capturedChatHistory.ShouldNotBeNull();
+        var systemMessage = capturedChatHistory.FirstOrDefault(m => m.Role == AuthorRole.System);
+        systemMessage.ShouldNotBeNull();
+        systemMessage.Content.ShouldContain("Python Specific Guidelines");
+        systemMessage.Content.ShouldContain("PEP 8");
+    }
 }
+
