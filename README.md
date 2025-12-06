@@ -1,4 +1,4 @@
-# RG.OpenCopilot (GitHub Enterprise Coding Agent)
+# RG.OpenCopilot (GitHub Enterprise Coding Agent Clone)
 
 RG.OpenCopilot is a C#/.NET 10 solution that aims to provide a GitHub Enterprise–hosted coding agent similar to the GitHub Copilot Coding Agent (GCCA).
 
