@@ -327,6 +327,7 @@ public class FileEditorIntegrationTests {
             }
 
             // Use base64 encoding to safely transfer content without shell injection risks
+            // Base64 only produces alphanumeric characters plus '+', '/', and '=', so it's safe to use in shell commands
             var bytes = System.Text.Encoding.UTF8.GetBytes(content);
             var base64Content = Convert.ToBase64String(bytes);
 
