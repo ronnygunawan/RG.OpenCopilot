@@ -296,8 +296,9 @@ public sealed class StepAnalyzer : IStepAnalyzer {
                             return "MSTest";
                         }
                     }
-                    catch {
-                        // Ignore errors reading individual files
+                    catch (Exception ex) {
+                        // Ignore errors reading individual project files - file may not be accessible or parseable
+                        _logger.LogDebug(ex, "Failed to read project file {ProjectFile}", projectFile);
                     }
                 }
             }
@@ -320,8 +321,9 @@ public sealed class StepAnalyzer : IStepAnalyzer {
                         return "Jasmine";
                     }
                 }
-                catch {
-                    // Ignore errors
+                catch (Exception ex) {
+                    // Ignore errors reading package.json - file may not be accessible or parseable
+                    _logger.LogDebug(ex, "Failed to read package.json");
                 }
             }
         }
