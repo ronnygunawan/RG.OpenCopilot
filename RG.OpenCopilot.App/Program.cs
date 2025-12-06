@@ -64,6 +64,8 @@ builder.Services.AddSingleton<IWebhookHandler, WebhookHandler>();
 builder.Services.AddSingleton<IWebhookValidator, WebhookValidator>();
 builder.Services.AddSingleton<IRepositoryAnalyzer, RepositoryAnalyzer>();
 builder.Services.AddSingleton<IInstructionsLoader, InstructionsLoader>();
+builder.Services.AddSingleton<IFileAnalyzer, FileAnalyzer>();
+builder.Services.AddSingleton<IFileEditor, FileEditor>();
 
 // Configure GitHub client
 builder.Services.AddSingleton<IGitHubClient>(sp => {

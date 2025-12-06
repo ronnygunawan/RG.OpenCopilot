@@ -87,3 +87,33 @@ public interface IFileAnalyzer {
     Task<List<string>> ListFilesAsync(string containerId, string pattern, CancellationToken cancellationToken = default);
     Task<FileTree> BuildFileTreeAsync(string containerId, string rootPath = ".", CancellationToken cancellationToken = default);
 }
+
+/// <summary>
+/// Type of file change operation
+/// </summary>
+public enum ChangeType {
+    Created,
+    Modified,
+    Deleted
+}
+
+/// <summary>
+/// Represents a tracked file change with old and new content
+/// </summary>
+public sealed class FileChange {
+    public ChangeType Type { get; init; }
+    public string Path { get; init; } = "";
+    public string? OldContent { get; init; }
+    public string? NewContent { get; init; }
+}
+
+/// <summary>
+/// Service for creating, modifying, and deleting files in containers with change tracking
+/// </summary>
+public interface IFileEditor {
+    Task CreateFileAsync(string containerId, string filePath, string content, CancellationToken cancellationToken = default);
+    Task ModifyFileAsync(string containerId, string filePath, Func<string, string> transform, CancellationToken cancellationToken = default);
+    Task DeleteFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default);
+    List<FileChange> GetChanges();
+    void ClearChanges();
+}
