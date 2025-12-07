@@ -1086,6 +1086,8 @@ public class SmartStepExecutorTests {
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync("existing content");
+
+        SetupFileEditorChanges(mocks, actionPlan);
     }
 
     private static void SetupFileEditorChanges(
