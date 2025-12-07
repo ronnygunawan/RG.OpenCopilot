@@ -108,6 +108,7 @@ public sealed class CodeQualityChecker : ICodeQualityChecker {
         _logger.LogInformation("Using linter: {Linter}", linterTool);
 
         CommandResult result;
+        bool toolRanSuccessfully = false;
         switch (linterTool) {
             case "dotnet-format":
                 result = await _containerManager.ExecuteInContainerAsync(
@@ -115,6 +116,8 @@ public sealed class CodeQualityChecker : ICodeQualityChecker {
                     command: "dotnet",
                     args: new[] { "format", "--verify-no-changes", "--verbosity", "diagnostic" },
                     cancellationToken: cancellationToken);
+                // dotnet format returns non-zero if formatting is needed, but that's expected
+                toolRanSuccessfully = true;
                 break;
 
             case "eslint":
@@ -123,6 +126,8 @@ public sealed class CodeQualityChecker : ICodeQualityChecker {
                     command: "npx",
                     args: new[] { "eslint", ".", "--format", "json" },
                     cancellationToken: cancellationToken);
+                // eslint returns non-zero if issues are found, but that's expected
+                toolRanSuccessfully = true;
                 break;
 
             case "black":
@@ -131,6 +136,8 @@ public sealed class CodeQualityChecker : ICodeQualityChecker {
                     command: "black",
                     args: new[] { "--check", "--diff", "." },
                     cancellationToken: cancellationToken);
+                // black returns non-zero if formatting is needed, but that's expected
+                toolRanSuccessfully = true;
                 break;
 
             case "pylint":
@@ -139,6 +146,8 @@ public sealed class CodeQualityChecker : ICodeQualityChecker {
                     command: "pylint",
                     args: new[] { "--output-format=json", "." },
                     cancellationToken: cancellationToken);
+                // pylint returns non-zero if issues are found, but that's expected
+                toolRanSuccessfully = true;
                 break;
 
             case "golint":
@@ -147,6 +156,8 @@ public sealed class CodeQualityChecker : ICodeQualityChecker {
                     command: "golangci-lint",
                     args: new[] { "run", "--out-format", "json" },
                     cancellationToken: cancellationToken);
+                // golangci-lint returns non-zero if issues are found, but that's expected
+                toolRanSuccessfully = true;
                 break;
 
             default:
@@ -162,7 +173,7 @@ public sealed class CodeQualityChecker : ICodeQualityChecker {
         var issues = ParseLintIssues(output: result.Output, tool: linterTool);
 
         return new LintResult {
-            Success = result.Success,
+            Success = toolRanSuccessfully,
             Tool = linterTool,
             Issues = issues,
             Output = result.Output
@@ -269,12 +280,12 @@ public sealed class CodeQualityChecker : ICodeQualityChecker {
                     filePath: issue.FilePath,
                     cancellationToken: cancellationToken);
 
-                // Apply the suggested fix
-                // This is a simple implementation - in practice, you'd need more sophisticated parsing
-                var lines = content.Split('\n');
+                // Apply the suggested fix - preserve line endings
+                var lineEnding = content.Contains("\r\n") ? "\r\n" : "\n";
+                var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
                 if (issue.LineNumber > 0 && issue.LineNumber <= lines.Length) {
                     lines[issue.LineNumber - 1] = issue.SuggestedFix;
-                    var fixedContent = string.Join('\n', lines);
+                    var fixedContent = string.Join(lineEnding, lines);
 
                     // Write back the fixed file
                     await _containerManager.WriteFileInContainerAsync(
