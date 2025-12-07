@@ -1,7 +1,7 @@
 #!/bin/bash
 # Build script for OpenCopilot builder image
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOCKERFILE="${SCRIPT_DIR}/Dockerfile.builder"

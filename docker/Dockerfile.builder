@@ -14,7 +14,7 @@ LABEL version="1.0.0"
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install base utilities
+# Install base utilities and Java
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     build-essential \
     unzip \
+    openjdk-21-jdk \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy .NET SDK from the official image
@@ -37,11 +38,6 @@ ARG NODE_VERSION=20.18.1
 RUN wget --no-check-certificate https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz -O /tmp/node.tar.xz \
     && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
     && rm /tmp/node.tar.xz
-
-# Install Java 21 (OpenJDK)
-RUN apt-get update && apt-get install -y \
-    openjdk-21-jdk \
-    && rm -rf /var/lib/apt/lists/*
 
 # Set Java environment variables
 ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
