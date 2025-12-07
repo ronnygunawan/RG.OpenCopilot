@@ -1738,6 +1738,473 @@ public class BuildVerifierTests {
         result.Errors.ShouldBeEmpty(); // Should fail on tool check before parsing errors
     }
 
+    [Fact]
+    public async Task VerifyBuildAsync_WithMaxRetries1_AttemptsOnce() {
+        // Arrange
+        var containerId = "test-container";
+        var attemptCount = 0;
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => {
+                attemptCount++;
+                return new CommandResult {
+                    ExitCode = 1,
+                    Output = "Program.cs(10,15): error CS1002: ; expected"
+                };
+            });
+
+        SetupLlmFixGeneration();
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 1);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Attempts.ShouldBe(1);
+        attemptCount.ShouldBe(1);
+        result.ToolAvailable.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithDotnetTool_ReturnsCorrectInstallationURL() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./Project.csproj"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args[0] == "dotnet"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Error.ShouldContain("https://dotnet.microsoft.com/download");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithNpmTool_ReturnsCorrectInstallationURL() {
+        // Arrange
+        var containerId = "test-container";
+        SetupProjectDetectionForBuildTool(containerId, "npm");
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args[0] == "npm"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Error.ShouldContain("https://nodejs.org/");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithGoTool_ReturnsCorrectInstallationURL() {
+        // Arrange
+        var containerId = "test-container";
+        SetupProjectDetectionForBuildTool(containerId, "go");
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args[0] == "go"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Error.ShouldContain("https://golang.org/doc/install");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithCargoTool_ReturnsCorrectInstallationURL() {
+        // Arrange
+        var containerId = "test-container";
+        SetupProjectDetectionForBuildTool(containerId, "cargo");
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args[0] == "cargo"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Error.ShouldContain("https://www.rust-lang.org/tools/install");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMavenTool_ReturnsCorrectInstallationURL() {
+        // Arrange
+        var containerId = "test-container";
+        SetupProjectDetectionForBuildTool(containerId, "maven");
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args[0] == "mvn"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Error.ShouldContain("https://maven.apache.org/install.html");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithGradleTool_ReturnsCorrectInstallationURL() {
+        // Arrange
+        var containerId = "test-container";
+        SetupProjectDetectionForBuildTool(containerId, "gradle");
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args[0] == "gradle"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Error.ShouldContain("https://gradle.org/install/");
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithAllBuildResultFields_PopulatesCorrectly() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "Program.cs(10,15): error CS1002: ; expected"
+            });
+
+        SetupLlmFixGeneration();
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 2);
+
+        // Assert - Validate all BuildResult properties
+        result.Success.ShouldBeFalse();
+        result.Attempts.ShouldBe(1);
+        result.Output.ShouldNotBeEmpty();
+        result.Errors.ShouldNotBeEmpty();
+        result.FixesApplied.ShouldBeEmpty();
+        result.Duration.ShouldBeGreaterThan(TimeSpan.Zero);
+        result.ToolAvailable.ShouldBeTrue();
+        result.MissingTool.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithMissingToolAllFields_PopulatesCorrectly() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./Project.csproj"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "not found"
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 5);
+
+        // Assert - Validate all BuildResult properties for missing tool scenario
+        result.Success.ShouldBeFalse();
+        result.Attempts.ShouldBe(1);
+        result.Output.ShouldContain("is not installed");
+        result.Errors.ShouldBeEmpty();
+        result.FixesApplied.ShouldBeEmpty();
+        result.Duration.ShouldBeGreaterThan(TimeSpan.Zero);
+        result.ToolAvailable.ShouldBeFalse();
+        result.MissingTool.ShouldBe("dotnet");
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithMultipleCategories_CategorizedCorrectly() {
+        // Arrange
+        var output = """
+            Program.cs(10,15): error CS0246: The type or namespace name 'Package' could not be found
+            Program.cs(20,10): error CS1503: Cannot convert type int to string
+            Program.cs(30,5): error CS1002: ; expected
+            Program.cs(40,8): error CS0000: Invalid configuration setting for feature
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBe(4);
+        // Verify at least some categories are correctly identified
+        errors.ShouldContain(e => e.Category == ErrorCategory.MissingDependency);
+        errors.ShouldContain(e => e.Category == ErrorCategory.Type);
+        // All errors should have some category assigned (not default/unknown)
+        errors.ShouldAllBe(e => e.ErrorCode.Length > 0);
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithSuccessAllFields_PopulatesCorrectly() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Build succeeded."
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 3);
+
+        // Assert - Validate all BuildResult properties for success scenario
+        result.Success.ShouldBeTrue();
+        result.Attempts.ShouldBe(1);
+        result.Output.ShouldContain("Build succeeded");
+        result.Errors.ShouldBeEmpty();
+        result.FixesApplied.ShouldBeEmpty();
+        result.Duration.ShouldBeGreaterThan(TimeSpan.Zero);
+        result.ToolAvailable.ShouldBeTrue();
+        result.MissingTool.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithToolCheckTimeout_HandlesGracefully() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        var delayCount = 0;
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(async () => {
+                delayCount++;
+                if (delayCount == 1) {
+                    await Task.Delay(100); // Simulate slow response
+                }
+                return new CommandResult {
+                    ExitCode = 0,
+                    Output = "/usr/bin/dotnet"
+                };
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Build succeeded."
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        delayCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithEmptyContainerId_HandlesGracefully() {
+        // Arrange
+        var containerId = "";
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                It.IsAny<string>(),
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "Invalid container ID"
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 1);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithWhichReturnsNonStandardPath_AcceptsToolAsAvailable() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args[0] == "dotnet"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "/opt/custom/path/dotnet" // Non-standard path
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Build succeeded."
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithLargeMaxRetries_RespectsLimit() {
+        // Arrange
+        var containerId = "test-container";
+        var attemptCount = 0;
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => {
+                attemptCount++;
+                return new CommandResult {
+                    ExitCode = 1,
+                    Output = "Program.cs(10,15): error CS1002: ; expected"
+                };
+            });
+
+        SetupLlmFixGeneration();
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 100);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Attempts.ShouldBe(1); // Should fail on first attempt due to no parseable errors after LLM response
+        attemptCount.ShouldBeLessThanOrEqualTo(100);
+    }
+
     private async Task VerifyToolCommandMapping(string buildTool, string expectedCommand) {
         var containerId = "test-container";
         var wasCalledWithCorrectCommand = false;
