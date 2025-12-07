@@ -1,0 +1,306 @@
+using System.Text;
+using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Git.Services;
+
+namespace RG.OpenCopilot.PRGenerationAgent.Services.Executor;
+
+/// <summary>
+/// Reports execution progress to pull request comments
+/// </summary>
+internal sealed class ProgressReporter : IProgressReporter {
+    private readonly IGitHubService _gitHubService;
+    private readonly ILogger<ProgressReporter> _logger;
+
+    public ProgressReporter(
+        IGitHubService gitHubService,
+        ILogger<ProgressReporter> logger) {
+        _gitHubService = gitHubService;
+        _logger = logger;
+    }
+
+    public async Task ReportStepProgressAsync(
+        AgentTask task,
+        PlanStep step,
+        StepExecutionResult result,
+        int prNumber,
+        CancellationToken cancellationToken = default) {
+        
+        var comment = FormatProgressComment(step, result, task);
+        
+        await _gitHubService.PostPullRequestCommentAsync(
+            owner: task.RepositoryOwner,
+            repo: task.RepositoryName,
+            prNumber: prNumber,
+            comment: comment,
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation(
+            "Posted step progress comment for step '{StepTitle}' to PR #{PrNumber}",
+            step.Title,
+            prNumber);
+    }
+
+    public async Task ReportExecutionSummaryAsync(
+        AgentTask task,
+        List<StepExecutionResult> results,
+        int prNumber,
+        CancellationToken cancellationToken = default) {
+        
+        var comment = FormatSummaryComment(task, results);
+        
+        await _gitHubService.PostPullRequestCommentAsync(
+            owner: task.RepositoryOwner,
+            repo: task.RepositoryName,
+            prNumber: prNumber,
+            comment: comment,
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation(
+            "Posted execution summary comment to PR #{PrNumber}",
+            prNumber);
+    }
+
+    public async Task ReportIntermediateProgressAsync(
+        AgentTask task,
+        string stage,
+        string message,
+        int prNumber,
+        CancellationToken cancellationToken = default) {
+        
+        var comment = FormatIntermediateProgress(stage, message);
+        
+        await _gitHubService.PostPullRequestCommentAsync(
+            owner: task.RepositoryOwner,
+            repo: task.RepositoryName,
+            prNumber: prNumber,
+            comment: comment,
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation(
+            "Posted intermediate progress comment for stage '{Stage}' to PR #{PrNumber}",
+            stage,
+            prNumber);
+    }
+
+    public Task UpdateProgressAsync(
+        AgentTask task,
+        int commentId,
+        string updatedContent,
+        CancellationToken cancellationToken = default) {
+        // Note: GitHub API doesn't support updating comments directly via Octokit IGitHubIssueAdapter
+        // This would require extending the adapter with UpdateCommentAsync method
+        // For now, we post new comments instead of updating existing ones
+        _logger.LogWarning(
+            "UpdateProgressAsync called but comment updates are not yet implemented. CommentId: {CommentId}",
+            commentId);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Formats a progress comment for a completed step
+    /// </summary>
+    private string FormatProgressComment(PlanStep step, StepExecutionResult result, AgentTask task) {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"## 📝 Step Progress: {step.Title}");
+        sb.AppendLine();
+        
+        // Status header
+        var statusIcon = result.Success ? "✅" : "❌";
+        var statusText = result.Success ? "Completed Successfully" : "Failed";
+        sb.AppendLine($"### {statusIcon} Status: {statusText}");
+        sb.AppendLine();
+        
+        // Duration
+        sb.AppendLine($"**Duration:** {FormatDuration(result.Duration)}");
+        sb.AppendLine();
+        
+        // Error details if failed
+        if (!result.Success && !string.IsNullOrEmpty(result.Error)) {
+            sb.AppendLine("### ⚠️ Error Details");
+            sb.AppendLine("```");
+            sb.AppendLine(result.Error);
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
+        
+        // Changes made
+        if (result.Changes.Count > 0) {
+            sb.AppendLine("### 📂 Changes Made");
+            foreach (var change in result.Changes) {
+                var changeIcon = change.Type switch {
+                    ChangeType.Created => "✨",
+                    ChangeType.Modified => "✏️",
+                    ChangeType.Deleted => "🗑️",
+                    _ => "📄"
+                };
+                sb.AppendLine($"- {changeIcon} {change.Type}: `{change.Path}`");
+            }
+            sb.AppendLine();
+        }
+        
+        // Build results
+        if (result.BuildResult != null) {
+            sb.AppendLine("### 🔨 Build Results");
+            var buildIcon = result.BuildResult.Success ? "✅" : "❌";
+            sb.AppendLine($"- {buildIcon} Build {(result.BuildResult.Success ? "succeeded" : "failed")} on attempt {result.BuildResult.Attempts}");
+            sb.AppendLine($"- Duration: {FormatDuration(result.BuildResult.Duration)}");
+            
+            if (result.BuildResult.Errors.Count > 0) {
+                sb.AppendLine($"- Errors: {result.BuildResult.Errors.Count}");
+            }
+            
+            if (result.BuildResult.FixesApplied.Count > 0) {
+                sb.AppendLine($"- Fixes applied: {result.BuildResult.FixesApplied.Count}");
+            }
+            sb.AppendLine();
+        }
+        
+        // Test results
+        if (result.TestResult != null) {
+            sb.AppendLine("### 🧪 Test Results");
+            var testIcon = result.TestResult.AllPassed ? "✅" : "⚠️";
+            sb.AppendLine($"- {testIcon} {(result.TestResult.AllPassed ? "All tests passed" : "Some tests failed")} ({result.TestResult.PassedTests}/{result.TestResult.TotalTests})");
+            sb.AppendLine($"- Duration: {FormatDuration(result.TestResult.Duration)}");
+            
+            if (result.TestResult.FailedTests > 0) {
+                sb.AppendLine($"- Failed: {result.TestResult.FailedTests}");
+            }
+            
+            if (result.TestResult.SkippedTests > 0) {
+                sb.AppendLine($"- Skipped: {result.TestResult.SkippedTests}");
+            }
+            
+            if (result.TestResult.FixesApplied.Count > 0) {
+                sb.AppendLine($"- Fixes applied: {result.TestResult.FixesApplied.Count}");
+            }
+            sb.AppendLine();
+        }
+        
+        // Execution metrics
+        if (result.Metrics != null) {
+            sb.AppendLine("### 📊 Execution Metrics");
+            
+            if (result.Metrics.LLMCalls > 0) {
+                sb.AppendLine($"- LLM calls: {result.Metrics.LLMCalls}");
+            }
+            
+            var filesAnalyzed = result.Metrics.FilesCreated + result.Metrics.FilesModified + result.Metrics.FilesDeleted;
+            if (filesAnalyzed > 0) {
+                sb.AppendLine($"- Files analyzed: {filesAnalyzed}");
+            }
+            
+            if (result.Metrics.CodeGenerationDuration > TimeSpan.Zero) {
+                sb.AppendLine($"- Code generation time: {FormatDuration(result.Metrics.CodeGenerationDuration)}");
+            }
+            
+            if (result.Metrics.AnalysisDuration > TimeSpan.Zero) {
+                sb.AppendLine($"- Analysis time: {FormatDuration(result.Metrics.AnalysisDuration)}");
+            }
+            sb.AppendLine();
+        }
+        
+        // Footer
+        sb.AppendLine("---");
+        sb.AppendLine($"_Automated update by RG.OpenCopilot • Step: {step.Title}_");
+        
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Formats an execution summary comment
+    /// </summary>
+    private string FormatSummaryComment(AgentTask task, List<StepExecutionResult> results) {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine("## 🎯 Execution Summary");
+        sb.AppendLine();
+        
+        var totalDuration = results.Sum(r => r.Duration.TotalSeconds);
+        var successCount = results.Count(r => r.Success);
+        var failureCount = results.Count - successCount;
+        
+        sb.AppendLine($"**Total Steps:** {results.Count}");
+        sb.AppendLine($"**Successful:** {successCount}");
+        sb.AppendLine($"**Failed:** {failureCount}");
+        sb.AppendLine($"**Total Duration:** {FormatDuration(TimeSpan.FromSeconds(totalDuration))}");
+        sb.AppendLine();
+        
+        // Step breakdown
+        sb.AppendLine("### 📋 Step Breakdown");
+        for (int i = 0; i < results.Count; i++) {
+            var result = results[i];
+            var statusIcon = result.Success ? "✅" : "❌";
+            var stepNumber = i + 1;
+            sb.AppendLine($"{stepNumber}. {statusIcon} {(result.Success ? "Success" : "Failed")} - {FormatDuration(result.Duration)}");
+        }
+        sb.AppendLine();
+        
+        // Aggregate metrics
+        var totalMetrics = new ExecutionMetrics {
+            FilesCreated = results.Sum(r => r.Metrics.FilesCreated),
+            FilesModified = results.Sum(r => r.Metrics.FilesModified),
+            FilesDeleted = results.Sum(r => r.Metrics.FilesDeleted),
+            LLMCalls = results.Sum(r => r.Metrics.LLMCalls),
+            BuildAttempts = results.Sum(r => r.Metrics.BuildAttempts),
+            TestAttempts = results.Sum(r => r.Metrics.TestAttempts),
+            AnalysisDuration = TimeSpan.FromSeconds(results.Sum(r => r.Metrics.AnalysisDuration.TotalSeconds)),
+            CodeGenerationDuration = TimeSpan.FromSeconds(results.Sum(r => r.Metrics.CodeGenerationDuration.TotalSeconds)),
+            BuildDuration = TimeSpan.FromSeconds(results.Sum(r => r.Metrics.BuildDuration.TotalSeconds)),
+            TestDuration = TimeSpan.FromSeconds(results.Sum(r => r.Metrics.TestDuration.TotalSeconds))
+        };
+        
+        sb.AppendLine("### 📊 Overall Metrics");
+        sb.AppendLine($"- Total files created: {totalMetrics.FilesCreated}");
+        sb.AppendLine($"- Total files modified: {totalMetrics.FilesModified}");
+        sb.AppendLine($"- Total files deleted: {totalMetrics.FilesDeleted}");
+        sb.AppendLine($"- Total LLM calls: {totalMetrics.LLMCalls}");
+        sb.AppendLine($"- Total build attempts: {totalMetrics.BuildAttempts}");
+        sb.AppendLine($"- Total test attempts: {totalMetrics.TestAttempts}");
+        sb.AppendLine();
+        
+        // Time breakdown
+        sb.AppendLine("### ⏱️ Time Breakdown");
+        sb.AppendLine($"- Analysis: {FormatDuration(totalMetrics.AnalysisDuration)}");
+        sb.AppendLine($"- Code generation: {FormatDuration(totalMetrics.CodeGenerationDuration)}");
+        sb.AppendLine($"- Building: {FormatDuration(totalMetrics.BuildDuration)}");
+        sb.AppendLine($"- Testing: {FormatDuration(totalMetrics.TestDuration)}");
+        sb.AppendLine();
+        
+        // Footer
+        sb.AppendLine("---");
+        sb.AppendLine("_Automated execution summary by RG.OpenCopilot_");
+        
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Formats an intermediate progress update
+    /// </summary>
+    private string FormatIntermediateProgress(string stage, string message) {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"## 🔄 In Progress: {stage}");
+        sb.AppendLine();
+        sb.AppendLine(message);
+        sb.AppendLine();
+        sb.AppendLine("---");
+        sb.AppendLine($"_Automated update by RG.OpenCopilot • {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC_");
+        
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Formats a duration in a human-readable format
+    /// </summary>
+    private string FormatDuration(TimeSpan duration) {
+        if (duration.TotalMinutes < 1) {
+            return $"{duration.TotalSeconds:F0}s";
+        }
+        
+        if (duration.TotalHours < 1) {
+            return $"{duration.Minutes}m {duration.Seconds}s";
+        }
+        
+        return $"{duration.Hours}h {duration.Minutes}m {duration.Seconds}s";
+    }
+}
