@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
-using RG.OpenCopilot.Agent;
-using RG.OpenCopilot.App.CodeGeneration;
+using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;

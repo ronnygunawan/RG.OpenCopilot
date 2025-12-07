@@ -7,26 +7,30 @@ RG.OpenCopilot is a C#/.NET 10 solution that provides a GitHub Enterprise–host
 ## Solution Structure
 
 - **RG.OpenCopilot.slnx** – root solution file
-- **RG.OpenCopilot.Agent** – shared domain models and service abstractions
+- **RG.OpenCopilot.PRGenerationAgent** – domain models and service abstractions for PR generation
   - Organized by feature first, then by layer (Models/, Services/)
   - `Planning/` – Planning domain (AgentPlan, PlanStep, AgentTaskContext, IPlannerService)
   - `Execution/` – Execution domain (AgentTask, AgentTaskStatus, IExecutorService)
   - `FileOperations/` – File operations domain (FileStructure, FileTree, FileChange, IFileAnalyzer, IFileEditor)
+  - `CodeGeneration/` – Code generation domain (LlmCodeGenerationRequest, GeneratedCode, ICodeGenerator, ITestGenerator)
+  - `Infrastructure/Services/` – Infrastructure service interfaces (IAgentTaskStore, ICommandExecutor, IRepositoryCloner)
   - Uses global usings for all feature namespaces
-- **RG.OpenCopilot.App** – ASP.NET Core minimal API organized by features
+- **RG.OpenCopilot.PRGenerationAgent.Services** – service implementations (internal visibility)
   - `Planner/` – Planning services (LlmPlannerService, SimplePlannerService)
-  - `Executor/` – Execution services (ExecutorService, ContainerExecutorService)
+  - `Executor/` – Execution services (ExecutorService, ContainerExecutorService, StepAnalyzer, BuildVerifier)
+  - `CodeGeneration/` – Code generation services (CodeGenerator, TestGenerator, CodeGenerationPrompts)
   - `Docker/` – Container management (ContainerManager, FileAnalyzer, FileEditor)
   - `GitHub/Git/` – Git operations
     - `Adapters/` – GitHub API adapters with anti-corruption layer
     - `Services/` – GitHubService for high-level operations
   - `GitHub/Repository/` – Repository analysis (RepositoryAnalyzer, InstructionsLoader)
   - `GitHub/Authentication/` – Authentication (GitHubAppTokenProvider, JwtTokenGenerator)
-  - `GitHub/Webhook/` – Webhook handling
-    - `Models/` – Webhook payload models
-    - `Services/` – WebhookHandler, WebhookValidator
-  - `Infrastructure/` – Cross-cutting concerns (CommandExecutor, RepositoryCloner, AgentTaskStore)
-- **RG.OpenCopilot.Runner** – console app to run the agent locally for testing
+  - `GitHub/Webhook/` – Webhook handling (WebhookHandler, WebhookValidator, webhook models)
+  - `Infrastructure/` – Infrastructure implementations (AgentTaskStore, CommandExecutor, RepositoryCloner)
+  - Exposes `ServiceCollectionExtensions` class with `AddPRGenerationAgentServices()` method
+- **RG.OpenCopilot.PRGenerationAgent.App** – ASP.NET Core minimal API (presentation layer)
+  - Contains `Program.cs` with webhook endpoints and service registration
+  - Minimal presentation logic, delegates to Services project
 - **RG.OpenCopilot.Tests** – xUnit tests using Shouldly assertions
 
 All projects target `.NET 10.0` with nullable reference types and implicit usings enabled.
@@ -45,7 +49,7 @@ dotnet test RG.OpenCopilot.slnx --configuration Release --no-build --verbosity n
 
 ### Run Web App
 ```bash
-dotnet run --project RG.OpenCopilot.App
+dotnet run --project RG.OpenCopilot.PRGenerationAgent.App
 ```
 
 ## Coding Conventions
@@ -172,21 +176,25 @@ public class FeatureTests {
 - **DDD concepts**: Domain models in Agent project, application services in App project
 
 ### Domain Models
-- Located in feature-specific folders in `RG.OpenCopilot.Agent/`
+- Located in feature-specific folders in `RG.OpenCopilot.PRGenerationAgent/`
 - **Planning**: `Planning/Models/` (AgentPlan, PlanStep, AgentTaskContext)
 - **Execution**: `Execution/Models/` (AgentTask, AgentTaskStatus)
 - **FileOperations**: `FileOperations/Models/` (FileStructure, FileTree, FileChange, etc.)
+- **CodeGeneration**: `CodeGeneration/Models/` (LlmCodeGenerationRequest, GeneratedCode, TestFile, etc.)
 - Each model in its own file for clarity
 - Use `sealed` classes for concrete types
 - Use `init` accessors for immutable properties
 - Initialize collections in property initializers
 
 ### Services and Abstractions
-- Service interfaces defined in feature-specific folders in `RG.OpenCopilot.Agent/Services/`
+- Service interfaces defined in feature-specific folders in `RG.OpenCopilot.PRGenerationAgent/Services/`
 - **Planning**: `Planning/Services/` (IPlannerService)
-- **Execution**: `Execution/Services/` (IExecutorService)
+- **Execution**: `Execution/Services/` (IExecutorService, IStepAnalyzer, IBuildVerifier)
 - **FileOperations**: `FileOperations/Services/` (IFileAnalyzer, IFileEditor)
-- Service implementations in feature-specific folders in `RG.OpenCopilot.App/`
+- **CodeGeneration**: `CodeGeneration/Services/` (ICodeGenerator, ITestGenerator)
+- **Infrastructure**: `Infrastructure/Services/` (IAgentTaskStore, ICommandExecutor, IRepositoryCloner)
+- Service implementations in feature-specific folders in `RG.OpenCopilot.PRGenerationAgent.Services/`
+- **All service implementations are internal** - only exposed through `AddPRGenerationAgentServices()` extension method
 - Use `async`/`await` for all I/O operations
 - Accept `CancellationToken` with default value in async methods
 - Return `Task<T>` or `Task` from async methods
@@ -223,12 +231,21 @@ public class FeatureTests {
 - Can be replaced with persistent storage implementation
 
 ### Key Interfaces
-- `IPlannerService` – creates structured plans using LLM models (in `RG.OpenCopilot.Agent/Planning/Services/`)
-- `IExecutorService` – executes plans and makes code changes (in `RG.OpenCopilot.Agent/Execution/Services/`)
-- `IFileAnalyzer` – analyzes files in containers (in `RG.OpenCopilot.Agent/FileOperations/Services/`)
-- `IFileEditor` – modifies files with change tracking (in `RG.OpenCopilot.Agent/FileOperations/Services/`)
-- `IGitHubService` – high-level GitHub operations (in `RG.OpenCopilot.App/GitHub/Git/Services/`)
-- `IContainerManager` – Docker container management (in `RG.OpenCopilot.App/Docker/`)
+- `IPlannerService` – creates structured plans using LLM models (in `RG.OpenCopilot.PRGenerationAgent/Planning/Services/`)
+- `IExecutorService` – executes plans and makes code changes (in `RG.OpenCopilot.PRGenerationAgent/Execution/Services/`)
+- `IFileAnalyzer` – analyzes files in containers (in `RG.OpenCopilot.PRGenerationAgent/FileOperations/Services/`)
+- `IFileEditor` – modifies files with change tracking (in `RG.OpenCopilot.PRGenerationAgent/FileOperations/Services/`)
+- `ICodeGenerator` – generates code using LLM (in `RG.OpenCopilot.PRGenerationAgent/CodeGeneration/Services/`)
+- `ITestGenerator` – generates tests using LLM (in `RG.OpenCopilot.PRGenerationAgent/CodeGeneration/Services/`)
+- `IGitHubService` – high-level GitHub operations (implemented in `RG.OpenCopilot.PRGenerationAgent.Services/GitHub/Git/Services/`)
+- `IContainerManager` – Docker container management (implemented in `RG.OpenCopilot.PRGenerationAgent.Services/Docker/`)
+- `IAgentTaskStore` – task persistence (in `RG.OpenCopilot.PRGenerationAgent/Infrastructure/Services/`)
+
+### Service Registration
+- All services are registered via `AddPRGenerationAgentServices()` extension method
+- Located in `RG.OpenCopilot.PRGenerationAgent.Services/ServiceCollectionExtensions.cs`
+- Called from `Program.cs` in the App project
+- Handles LLM configuration, GitHub client setup, and all service dependencies
 
 ## LLM Integration
 

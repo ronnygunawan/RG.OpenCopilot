@@ -1,7 +1,7 @@
 using Moq;
-using RG.OpenCopilot.Agent;
-using RG.OpenCopilot.App.Docker;
-using RG.OpenCopilot.App.Executor;
+using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
+using RG.OpenCopilot.PRGenerationAgent.Services.Executor;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Shouldly;

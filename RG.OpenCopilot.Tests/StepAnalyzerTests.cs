@@ -3,8 +3,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Moq;
-using RG.OpenCopilot.Agent;
-using RG.OpenCopilot.App;
+using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Services;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;

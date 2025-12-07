@@ -1,5 +1,5 @@
-using RG.OpenCopilot.Agent;
-using RG.OpenCopilot.App;
+using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Services;
 using Shouldly;
 using Microsoft.Extensions.Logging;
 
