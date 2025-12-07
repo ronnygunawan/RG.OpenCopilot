@@ -36,12 +36,15 @@ public sealed class BuildVerifier : IBuildVerifier {
     public async Task<BuildResult> VerifyBuildAsync(string containerId, int maxRetries = 3, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Starting build verification for container {ContainerId} with max {MaxRetries} retries", containerId, maxRetries);
         
+        // Ensure at least one attempt is made
+        var effectiveMaxRetries = Math.Max(1, maxRetries);
+        
         var stopwatch = Stopwatch.StartNew();
         var allFixesApplied = new List<CodeFix>();
         var attempts = 0;
 
-        for (attempts = 1; attempts <= maxRetries; attempts++) {
-            _logger.LogInformation("Build attempt {Attempt} of {MaxRetries}", attempts, maxRetries);
+        for (attempts = 1; attempts <= effectiveMaxRetries; attempts++) {
+            _logger.LogInformation("Build attempt {Attempt} of {MaxRetries}", attempts, effectiveMaxRetries);
 
             var buildResult = await RunBuildAsync(containerId, cancellationToken);
 
@@ -298,6 +301,18 @@ public sealed class BuildVerifier : IBuildVerifier {
 
     public async Task<List<BuildError>> ParseBuildErrorsAsync(string output, string buildTool, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Parsing build errors for {BuildTool}", buildTool);
+
+        // Handle null or empty output gracefully
+        if (string.IsNullOrEmpty(output)) {
+            _logger.LogDebug("Output is null or empty, returning empty error list");
+            return [];
+        }
+
+        // Handle empty or unsupported build tool
+        if (string.IsNullOrEmpty(buildTool)) {
+            _logger.LogDebug("Build tool is null or empty, returning empty error list");
+            return [];
+        }
 
         var errors = new List<BuildError>();
 

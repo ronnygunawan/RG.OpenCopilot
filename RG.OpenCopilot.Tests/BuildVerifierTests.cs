@@ -2528,15 +2528,17 @@ public class BuildVerifierTests {
     }
 
     [Fact]
-    public async Task ParseBuildErrorsAsync_WithNullOutput_ThrowsArgumentNullException() {
+    public async Task ParseBuildErrorsAsync_WithNullOutput_ReturnsEmptyList() {
         // Arrange
         string? nullOutput = null;
 
-        // Act & Assert
-        await Should.ThrowAsync<ArgumentNullException>(
-            async () => await _verifier.ParseBuildErrorsAsync(
-                output: nullOutput!,
-                buildTool: "dotnet"));
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: nullOutput!,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.ShouldBeEmpty();
     }
 
     [Fact]
@@ -2567,8 +2569,8 @@ public class BuildVerifierTests {
     }
 
     [Fact]
-    public async Task VerifyBuildAsync_WithZeroMaxRetries_DoesNotAttempt() {
-        // Arrange - This tests the boundary condition
+    public async Task VerifyBuildAsync_WithZeroMaxRetries_AttemptsOnce() {
+        // Arrange - Even with maxRetries=0, should attempt at least once
         var containerId = "test-container";
         var attemptCount = 0;
         SetupBuildToolDetection(buildTool: "dotnet");
@@ -2592,9 +2594,10 @@ public class BuildVerifierTests {
             containerId: containerId,
             maxRetries: 0);
 
-        // Assert - With maxRetries=0, the loop doesn't run (attempts <= 0)
-        result.Success.ShouldBeFalse();
-        attemptCount.ShouldBe(0);
+        // Assert - Should attempt at least once even with maxRetries=0
+        result.Success.ShouldBeTrue();
+        attemptCount.ShouldBe(1);
+        result.Attempts.ShouldBe(1);
     }
 
     [Fact]
