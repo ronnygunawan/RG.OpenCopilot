@@ -18,6 +18,19 @@ public sealed class TestValidator : ITestValidator {
     private readonly IChatCompletionService _chatService;
     private readonly ILogger<TestValidator> _logger;
 
+    // Cached regex patterns for performance
+    private static readonly Regex DotnetSummaryPattern = new(@"Failed:\s+(\d+),\s+Passed:\s+(\d+),\s+Skipped:\s+(\d+),\s+Total:\s+(\d+)", RegexOptions.Compiled);
+    private static readonly Regex DotnetPassedPattern = new(@"Passed:\s+(\d+),\s+Skipped:\s+(\d+),\s+Total:\s+(\d+)", RegexOptions.Compiled);
+    private static readonly Regex DotnetFailurePattern = new(@"Failed\s+(.+)\.([^\s.]+)\s+\[", RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Regex JestSummaryPattern = new(@"Tests:\s+(?:(\d+)\s+failed,\s+)?(\d+)\s+passed(?:,\s+(\d+)\s+skipped)?,\s+(\d+)\s+total", RegexOptions.Compiled);
+    private static readonly Regex JestFailurePattern = new(@"●\s+(.+?)\s+›\s+(.+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Regex PytestSummaryPattern = new(@"===\s+(?:(\d+)\s+failed(?:,\s+)?)?(?:(\d+)\s+passed(?:,\s+)?)?(?:(\d+)\s+skipped)?.*===", RegexOptions.Compiled);
+    private static readonly Regex PytestFailurePattern = new(@"FAILED\s+(.+?)::(.+?)::(.*?)\s+-\s+(.+?)(?=\n(?:FAILED|===|$))", RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.Singleline);
+    private static readonly Regex JunitSummaryPattern = new(@"Tests run:\s+(\d+),\s+Failures:\s+(\d+),\s+Errors:\s+(\d+),\s+Skipped:\s+(\d+)", RegexOptions.Compiled);
+    private static readonly Regex JunitFailurePattern = new(@"(\w+)\((.+?)\)\s+Time elapsed:.*?<<<\s+(FAILURE|ERROR)!", RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Regex LineCoveragePattern = new(@"Line.*?(\d+(?:\.\d+)?)%", RegexOptions.Compiled);
+    private static readonly Regex BranchCoveragePattern = new(@"Branch.*?(\d+(?:\.\d+)?)%", RegexOptions.Compiled);
+
     public TestValidator(
         IContainerManager containerManager,
         IFileEditor fileEditor,
@@ -49,7 +62,7 @@ public sealed class TestValidator : ITestValidator {
                     AllPassed = true,
                     TotalTests = testResult.Total,
                     PassedTests = testResult.Passed,
-                    FailedTests = 0,
+                    FailedTests = testResult.Failed,
                     SkippedTests = testResult.Skipped,
                     Attempts = attempts,
                     RemainingFailures = [],
@@ -337,8 +350,8 @@ public sealed class TestValidator : ITestValidator {
                 containerId, 
                 "dotnet", 
                 testFilter != null 
-                    ? new[] { "test", "--no-build", "--filter", testFilter }
-                    : new[] { "test", "--no-build" }, 
+                    ? new[] { "test", "--filter", testFilter }
+                    : new[] { "test" }, 
                 cancellationToken),
             
             "jest" => await _containerManager.ExecuteInContainerAsync(
@@ -435,8 +448,7 @@ public sealed class TestValidator : ITestValidator {
         var skipped = 0;
 
         // Pattern: Failed!  - Failed:     5, Passed:    42, Skipped:     3, Total:    50
-        var summaryPattern = new Regex(@"Failed:\s+(\d+),\s+Passed:\s+(\d+),\s+Skipped:\s+(\d+),\s+Total:\s+(\d+)");
-        var summaryMatch = summaryPattern.Match(output);
+        var summaryMatch = DotnetSummaryPattern.Match(output);
         if (summaryMatch.Success) {
             failed = int.Parse(summaryMatch.Groups[1].Value);
             passed = int.Parse(summaryMatch.Groups[2].Value);
@@ -445,8 +457,7 @@ public sealed class TestValidator : ITestValidator {
         }
 
         // Pattern: Passed!  - Failed:     0, Passed:    50, Skipped:     0, Total:    50
-        var passedPattern = new Regex(@"Passed:\s+(\d+),\s+Skipped:\s+(\d+),\s+Total:\s+(\d+)");
-        var passedMatch = passedPattern.Match(output);
+        var passedMatch = DotnetPassedPattern.Match(output);
         if (passedMatch.Success && !summaryMatch.Success) {
             passed = int.Parse(passedMatch.Groups[1].Value);
             skipped = int.Parse(passedMatch.Groups[2].Value);
@@ -457,8 +468,7 @@ public sealed class TestValidator : ITestValidator {
         // Parse individual failures
         // Pattern: Failed TestClassName.TestMethodName [Duration]
         // Followed by error message
-        var failurePattern = new Regex(@"Failed\s+(.+)\.([^\s.]+)\s+\[", RegexOptions.Multiline);
-        var matches = failurePattern.Matches(output);
+        var matches = DotnetFailurePattern.Matches(output);
 
         foreach (Match match in matches) {
             var className = match.Groups[1].Value.Trim();
@@ -504,8 +514,7 @@ public sealed class TestValidator : ITestValidator {
         var skipped = 0;
 
         // Pattern: Tests:       3 failed, 47 passed, 50 total
-        var summaryPattern = new Regex(@"Tests:\s+(?:(\d+)\s+failed,\s+)?(\d+)\s+passed(?:,\s+(\d+)\s+skipped)?,\s+(\d+)\s+total");
-        var summaryMatch = summaryPattern.Match(output);
+        var summaryMatch = JestSummaryPattern.Match(output);
         if (summaryMatch.Success) {
             failed = summaryMatch.Groups[1].Success ? int.Parse(summaryMatch.Groups[1].Value) : 0;
             passed = int.Parse(summaryMatch.Groups[2].Value);
@@ -515,8 +524,7 @@ public sealed class TestValidator : ITestValidator {
 
         // Parse individual failures
         // Pattern: ● TestSuite › TestName
-        var failurePattern = new Regex(@"●\s+(.+?)\s+›\s+(.+?)$", RegexOptions.Multiline);
-        var matches = failurePattern.Matches(output);
+        var matches = JestFailurePattern.Matches(output);
 
         foreach (Match match in matches) {
             var className = match.Groups[1].Value.Trim();
@@ -557,8 +565,7 @@ public sealed class TestValidator : ITestValidator {
         var skipped = 0;
 
         // Pattern: === 3 failed, 47 passed in 2.50s ===
-        var summaryPattern = new Regex(@"===\s+(?:(\d+)\s+failed(?:,\s+)?)?(?:(\d+)\s+passed(?:,\s+)?)?(?:(\d+)\s+skipped)?.*===");
-        var summaryMatch = summaryPattern.Match(output);
+        var summaryMatch = PytestSummaryPattern.Match(output);
         if (summaryMatch.Success) {
             failed = summaryMatch.Groups[1].Success ? int.Parse(summaryMatch.Groups[1].Value) : 0;
             passed = summaryMatch.Groups[2].Success ? int.Parse(summaryMatch.Groups[2].Value) : 0;
@@ -568,8 +575,7 @@ public sealed class TestValidator : ITestValidator {
 
         // Parse individual failures
         // Pattern: FAILED test_module.py::TestClass::test_method - AssertionError: ...
-        var failurePattern = new Regex(@"FAILED\s+(.+?)::(.+?)::(.*?)\s+-\s+(.+?)(?=\n(?:FAILED|===|$))", RegexOptions.Multiline | RegexOptions.Singleline);
-        var matches = failurePattern.Matches(output);
+        var matches = PytestFailurePattern.Matches(output);
 
         foreach (Match match in matches) {
             var module = match.Groups[1].Value.Trim();
@@ -607,8 +613,7 @@ public sealed class TestValidator : ITestValidator {
         var skipped = 0;
 
         // Pattern: Tests run: 50, Failures: 3, Errors: 0, Skipped: 2
-        var summaryPattern = new Regex(@"Tests run:\s+(\d+),\s+Failures:\s+(\d+),\s+Errors:\s+(\d+),\s+Skipped:\s+(\d+)");
-        var summaryMatch = summaryPattern.Match(output);
+        var summaryMatch = JunitSummaryPattern.Match(output);
         if (summaryMatch.Success) {
             total = int.Parse(summaryMatch.Groups[1].Value);
             failed = int.Parse(summaryMatch.Groups[2].Value) + int.Parse(summaryMatch.Groups[3].Value);
@@ -618,8 +623,7 @@ public sealed class TestValidator : ITestValidator {
 
         // Parse individual failures
         // Pattern: testMethod(com.example.TestClass)  Time elapsed: 0.05 s  <<< FAILURE!
-        var failurePattern = new Regex(@"(\w+)\((.+?)\)\s+Time elapsed:.*?<<<\s+(FAILURE|ERROR)!", RegexOptions.Multiline);
-        var matches = failurePattern.Matches(output);
+        var matches = JunitFailurePattern.Matches(output);
 
         foreach (Match match in matches) {
             var testName = match.Groups[1].Value.Trim();
@@ -678,11 +682,8 @@ public sealed class TestValidator : ITestValidator {
         // This is a simplified implementation
         // Real coverage parsing would be more complex and framework-specific
         
-        var lineCoveragePattern = new Regex(@"Line.*?(\d+(?:\.\d+)?)%");
-        var branchCoveragePattern = new Regex(@"Branch.*?(\d+(?:\.\d+)?)%");
-
-        var lineCoverageMatch = lineCoveragePattern.Match(output);
-        var branchCoverageMatch = branchCoveragePattern.Match(output);
+        var lineCoverageMatch = LineCoveragePattern.Match(output);
+        var branchCoverageMatch = BranchCoveragePattern.Match(output);
 
         if (!lineCoverageMatch.Success && !branchCoverageMatch.Success) {
             return null;
