@@ -30,13 +30,15 @@ public sealed class StepExecutionResult {
     /// <summary>
     /// Creates a failed execution result
     /// </summary>
-    public static StepExecutionResult CreateFailure(string error, List<FileChange>? changes = null, StepActionPlan? actionPlan = null, TimeSpan? duration = null, ExecutionMetrics? metrics = null) =>
+    public static StepExecutionResult CreateFailure(string error, List<FileChange>? changes = null, StepActionPlan? actionPlan = null, TimeSpan? duration = null, ExecutionMetrics? metrics = null, BuildResult? buildResult = null, TestValidationResult? testResult = null) =>
         new() {
             Success = false,
             Error = error,
             Changes = changes ?? [],
             ActionPlan = actionPlan,
             Duration = duration ?? TimeSpan.Zero,
-            Metrics = metrics ?? new()
+            Metrics = metrics ?? new(),
+            BuildResult = buildResult,
+            TestResult = testResult
         };
 }

@@ -104,7 +104,8 @@ internal sealed class SmartStepExecutor : ISmartStepExecutor {
                     changes: _fileEditor.GetChanges(),
                     actionPlan: actionPlan,
                     duration: stopwatch.Elapsed,
-                    metrics: metrics);
+                    metrics: metrics,
+                    buildResult: buildResult);
             }
 
             // Phase 5: Validate tests
@@ -126,7 +127,9 @@ internal sealed class SmartStepExecutor : ISmartStepExecutor {
                     changes: _fileEditor.GetChanges(),
                     actionPlan: actionPlan,
                     duration: stopwatch.Elapsed,
-                    metrics: metrics);
+                    metrics: metrics,
+                    buildResult: buildResult,
+                    testResult: testResult);
             }
 
             // Phase 6: Check code quality
@@ -452,12 +455,16 @@ internal sealed class SmartStepExecutor : ISmartStepExecutor {
         List<FileChange> changes,
         StepActionPlan? actionPlan,
         TimeSpan duration,
-        ExecutionMetrics metrics) {
+        ExecutionMetrics metrics,
+        BuildResult? buildResult = null,
+        TestValidationResult? testResult = null) {
         return StepExecutionResult.CreateFailure(
             error: error,
             changes: changes,
             actionPlan: actionPlan,
             duration: duration,
-            metrics: metrics);
+            metrics: metrics,
+            buildResult: buildResult,
+            testResult: testResult);
     }
 }
