@@ -1,0 +1,21 @@
+// Global usings for RG.OpenCopilot.PRGenerationAgent.Services
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.Logging;
+global using RG.OpenCopilot.PRGenerationAgent.Planning.Models;
+global using RG.OpenCopilot.PRGenerationAgent.Planning.Services;
+global using RG.OpenCopilot.PRGenerationAgent.Execution.Models;
+global using RG.OpenCopilot.PRGenerationAgent.Execution.Services;
+global using RG.OpenCopilot.PRGenerationAgent.FileOperations.Models;
+global using RG.OpenCopilot.PRGenerationAgent.FileOperations.Services;
+global using RG.OpenCopilot.PRGenerationAgent.CodeGeneration.Models;
+global using RG.OpenCopilot.PRGenerationAgent.CodeGeneration.Services;
+global using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
+global using RG.OpenCopilot.PRGenerationAgent.Services.Executor;
+global using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Authentication;
+global using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Git.Adapters;
+global using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Git.Services;
+global using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Repository;
+global using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Webhook.Models;
+global using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Webhook.Services;
+global using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
+global using RG.OpenCopilot.PRGenerationAgent.Services.Planner;

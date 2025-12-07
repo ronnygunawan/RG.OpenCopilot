@@ -1,4 +1,4 @@
-using RG.OpenCopilot.Agent;
+using RG.OpenCopilot.PRGenerationAgent;
 using Shouldly;
 using System.Text.Json;
 

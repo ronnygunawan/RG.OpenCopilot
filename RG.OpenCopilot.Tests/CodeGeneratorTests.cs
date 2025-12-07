@@ -5,8 +5,8 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Moq;
 using Octokit;
-using RG.OpenCopilot.Agent;
-using RG.OpenCopilot.App.CodeGeneration;
+using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;

@@ -1,4 +1,4 @@
-using RG.OpenCopilot.Agent;
+using RG.OpenCopilot.PRGenerationAgent;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;

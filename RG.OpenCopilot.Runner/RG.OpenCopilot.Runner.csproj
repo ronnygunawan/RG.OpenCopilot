@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RG.OpenCopilot.Agent\RG.OpenCopilot.Agent.csproj" />
+    <ProjectReference Include="..\RG.OpenCopilot.PRGenerationAgent\RG.OpenCopilot.PRGenerationAgent.csproj" />
   </ItemGroup>
 
 </Project>

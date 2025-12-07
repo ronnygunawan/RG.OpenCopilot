@@ -1,4 +1,4 @@
-using RG.OpenCopilot.Agent;
+using RG.OpenCopilot.PRGenerationAgent;
 
 if (args.Length == 0) {
     Console.WriteLine("RG.OpenCopilot.Runner - local agent runner stub");

@@ -1,5 +1,5 @@
 using Moq;
-using RG.OpenCopilot.App;
+using RG.OpenCopilot.PRGenerationAgent.Services;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;

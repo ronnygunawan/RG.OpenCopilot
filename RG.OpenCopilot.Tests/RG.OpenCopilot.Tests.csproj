@@ -14,6 +14,11 @@
     <PackageReference Include="Shouldly" Version="4.3.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,8 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\RG.OpenCopilot.Agent\RG.OpenCopilot.Agent.csproj" />
-    <ProjectReference Include="..\RG.OpenCopilot.App\RG.OpenCopilot.App.csproj" />
+    <ProjectReference Include="..\RG.OpenCopilot.PRGenerationAgent\RG.OpenCopilot.PRGenerationAgent.csproj" />
+    <ProjectReference Include="..\RG.OpenCopilot.PRGenerationAgent.Services\RG.OpenCopilot.PRGenerationAgent.Services.csproj" />
   </ItemGroup>
 
 </Project>

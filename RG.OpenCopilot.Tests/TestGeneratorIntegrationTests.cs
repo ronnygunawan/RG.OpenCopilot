@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
-using RG.OpenCopilot.App.CodeGeneration;
+using RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
