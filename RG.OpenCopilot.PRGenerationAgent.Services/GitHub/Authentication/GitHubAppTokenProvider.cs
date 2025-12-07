@@ -35,13 +35,9 @@ public sealed class GitHubAppTokenProvider : IGitHubAppTokenProvider {
     }
 
     public async Task<string> GetInstallationTokenAsync(long installationId, CancellationToken cancellationToken = default) {
-        // For POC/testing, fall back to personal access token if GitHub App credentials are not configured
         if (string.IsNullOrEmpty(_appId) || string.IsNullOrEmpty(_privateKey)) {
-            _logger.LogWarning("GitHub App credentials not configured, using fallback authentication");
-
-            // Return empty string - the caller should handle this
-            // In a real implementation, this would throw an exception
-            return "";
+            _logger.LogError("GitHub App credentials not configured. AppId and PrivateKey are required.");
+            throw new InvalidOperationException("GitHub App credentials (AppId and PrivateKey) must be configured to generate installation tokens");
         }
 
         try {
