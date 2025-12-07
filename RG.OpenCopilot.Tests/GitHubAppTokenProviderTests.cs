@@ -23,7 +23,7 @@ public class GitHubAppTokenProviderTests {
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
-            async () => await provider.GetInstallationTokenAsync(installationId: 123));
+            () => provider.GetInstallationTokenAsync(installationId: 123));
         
         exception.Message.ShouldBe("GitHub App credentials (AppId and PrivateKey) must be configured to generate installation tokens");
         mockJwtGenerator.Verify(j => j.GenerateJwtToken(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
