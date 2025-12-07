@@ -32,6 +32,7 @@ public interface IContainerManager : IDirectoryOperations {
     Task WriteFileInContainerAsync(string containerId, string filePath, string content, CancellationToken cancellationToken = default);
     Task CommitAndPushAsync(string containerId, string commitMessage, string owner, string repo, string branch, string token, CancellationToken cancellationToken = default);
     Task CleanupContainerAsync(string containerId, CancellationToken cancellationToken = default);
+    Task<BuildToolsStatus> VerifyBuildToolsAsync(string containerId, CancellationToken cancellationToken = default);
 }
 
 public sealed class DockerContainerManager : IContainerManager {
@@ -91,6 +92,9 @@ public sealed class DockerContainerManager : IContainerManager {
 
         // Install git if not already present in the image
         await EnsureGitInstalledAsync(containerId, imageType, cancellationToken);
+
+        // Verify build tools are available
+        await VerifyBuildToolsAsync(containerId, cancellationToken);
 
         // Clone the repository inside the container
         var repoUrl = $"https://x-access-token:{token}@github.com/{owner}/{repo}.git";
@@ -270,6 +274,75 @@ public sealed class DockerContainerManager : IContainerManager {
             cancellationToken: cancellationToken);
 
         _logger.LogInformation("Cleaned up container {ContainerId}", containerId);
+    }
+
+    public async Task<BuildToolsStatus> VerifyBuildToolsAsync(string containerId, CancellationToken cancellationToken = default) {
+        _logger.LogInformation("Verifying build tools in container {ContainerId}", containerId);
+
+        var missingTools = new List<string>();
+        
+        // Check for dotnet
+        var dotnetResult = await ExecuteInContainerAsync(containerId, "which", new[] { "dotnet" }, cancellationToken);
+        var dotnetAvailable = dotnetResult.Success;
+        if (!dotnetAvailable) {
+            missingTools.Add("dotnet");
+            _logger.LogWarning("Build tool 'dotnet' is not available in container {ContainerId}", containerId);
+        }
+
+        // Check for npm
+        var npmResult = await ExecuteInContainerAsync(containerId, "which", new[] { "npm" }, cancellationToken);
+        var npmAvailable = npmResult.Success;
+        if (!npmAvailable) {
+            missingTools.Add("npm");
+            _logger.LogWarning("Build tool 'npm' is not available in container {ContainerId}", containerId);
+        }
+
+        // Check for gradle
+        var gradleResult = await ExecuteInContainerAsync(containerId, "which", new[] { "gradle" }, cancellationToken);
+        var gradleAvailable = gradleResult.Success;
+        if (!gradleAvailable) {
+            missingTools.Add("gradle");
+            _logger.LogWarning("Build tool 'gradle' is not available in container {ContainerId}", containerId);
+        }
+
+        // Check for maven
+        var mavenResult = await ExecuteInContainerAsync(containerId, "which", new[] { "mvn" }, cancellationToken);
+        var mavenAvailable = mavenResult.Success;
+        if (!mavenAvailable) {
+            missingTools.Add("maven");
+            _logger.LogWarning("Build tool 'maven' is not available in container {ContainerId}", containerId);
+        }
+
+        // Check for go
+        var goResult = await ExecuteInContainerAsync(containerId, "which", new[] { "go" }, cancellationToken);
+        var goAvailable = goResult.Success;
+        if (!goAvailable) {
+            missingTools.Add("go");
+            _logger.LogWarning("Build tool 'go' is not available in container {ContainerId}", containerId);
+        }
+
+        // Check for cargo
+        var cargoResult = await ExecuteInContainerAsync(containerId, "which", new[] { "cargo" }, cancellationToken);
+        var cargoAvailable = cargoResult.Success;
+        if (!cargoAvailable) {
+            missingTools.Add("cargo");
+            _logger.LogWarning("Build tool 'cargo' is not available in container {ContainerId}", containerId);
+        }
+
+        var status = new BuildToolsStatus {
+            DotnetAvailable = dotnetAvailable,
+            NpmAvailable = npmAvailable,
+            GradleAvailable = gradleAvailable,
+            MavenAvailable = mavenAvailable,
+            GoAvailable = goAvailable,
+            CargoAvailable = cargoAvailable,
+            MissingTools = missingTools
+        };
+
+        _logger.LogInformation("Build tools verification completed for container {ContainerId}. Available: dotnet={DotnetAvailable}, npm={NpmAvailable}, gradle={GradleAvailable}, maven={MavenAvailable}, go={GoAvailable}, cargo={CargoAvailable}",
+            containerId, dotnetAvailable, npmAvailable, gradleAvailable, mavenAvailable, goAvailable, cargoAvailable);
+
+        return status;
     }
 
     public async Task CreateDirectoryAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {

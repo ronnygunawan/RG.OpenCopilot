@@ -422,5 +422,17 @@ public class FileEditorIntegrationTests {
         public Task<List<string>> ListContentsAsync(string containerId, string dirPath, CancellationToken cancellationToken = default) {
             return Task.FromResult(new List<string>());
         }
+
+        public Task<BuildToolsStatus> VerifyBuildToolsAsync(string containerId, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new BuildToolsStatus {
+                DotnetAvailable = true,
+                NpmAvailable = true,
+                GradleAvailable = true,
+                MavenAvailable = true,
+                GoAvailable = true,
+                CargoAvailable = true,
+                MissingTools = []
+            });
+        }
     }
 }

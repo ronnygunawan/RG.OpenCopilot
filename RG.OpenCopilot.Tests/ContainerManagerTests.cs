@@ -1415,6 +1415,98 @@ public class ContainerManagerTests {
         exception.ParamName.ShouldBe("imageType");
     }
 
+    [Fact]
+    public async Task VerifyBuildToolsAsync_ChecksAllBuildTools() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var status = await manager.VerifyBuildToolsAsync(containerId: "test-container");
+
+        // Assert
+        status.ShouldNotBeNull();
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("dotnet"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("npm"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("gradle"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("mvn"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("go"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("cargo"));
+    }
+
+    [Fact]
+    public async Task VerifyBuildToolsAsync_AllToolsAvailable_ReturnsAllTrue() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var status = await manager.VerifyBuildToolsAsync(containerId: "test-container");
+
+        // Assert
+        status.DotnetAvailable.ShouldBeTrue();
+        status.NpmAvailable.ShouldBeTrue();
+        status.GradleAvailable.ShouldBeTrue();
+        status.MavenAvailable.ShouldBeTrue();
+        status.GoAvailable.ShouldBeTrue();
+        status.CargoAvailable.ShouldBeTrue();
+        status.MissingTools.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task VerifyBuildToolsAsync_SomeToolsMissing_ReportsCorrectly() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            FailOnCommand = "docker",
+            FailOnArgs = new[] { "exec" }
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var status = await manager.VerifyBuildToolsAsync(containerId: "test-container");
+
+        // Assert
+        status.DotnetAvailable.ShouldBeFalse();
+        status.NpmAvailable.ShouldBeFalse();
+        status.GradleAvailable.ShouldBeFalse();
+        status.MavenAvailable.ShouldBeFalse();
+        status.GoAvailable.ShouldBeFalse();
+        status.CargoAvailable.ShouldBeFalse();
+        status.MissingTools.ShouldContain("dotnet");
+        status.MissingTools.ShouldContain("npm");
+        status.MissingTools.ShouldContain("gradle");
+        status.MissingTools.ShouldContain("maven");
+        status.MissingTools.ShouldContain("go");
+        status.MissingTools.ShouldContain("cargo");
+        status.MissingTools.Count.ShouldBe(6);
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_CallsVerifyBuildTools() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main");
+
+        // Assert - should verify build tools after git installation and before cloning
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("dotnet"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("npm"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("gradle"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("mvn"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("go"));
+        commandExecutor.Commands.ShouldContain(c => c.Args.Contains("which") && c.Args.Contains("cargo"));
+    }
+
     // Test helper classes
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
