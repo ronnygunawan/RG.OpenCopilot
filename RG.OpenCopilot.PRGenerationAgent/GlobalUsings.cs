@@ -7,4 +7,5 @@ global using RG.OpenCopilot.PRGenerationAgent.FileOperations.Models;
 global using RG.OpenCopilot.PRGenerationAgent.FileOperations.Services;
 global using RG.OpenCopilot.PRGenerationAgent.CodeGeneration.Models;
 global using RG.OpenCopilot.PRGenerationAgent.CodeGeneration.Services;
+global using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Models;
 global using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
