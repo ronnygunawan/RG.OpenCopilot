@@ -1,4 +1,21 @@
-# OpenCopilot Multi-Language Builder Image
+# OpenCopilot Multi-Language Builder Image (Technical Debt)
+
+> **⚠️ TECHNICAL DEBT NOTICE**
+>
+> This multi-language builder image is **not currently in use**. The codebase currently uses language-specific Docker images for better performance and faster container startup times:
+> - .NET: `mcr.microsoft.com/dotnet/sdk:10.0`
+> - JavaScript/TypeScript: `node:20-bookworm`
+> - Java: `eclipse-temurin:21-jdk`
+> - Go: `golang:1.22-bookworm`
+> - Rust: `rust:1-bookworm`
+>
+> This unified builder image is documented here as **future technical debt** that should eventually be addressed to:
+> - Simplify container management
+> - Reduce image proliferation
+> - Enable cross-language projects
+> - Improve consistency across build environments
+>
+> See `ContainerManager.cs` for the current language-specific implementation.
 
 This Docker image provides a unified build environment with all development tools required by BuildVerifier to build projects across different ecosystems.
 

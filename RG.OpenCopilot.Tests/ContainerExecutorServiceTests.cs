@@ -434,6 +434,11 @@ public class ContainerExecutorServiceTests {
             return Task.FromResult("test-container-id");
         }
 
+        public Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, ContainerImageType imageType, CancellationToken cancellationToken = default) {
+            ContainerCreated = true;
+            return Task.FromResult("test-container-id");
+        }
+
         public Task<CommandResult> ExecuteInContainerAsync(string containerId, string command, string[] args, CancellationToken cancellationToken = default) {
             return Task.FromResult(new CommandResult {
                 ExitCode = 0,
@@ -521,6 +526,10 @@ public class ContainerExecutorServiceTests {
             throw new InvalidOperationException("Container creation failed");
         }
 
+        public Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, ContainerImageType imageType, CancellationToken cancellationToken = default) {
+            throw new InvalidOperationException("Container creation failed");
+        }
+
         public Task<CommandResult> ExecuteInContainerAsync(string containerId, string command, string[] args, CancellationToken cancellationToken = default) {
             return Task.FromResult(new CommandResult {
                 ExitCode = 0,
@@ -577,6 +586,10 @@ public class ContainerExecutorServiceTests {
             return Task.FromResult("test-container-id");
         }
 
+        public Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, ContainerImageType imageType, CancellationToken cancellationToken = default) {
+            return Task.FromResult("test-container-id");
+        }
+
         public Task<CommandResult> ExecuteInContainerAsync(string containerId, string command, string[] args, CancellationToken cancellationToken = default) {
             throw new InvalidOperationException("Execution failed");
         }
@@ -625,6 +638,10 @@ public class ContainerExecutorServiceTests {
 
     private class TestContainerManagerThatFailsCommitAndPush : IContainerManager {
         public Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default) {
+            return Task.FromResult("test-container-id");
+        }
+
+        public Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, ContainerImageType imageType, CancellationToken cancellationToken = default) {
             return Task.FromResult("test-container-id");
         }
 
