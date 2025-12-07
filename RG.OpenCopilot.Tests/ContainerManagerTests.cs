@@ -1394,6 +1394,27 @@ public class ContainerManagerTests {
             c.Args.Contains("apt-get") && c.Args.Contains("install"));
     }
 
+    [Fact]
+    public async Task CreateContainerAsync_WithInvalidImageType_ThrowsArgumentOutOfRangeException() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+        var invalidImageType = (ContainerImageType)999; // Invalid enum value
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<ArgumentOutOfRangeException>(
+            async () => await manager.CreateContainerAsync(
+                owner: "test-owner",
+                repo: "test-repo",
+                token: "test-token",
+                branch: "main",
+                imageType: invalidImageType));
+
+        exception.Message.ShouldContain("Unsupported image type");
+        exception.ParamName.ShouldBe("imageType");
+    }
+
     // Test helper classes
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
