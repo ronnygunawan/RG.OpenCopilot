@@ -169,7 +169,8 @@ public sealed class TestValidator : ITestValidator {
         var result = await ExecuteTestCommandAsync(containerId, framework, testFilter, cancellationToken);
         stopwatch.Stop();
 
-        var testResult = await ParseTestResultsAsync(result.Output + "\n" + result.Error, framework, cancellationToken);
+        var output = result.Output + (result.Error != null ? "\n" + result.Error : "");
+        var testResult = await ParseTestResultsAsync(output, framework, cancellationToken);
         
         return new TestExecutionResult {
             Success = testResult.Success,
@@ -456,7 +457,7 @@ public sealed class TestValidator : ITestValidator {
         // Parse individual failures
         // Pattern: Failed TestClassName.TestMethodName [Duration]
         // Followed by error message
-        var failurePattern = new Regex(@"Failed\s+(.+?)\.(.+?)\s+\[", RegexOptions.Multiline);
+        var failurePattern = new Regex(@"Failed\s+(.+)\.([^\s.]+)\s+\[", RegexOptions.Multiline);
         var matches = failurePattern.Matches(output);
 
         foreach (Match match in matches) {
