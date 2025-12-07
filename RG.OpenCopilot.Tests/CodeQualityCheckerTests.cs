@@ -382,6 +382,279 @@ public class CodeQualityCheckerTests {
         result.Issues.Count.ShouldBe(2);
     }
 
+    [Fact]
+    public async Task RunLinterAsync_WithDotnetFormatOutput_ParsesIssues() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupDotNetProjectWithFormattingIssues();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunLinterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Issues.ShouldNotBeEmpty();
+        result.Issues[0].RuleId.ShouldBe("format");
+        result.Issues[0].Message.ShouldBe("File requires formatting");
+        result.Issues[0].AutoFixable.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task RunLinterAsync_WithBlackOutput_ParsesIssues() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupBlackProjectWithFormattingIssues();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunLinterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Issues.ShouldNotBeEmpty();
+        result.Issues[0].RuleId.ShouldBe("format");
+        result.Issues[0].Message.ShouldContain("Black");
+    }
+
+    [Fact]
+    public async Task RunLinterAsync_WithPylintDifferentSeverities_ParsesCorrectly() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupPylintProjectWithMultipleSeverities();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunLinterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Issues.Count.ShouldBe(4);
+        result.Issues.ShouldContain(i => i.Severity == IssueSeverity.Error);
+        result.Issues.ShouldContain(i => i.Severity == IssueSeverity.Warning);
+        result.Issues.ShouldContain(i => i.Severity == IssueSeverity.Info);
+        result.Issues.ShouldContain(i => i.Severity == IssueSeverity.Suggestion);
+    }
+
+    [Fact]
+    public async Task RunLinterAsync_WithGolintOutput_ParsesIssues() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupGoProjectWithLintIssues();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunLinterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Issues.ShouldNotBeEmpty();
+        result.Issues[0].RuleId.ShouldNotBeEmpty();
+        result.Issues[0].FilePath.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public async Task RunLinterAsync_WithInvalidJson_HandlesGracefully() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupEslintProjectWithInvalidJson();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunLinterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Success.ShouldBeTrue();
+        result.Issues.ShouldBeEmpty(); // Invalid JSON should result in empty issues, not crash
+    }
+
+    [Fact]
+    public async Task RunFormatterAsync_WithPrettierOutput_ParsesFormattedFiles() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupPrettierProjectWithOutput();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunFormatterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Success.ShouldBeTrue();
+        result.FilesFormatted.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task RunFormatterAsync_WithBlackFormatterOutput_ParsesFormattedFiles() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupBlackFormatterWithOutput();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunFormatterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Success.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task RunFormatterAsync_WithDotnetFormatOutput_ParsesFormattedFiles() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupDotNetFormatterWithOutput();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunFormatterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Success.ShouldBeTrue();
+        result.FilesFormatted.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task RunFormatterAsync_WithInvalidOutput_HandlesGracefully() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupFormatterWithInvalidOutput();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunFormatterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.FilesFormatted.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task AutoFixIssuesAsync_WithLineNumberOutOfRange_SkipsIssue() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetFileContent(filePath: "test.js", content: "const x = 1;");
+        var checker = CreateChecker(containerManager: containerManager);
+
+        var issues = new List<QualityIssue> {
+            new QualityIssue {
+                RuleId = "semi",
+                Message = "Missing semicolon",
+                FilePath = "test.js",
+                LineNumber = 100, // Out of range
+                Severity = IssueSeverity.Warning,
+                Category = IssueCategory.Style,
+                AutoFixable = true,
+                SuggestedFix = "const x = 1;"
+            }
+        };
+
+        // Act
+        await checker.AutoFixIssuesAsync(containerId: "test-container", issues: issues);
+
+        // Assert
+        containerManager.WrittenFiles.ShouldNotContainKey("test.js");
+    }
+
+    [Fact]
+    public async Task AutoFixIssuesAsync_WithZeroLineNumber_SkipsIssue() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetFileContent(filePath: "test.js", content: "const x = 1;");
+        var checker = CreateChecker(containerManager: containerManager);
+
+        var issues = new List<QualityIssue> {
+            new QualityIssue {
+                RuleId = "format",
+                Message = "File requires formatting",
+                FilePath = "test.js",
+                LineNumber = 0,
+                Severity = IssueSeverity.Warning,
+                Category = IssueCategory.Style,
+                AutoFixable = true,
+                SuggestedFix = "fixed content"
+            }
+        };
+
+        // Act
+        await checker.AutoFixIssuesAsync(containerId: "test-container", issues: issues);
+
+        // Assert
+        containerManager.WrittenFiles.ShouldNotContainKey("test.js");
+    }
+
+    [Fact]
+    public async Task AutoFixIssuesAsync_WithEmptySuggestedFix_SkipsIssue() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetFileContent(filePath: "test.js", content: "const x = 1;");
+        var checker = CreateChecker(containerManager: containerManager);
+
+        var issues = new List<QualityIssue> {
+            new QualityIssue {
+                RuleId = "semi",
+                Message = "Missing semicolon",
+                FilePath = "test.js",
+                LineNumber = 1,
+                Severity = IssueSeverity.Warning,
+                Category = IssueCategory.Style,
+                AutoFixable = true,
+                SuggestedFix = "" // Empty fix
+            }
+        };
+
+        // Act
+        await checker.AutoFixIssuesAsync(containerId: "test-container", issues: issues);
+
+        // Assert
+        containerManager.WrittenFiles.ShouldNotContainKey("test.js");
+    }
+
+    [Fact]
+    public async Task AutoFixIssuesAsync_PreservesCRLFLineEndings() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetFileContent(filePath: "test.js", content: "const x = 1;\r\nconst y = 2;\r\n");
+        var checker = CreateChecker(containerManager: containerManager);
+
+        var issues = new List<QualityIssue> {
+            new QualityIssue {
+                RuleId = "semi",
+                Message = "Missing semicolon",
+                FilePath = "test.js",
+                LineNumber = 2,
+                Severity = IssueSeverity.Warning,
+                Category = IssueCategory.Style,
+                AutoFixable = true,
+                SuggestedFix = "const y = 2;"
+            }
+        };
+
+        // Act
+        await checker.AutoFixIssuesAsync(containerId: "test-container", issues: issues);
+
+        // Assert
+        containerManager.WrittenFiles.ShouldContainKey("test.js");
+        containerManager.WrittenFiles["test.js"].ShouldContain("\r\n");
+    }
+
+    [Fact]
+    public async Task RunFormatterAsync_WithFormatterFailure_ReturnsFailure() {
+        // Arrange
+        var containerManager = new TestContainerManagerForQualityCheck();
+        containerManager.SetupFormatterFailure();
+        var checker = CreateChecker(containerManager: containerManager);
+
+        // Act
+        var result = await checker.RunFormatterAsync(containerId: "test-container");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Success.ShouldBeFalse();
+    }
+
     private static ICodeQualityChecker CreateChecker(IContainerManager containerManager) {
         var logger = new TestLogger<RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration.CodeQualityChecker>();
         return new RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration.CodeQualityChecker(containerManager: containerManager, logger: logger);
@@ -401,6 +674,7 @@ public class CodeQualityCheckerTests {
         private bool _throwExecuteError = false;
         private bool _persistLintOutputAfterFix = false;
         private int _linterCallCount = 0;
+        private bool _formatterShouldFail = false;
 
         public Dictionary<string, string> WrittenFiles { get; } = new();
 
@@ -502,6 +776,109 @@ public class CodeQualityCheckerTests {
             _projectType = "prettier";
         }
 
+        public void SetupDotNetProjectWithFormattingIssues() {
+            _projectType = "dotnet";
+            _lintOutput = "  Formatted Program.cs (3 formatting issues)\n  Formatted Helper.cs (1 formatting issue)";
+        }
+
+        public void SetupBlackProjectWithFormattingIssues() {
+            _projectType = "black";
+            _lintOutput = "would reformat main.py\nwould reformat utils.py";
+        }
+
+        public void SetupPylintProjectWithMultipleSeverities() {
+            _projectType = "pylint";
+            _lintOutput = """
+                [
+                    {
+                        "type": "error",
+                        "module": "main",
+                        "obj": "function1",
+                        "line": 10,
+                        "message-id": "E0001",
+                        "message": "Syntax error",
+                        "path": "main.py"
+                    },
+                    {
+                        "type": "warning",
+                        "module": "main",
+                        "obj": "function2",
+                        "line": 20,
+                        "message-id": "W0612",
+                        "message": "Unused variable",
+                        "path": "main.py"
+                    },
+                    {
+                        "type": "convention",
+                        "module": "utils",
+                        "obj": "",
+                        "line": 5,
+                        "message-id": "C0103",
+                        "message": "Naming convention",
+                        "path": "utils.py"
+                    },
+                    {
+                        "type": "refactor",
+                        "module": "helper",
+                        "obj": "",
+                        "line": 15,
+                        "message-id": "R0912",
+                        "message": "Too many branches",
+                        "path": "helper.py"
+                    }
+                ]
+                """;
+        }
+
+        public void SetupGoProjectWithLintIssues() {
+            _projectType = "go";
+            _lintOutput = """
+                {
+                    "Issues": [
+                        {
+                            "FromLinter": "golint",
+                            "Text": "exported function should have comment",
+                            "Pos": {
+                                "Filename": "main.go",
+                                "Line": 42
+                            },
+                            "Severity": "warning"
+                        }
+                    ]
+                }
+                """;
+        }
+
+        public void SetupEslintProjectWithInvalidJson() {
+            _projectType = "eslint";
+            _lintOutput = "This is not valid JSON { broken";
+        }
+
+        public void SetupPrettierProjectWithOutput() {
+            _projectType = "prettier";
+            _lintOutput = "src/app.js\nsrc/utils.js\nstyles/main.css";
+        }
+
+        public void SetupBlackFormatterWithOutput() {
+            _projectType = "black";
+            _lintOutput = "reformatted main.py\nreformatted utils.py";
+        }
+
+        public void SetupDotNetFormatterWithOutput() {
+            _projectType = "dotnet";
+            _lintOutput = "  Formatted Program.cs (2 changes)\n  Formatted Helper.cs (1 change)";
+        }
+
+        public void SetupFormatterWithInvalidOutput() {
+            _projectType = "prettier";
+            _lintOutput = ""; // Empty or invalid output
+        }
+
+        public void SetupFormatterFailure() {
+            _projectType = "dotnet";
+            _formatterShouldFail = true;
+        }
+
         public void SetFileContent(string filePath, string content) {
             _fileContents[filePath] = content;
         }
@@ -578,6 +955,13 @@ public class CodeQualityCheckerTests {
 
             // Handle linter/formatter commands
             if (command == "dotnet" && args.Contains("format")) {
+                if (_formatterShouldFail && !args.Contains("--verify-no-changes")) {
+                    return Task.FromResult(new CommandResult {
+                        ExitCode = 1,
+                        Output = "",
+                        Error = "Formatter failed"
+                    });
+                }
                 return Task.FromResult(new CommandResult {
                     ExitCode = 0,
                     Output = _lintOutput,
@@ -598,17 +982,17 @@ public class CodeQualityCheckerTests {
 
             if (command == "npx" && args.Contains("prettier")) {
                 return Task.FromResult(new CommandResult {
-                    ExitCode = 0,
-                    Output = "",
-                    Error = ""
+                    ExitCode = _formatterShouldFail ? 1 : 0,
+                    Output = _lintOutput,
+                    Error = _formatterShouldFail ? "Prettier failed" : ""
                 });
             }
 
             if (command == "black") {
                 return Task.FromResult(new CommandResult {
-                    ExitCode = 0,
+                    ExitCode = _formatterShouldFail ? 1 : 0,
                     Output = _lintOutput,
-                    Error = ""
+                    Error = _formatterShouldFail ? "Black failed" : ""
                 });
             }
 
@@ -630,9 +1014,9 @@ public class CodeQualityCheckerTests {
 
             if (command == "gofmt") {
                 return Task.FromResult(new CommandResult {
-                    ExitCode = 0,
+                    ExitCode = _formatterShouldFail ? 1 : 0,
                     Output = "",
-                    Error = ""
+                    Error = _formatterShouldFail ? "Gofmt failed" : ""
                 });
             }
 
