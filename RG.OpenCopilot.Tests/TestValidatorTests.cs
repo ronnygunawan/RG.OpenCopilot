@@ -785,6 +785,457 @@ public class TestValidatorTests {
             .ReturnsAsync(new List<ChatMessageContent> { chatContent });
     }
 
+    [Fact]
+    public async Task RunTestsAsync_WithTestFilter_PassesFilterToCommand() {
+        // Arrange
+        var containerId = "test-container";
+        var testFilter = "FullyQualifiedName~MyTests";
+        SetupFrameworkDetection(containerId, "xunit");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("--filter") && args.Contains(testFilter)),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Passed!  - Failed:     0, Passed:    1, Skipped:     0, Total:    1"
+            });
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId, testFilter: testFilter);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        _containerManager.Verify(c => c.ExecuteInContainerAsync(
+            containerId,
+            "dotnet",
+            It.Is<string[]>(args => args.Contains("--filter") && args.Contains(testFilter)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithTimeoutFailure_ParsesAsTimeoutType() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        SetupTestExecution(containerId, """
+            Failed MyTests.SlowTest.ExecuteWithTimeout [5000 ms]
+            Test execution timed out after 5000 ms
+            
+            Failed!  - Failed:     1, Passed:    0, Skipped:     0, Total:    1
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Failures.Count.ShouldBe(1);
+        result.Failures[0].Type.ShouldBe(FailureType.Timeout);
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithSetupFailure_ParsesAsSetupType() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        SetupTestExecution(containerId, """
+            Failed MyTests.TestClass.TestMethod [100 ms]
+            Setup failed: BeforeAll initialization error
+            
+            Failed!  - Failed:     1, Passed:    0, Skipped:     0, Total:    1
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Failures.Count.ShouldBe(1);
+        result.Failures[0].Type.ShouldBe(FailureType.Setup);
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithTeardownFailure_ParsesAsTeardownType() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        SetupTestExecution(containerId, """
+            Failed MyTests.TestClass.TestMethod [100 ms]
+            Teardown failed: AfterEach cleanup error
+            
+            Failed!  - Failed:     1, Passed:    0, Skipped:     0, Total:    1
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Failures.Count.ShouldBe(1);
+        result.Failures[0].Type.ShouldBe(FailureType.Teardown);
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithExceptionFailure_ParsesAsExceptionType() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        SetupTestExecution(containerId, """
+            Failed MyTests.TestClass.TestMethod [100 ms]
+            NullReferenceException: Object reference not set to an instance of an object
+            
+            Failed!  - Failed:     1, Passed:    0, Skipped:     0, Total:    1
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Failures.Count.ShouldBe(1);
+        result.Failures[0].Type.ShouldBe(FailureType.Exception);
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithSkippedTests_ParsesSkippedCount() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        SetupTestExecution(containerId, """
+            Passed!  - Failed:     0, Passed:    45, Skipped:     5, Total:    50
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.Total.ShouldBe(50);
+        result.Passed.ShouldBe(45);
+        result.Skipped.ShouldBe(5);
+        result.Failed.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task AnalyzeTestFailuresAsync_WithStackTrace_IncludesInPrompt() {
+        // Arrange
+        var promptCaptured = "";
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, """
+            {
+              "failures": [
+                {
+                  "testName": "TestMethod",
+                  "className": "TestClass",
+                  "errorMessage": "Assertion failed",
+                  "type": "Assertion"
+                }
+              ]
+            }
+            """);
+
+        _chatService
+            .Setup(c => c.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<ChatHistory, PromptExecutionSettings, Kernel, CancellationToken>((h, s, k, c) => {
+                promptCaptured = h.LastOrDefault()?.Content ?? "";
+            })
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var failures = new List<TestFailure> {
+            new TestFailure {
+                TestName = "TestMethod",
+                ClassName = "TestClass",
+                ErrorMessage = "Assertion failed",
+                Type = FailureType.Assertion,
+                StackTrace = "at TestClass.TestMethod() in TestClass.cs:line 42"
+            }
+        };
+
+        // Act
+        var result = await _validator.AnalyzeTestFailuresAsync(failures: failures);
+
+        // Assert
+        result.ShouldNotBeNull();
+        promptCaptured.ShouldContain("Stack Trace");
+        promptCaptured.ShouldContain("at TestClass.TestMethod()");
+    }
+
+    [Fact]
+    public async Task AnalyzeTestFailuresAsync_WithInvalidJson_ReturnsEmptyList() {
+        // Arrange
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, "invalid json {");
+        
+        _chatService
+            .Setup(c => c.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var failures = new List<TestFailure> {
+            new TestFailure {
+                TestName = "TestMethod",
+                ClassName = "TestClass",
+                ErrorMessage = "Error",
+                Type = FailureType.Exception
+            }
+        };
+
+        // Act
+        var result = await _validator.AnalyzeTestFailuresAsync(failures: failures);
+
+        // Assert
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task RunAndValidateTestsAsync_WithFailuresButNoParsedFailures_ReturnsFailure() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        
+        // Setup test execution to return output that indicates failures but without parseable failure details
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                It.Is<string>(cmd => cmd != "find"),
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = """
+                    Some error occurred during test execution
+                    
+                    Failed!  - Failed:     3, Passed:    47, Skipped:     0, Total:    50
+                    """
+                // Note: This has the summary but no individual "Failed TestClass.TestMethod" lines
+            });
+
+        // Act
+        var result = await _validator.RunAndValidateTestsAsync(containerId: containerId, maxRetries: 1);
+
+        // Assert
+        result.AllPassed.ShouldBeFalse();
+        result.FailedTests.ShouldBe(3);
+        result.RemainingFailures.ShouldBeEmpty(); // No parseable individual failures
+        result.Summary.ShouldContain("no failures could be parsed");
+    }
+
+    [Fact]
+    public async Task GetCoverageAsync_WithOnlyLineCoverage_ParsesCorrectly() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("--collect")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Line Coverage: 75.0%"
+            });
+
+        // Act
+        var result = await _validator.GetCoverageAsync(containerId: containerId);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.LineCoverage.ShouldBe(75.0);
+        result.BranchCoverage.ShouldBe(0.0);
+    }
+
+    [Fact]
+    public async Task GetCoverageAsync_WithOnlyBranchCoverage_ParsesCorrectly() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("--collect")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Branch Coverage: 60.5%"
+            });
+
+        // Act
+        var result = await _validator.GetCoverageAsync(containerId: containerId);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.LineCoverage.ShouldBe(0.0);
+        result.BranchCoverage.ShouldBe(60.5);
+    }
+
+    [Fact]
+    public async Task GetCoverageAsync_WithNoCoverageData_ReturnsNull() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("--collect")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "No coverage data available"
+            });
+
+        // Act
+        var result = await _validator.GetCoverageAsync(containerId: containerId);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithNunitFailures_ParsesCorrectly() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "nunit");
+        SetupTestExecution(containerId, """
+            Failed MyTests.CalculatorTests.SubtractMethod [100 ms]
+            Expected: 3
+            Actual: 2
+            
+            Failed!  - Failed:     1, Passed:    49, Skipped:     0, Total:    50
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Total.ShouldBe(50);
+        result.Failed.ShouldBe(1);
+        result.Failures.Count.ShouldBe(1);
+        result.Failures[0].ClassName.ShouldBe("MyTests.CalculatorTests");
+        result.Failures[0].TestName.ShouldBe("SubtractMethod");
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithMstestFailures_ParsesCorrectly() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "mstest");
+        SetupTestExecution(containerId, """
+            Failed MyTests.CalculatorTests.MultiplyMethod [100 ms]
+            Expected: 12
+            Actual: 10
+            
+            Failed!  - Failed:     1, Passed:    49, Skipped:     0, Total:    50
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Failed.ShouldBe(1);
+        result.Failures.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task RunAndValidateTestsAsync_WithLlmGeneratingInvalidJson_ReturnsFailure() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "xunit");
+        SetupTestExecution(containerId, """
+            Failed MyTests.TestClass.TestMethod [100 ms]
+            Test failed
+            
+            Failed!  - Failed:     1, Passed:    0, Skipped:     0, Total:    1
+            """);
+
+        // Setup LLM to return invalid JSON
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, "{ invalid json");
+        _chatService
+            .Setup(c => c.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        // Act
+        var result = await _validator.RunAndValidateTestsAsync(containerId: containerId, maxRetries: 2);
+
+        // Assert
+        result.AllPassed.ShouldBeFalse();
+        result.FixesApplied.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithJestSkippedTests_ParsesCorrectly() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "jest");
+        SetupTestExecution(containerId, """
+            Tests:       1 failed, 45 passed, 4 skipped, 50 total
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Total.ShouldBe(50);
+        result.Passed.ShouldBe(45);
+        result.Failed.ShouldBe(1);
+        result.Skipped.ShouldBe(4);
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithPytestOnlyPassed_ParsesCorrectly() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "pytest");
+        SetupTestExecution(containerId, """
+            === 50 passed in 2.50s ===
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.Total.ShouldBe(50);
+        result.Passed.ShouldBe(50);
+        result.Failed.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task RunTestsAsync_WithJunitErrors_ParsesAsFailures() {
+        // Arrange
+        var containerId = "test-container";
+        SetupFrameworkDetection(containerId, "junit");
+        SetupTestExecution(containerId, """
+            testMethod(com.example.TestClass)  Time elapsed: 0.05 s  <<< ERROR!
+            java.lang.NullPointerException
+            
+            Tests run: 50, Failures: 0, Errors: 1, Skipped: 0
+            """);
+
+        // Act
+        var result = await _validator.RunTestsAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Failed.ShouldBe(1); // Errors count as failures
+        result.Failures.Count.ShouldBe(1);
+    }
+
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
