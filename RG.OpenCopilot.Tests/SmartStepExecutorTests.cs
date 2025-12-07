@@ -739,6 +739,535 @@ public class SmartStepExecutorTests {
         result.Metrics.TestDuration.ShouldBe(TimeSpan.FromSeconds(2));
     }
 
+    [Fact]
+    public async Task ExecuteStepAsync_CreateFileWithEmptyContent_GeneratesContentUsingLLM() {
+        // Arrange
+        var containerId = "test-container";
+        var step = new PlanStep {
+            Id = "step-empty-content",
+            Title = "Create file with LLM generation",
+            Details = "Create a file where LLM generates content"
+        };
+        var context = new RepositoryContext {
+            Language = "csharp",
+            BuildTool = "dotnet"
+        };
+
+        var actionPlan = new StepActionPlan {
+            Actions = [
+                new CodeAction {
+                    Type = ActionType.CreateFile,
+                    FilePath = "/workspace/Generated.cs",
+                    Description = "Generate a new class",
+                    Request = new CodeGenerationRequest { Content = "" } // Empty content
+                }
+            ],
+            RequiresTests = false
+        };
+
+        var buildResult = new BuildResult {
+            Success = true,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(2)
+        };
+
+        var testResult = new TestValidationResult {
+            AllPassed = true,
+            TotalTests = 0,
+            PassedTests = 0,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(1)
+        };
+
+        var qualityResult = new QualityResult {
+            Success = true,
+            Issues = []
+        };
+
+        var mocks = CreateMocks();
+        mocks.StepAnalyzer
+            .Setup(a => a.AnalyzeStepAsync(It.IsAny<PlanStep>(), It.IsAny<RepositoryContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(actionPlan);
+
+        mocks.CodeGenerator
+            .Setup(c => c.GenerateCodeAsync(It.IsAny<LlmCodeGenerationRequest>(), null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("public class Generated { }");
+
+        mocks.BuildVerifier
+            .Setup(b => b.VerifyBuildAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(buildResult);
+
+        mocks.TestValidator
+            .Setup(t => t.RunAndValidateTestsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(testResult);
+
+        mocks.QualityChecker
+            .Setup(q => q.CheckAndFixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(qualityResult);
+
+        mocks.FileEditor
+            .Setup(f => f.GetChanges())
+            .Returns([new FileChange { Type = ChangeType.Created, Path = "/workspace/Generated.cs" }]);
+
+        var executor = CreateExecutor(mocks);
+
+        // Act
+        var result = await executor.ExecuteStepAsync(containerId, step, context);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        mocks.CodeGenerator.Verify(c => c.GenerateCodeAsync(
+            It.Is<LlmCodeGenerationRequest>(r => r.FilePath == "/workspace/Generated.cs"),
+            null,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteStepAsync_ModifyFileWithEmptyContent_GeneratesModificationsUsingLLM() {
+        // Arrange
+        var containerId = "test-container";
+        var step = new PlanStep {
+            Id = "step-modify-empty",
+            Title = "Modify file with LLM generation",
+            Details = "Modify a file using LLM"
+        };
+        var context = new RepositoryContext {
+            Language = "csharp",
+            BuildTool = "dotnet"
+        };
+
+        var actionPlan = new StepActionPlan {
+            Actions = [
+                new CodeAction {
+                    Type = ActionType.ModifyFile,
+                    FilePath = "/workspace/Existing.cs",
+                    Description = "Update the class",
+                    Request = new CodeGenerationRequest { Content = "" } // Empty content
+                }
+            ],
+            RequiresTests = false
+        };
+
+        var buildResult = new BuildResult {
+            Success = true,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(2)
+        };
+
+        var testResult = new TestValidationResult {
+            AllPassed = true,
+            TotalTests = 0,
+            PassedTests = 0,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(1)
+        };
+
+        var qualityResult = new QualityResult {
+            Success = true,
+            Issues = []
+        };
+
+        var mocks = CreateMocks();
+        mocks.StepAnalyzer
+            .Setup(a => a.AnalyzeStepAsync(It.IsAny<PlanStep>(), It.IsAny<RepositoryContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(actionPlan);
+
+        mocks.ContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(It.IsAny<string>(), "/workspace/Existing.cs", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("public class Existing { }");
+
+        mocks.CodeGenerator
+            .Setup(c => c.GenerateCodeAsync(It.IsAny<LlmCodeGenerationRequest>(), "public class Existing { }", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("public class Existing { /* updated */ }");
+
+        mocks.BuildVerifier
+            .Setup(b => b.VerifyBuildAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(buildResult);
+
+        mocks.TestValidator
+            .Setup(t => t.RunAndValidateTestsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(testResult);
+
+        mocks.QualityChecker
+            .Setup(q => q.CheckAndFixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(qualityResult);
+
+        mocks.FileEditor
+            .Setup(f => f.GetChanges())
+            .Returns([new FileChange { Type = ChangeType.Modified, Path = "/workspace/Existing.cs" }]);
+
+        var executor = CreateExecutor(mocks);
+
+        // Act
+        var result = await executor.ExecuteStepAsync(containerId, step, context);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        mocks.CodeGenerator.Verify(c => c.GenerateCodeAsync(
+            It.Is<LlmCodeGenerationRequest>(r => r.FilePath == "/workspace/Existing.cs"),
+            "public class Existing { }",
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteStepAsync_QualityCheckFails_ContinuesExecution() {
+        // Arrange
+        var containerId = "test-container";
+        var step = new PlanStep {
+            Id = "step-quality-fail",
+            Title = "Test quality check failure",
+            Details = "Quality check fails but execution continues"
+        };
+        var context = new RepositoryContext {
+            Language = "csharp",
+            BuildTool = "dotnet"
+        };
+
+        var actionPlan = new StepActionPlan {
+            Actions = [
+                new CodeAction {
+                    Type = ActionType.CreateFile,
+                    FilePath = "/workspace/File.cs",
+                    Description = "Create file",
+                    Request = new CodeGenerationRequest { Content = "public class File { }" }
+                }
+            ],
+            RequiresTests = false
+        };
+
+        var buildResult = new BuildResult {
+            Success = true,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(2)
+        };
+
+        var testResult = new TestValidationResult {
+            AllPassed = true,
+            TotalTests = 0,
+            PassedTests = 0,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(1)
+        };
+
+        var qualityResult = new QualityResult {
+            Success = false, // Quality check fails
+            Issues = [new QualityIssue { Message = "Code quality issue" }]
+        };
+
+        var mocks = CreateMocks();
+        SetupSuccessfulExecution(mocks, actionPlan, buildResult, testResult, qualityResult, null, null);
+
+        var executor = CreateExecutor(mocks);
+
+        // Act
+        var result = await executor.ExecuteStepAsync(containerId, step, context);
+
+        // Assert
+        result.Success.ShouldBeTrue(); // Should still succeed despite quality failure
+    }
+
+    [Fact]
+    public async Task RollbackStepAsync_WithRollbackError_ContinuesWithOtherRollbacks() {
+        // Arrange
+        var containerId = "test-container";
+        var changes = new List<FileChange> {
+            new() {
+                Type = ChangeType.Created,
+                Path = "/workspace/File1.cs",
+                NewContent = "file1"
+            },
+            new() {
+                Type = ChangeType.Created,
+                Path = "/workspace/File2.cs",
+                NewContent = "file2"
+            }
+        };
+
+        var failedResult = StepExecutionResult.CreateFailure("Test failure", changes: changes);
+
+        var mocks = CreateMocks();
+
+        // First file rollback will fail
+        var callCount = 0;
+        mocks.ContainerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                It.IsAny<string>(),
+                "test",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => {
+                callCount++;
+                if (callCount == 1) {
+                    throw new InvalidOperationException("Rollback error");
+                }
+                return new CommandResult { ExitCode = 0 };
+            });
+
+        mocks.ContainerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                It.IsAny<string>(),
+                "rm",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0 });
+
+        var executor = CreateExecutor(mocks);
+
+        // Act & Assert - should not throw, continues with other rollbacks
+        await executor.RollbackStepAsync(containerId, failedResult);
+
+        mocks.FileEditor.Verify(f => f.ClearChanges(), Times.Once);
+    }
+
+    [Fact]
+    public async Task RollbackStepAsync_OuterExceptionDuringRollback_ThrowsInvalidOperationException() {
+        // Arrange
+        var containerId = "test-container";
+        var changes = new List<FileChange> {
+            new() {
+                Type = ChangeType.Created,
+                Path = "/workspace/File.cs"
+            }
+        };
+
+        var failedResult = StepExecutionResult.CreateFailure("Test failure", changes: changes);
+
+        var mocks = CreateMocks();
+
+        // Mock throws on clearing changes
+        mocks.FileEditor
+            .Setup(f => f.ClearChanges())
+            .Throws(new InvalidOperationException("Clear failed"));
+
+        mocks.ContainerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0 });
+
+        var executor = CreateExecutor(mocks);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await executor.RollbackStepAsync(containerId, failedResult));
+
+        exception.Message.ShouldContain("Rollback failed");
+    }
+
+    [Fact]
+    public async Task RollbackStepAsync_ModifiedFileWithNullOldContent_SkipsRestore() {
+        // Arrange
+        var containerId = "test-container";
+        var changes = new List<FileChange> {
+            new() {
+                Type = ChangeType.Modified,
+                Path = "/workspace/File.cs",
+                OldContent = null,  // null old content
+                NewContent = "new content"
+            }
+        };
+
+        var failedResult = StepExecutionResult.CreateFailure("Test failure", changes: changes);
+
+        var mocks = CreateMocks();
+        var executor = CreateExecutor(mocks);
+
+        // Act
+        await executor.RollbackStepAsync(containerId, failedResult);
+
+        // Assert - WriteFileInContainerAsync should not be called
+        mocks.ContainerManager.Verify(
+            c => c.WriteFileInContainerAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RollbackStepAsync_DeletedFileWithNullOldContent_SkipsRecreate() {
+        // Arrange
+        var containerId = "test-container";
+        var changes = new List<FileChange> {
+            new() {
+                Type = ChangeType.Deleted,
+                Path = "/workspace/File.cs",
+                OldContent = null  // null old content
+            }
+        };
+
+        var failedResult = StepExecutionResult.CreateFailure("Test failure", changes: changes);
+
+        var mocks = CreateMocks();
+        var executor = CreateExecutor(mocks);
+
+        // Act
+        await executor.RollbackStepAsync(containerId, failedResult);
+
+        // Assert - WriteFileInContainerAsync should not be called
+        mocks.ContainerManager.Verify(
+            c => c.WriteFileInContainerAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteStepAsync_TestFilePathIsEmpty_SkipsTestFileCreation() {
+        // Arrange
+        var containerId = "test-container";
+        var step = new PlanStep {
+            Id = "step-no-test-path",
+            Title = "Test without test file path",
+            Details = "Generate tests but no test file path specified"
+        };
+        var context = new RepositoryContext {
+            Language = "csharp",
+            TestFramework = "xUnit",
+            BuildTool = "dotnet"
+        };
+
+        var actionPlan = new StepActionPlan {
+            Actions = [
+                new CodeAction {
+                    Type = ActionType.CreateFile,
+                    FilePath = "/workspace/Service.cs",
+                    Description = "Create service",
+                    Request = new CodeGenerationRequest { Content = "public class Service { }" }
+                }
+            ],
+            RequiresTests = true,
+            MainFile = "/workspace/Service.cs",
+            TestFile = "" // Empty test file path
+        };
+
+        var buildResult = new BuildResult {
+            Success = true,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(2)
+        };
+
+        var testResult = new TestValidationResult {
+            AllPassed = true,
+            TotalTests = 0,
+            PassedTests = 0,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(1)
+        };
+
+        var qualityResult = new QualityResult {
+            Success = true,
+            Issues = []
+        };
+
+        var mocks = CreateMocks();
+        mocks.StepAnalyzer
+            .Setup(a => a.AnalyzeStepAsync(It.IsAny<PlanStep>(), It.IsAny<RepositoryContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(actionPlan);
+
+        mocks.ContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(It.IsAny<string>(), "/workspace/Service.cs", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("public class Service { }");
+
+        mocks.TestGenerator
+            .Setup(t => t.GenerateTestsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("public class Tests { }");
+
+        mocks.BuildVerifier
+            .Setup(b => b.VerifyBuildAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(buildResult);
+
+        mocks.TestValidator
+            .Setup(t => t.RunAndValidateTestsAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(testResult);
+
+        mocks.QualityChecker
+            .Setup(q => q.CheckAndFixAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(qualityResult);
+
+        mocks.FileEditor
+            .Setup(f => f.GetChanges())
+            .Returns([new FileChange { Type = ChangeType.Created, Path = "/workspace/Service.cs" }]);
+
+        var executor = CreateExecutor(mocks);
+
+        // Act
+        var result = await executor.ExecuteStepAsync(containerId, step, context);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        // Verify test file was not created or modified since path is empty
+        // TestGenerator should still be called to generate test content
+        mocks.TestGenerator.Verify(
+            t => t.GenerateTestsAsync(It.IsAny<string>(), "/workspace/Service.cs", It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        // But the test file should not be written anywhere since TestFile is empty
+        mocks.FileEditor.Verify(
+            f => f.CreateFileAsync(It.IsAny<string>(), "", It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteStepAsync_RequiresTestsButMainFileEmpty_SkipsTestGeneration() {
+        // Arrange
+        var containerId = "test-container";
+        var step = new PlanStep {
+            Id = "step-no-main-file",
+            Title = "Test without main file",
+            Details = "RequiresTests is true but MainFile is empty"
+        };
+        var context = new RepositoryContext {
+            Language = "csharp",
+            TestFramework = "xUnit",
+            BuildTool = "dotnet"
+        };
+
+        var actionPlan = new StepActionPlan {
+            Actions = [
+                new CodeAction {
+                    Type = ActionType.CreateFile,
+                    FilePath = "/workspace/File.cs",
+                    Description = "Create file",
+                    Request = new CodeGenerationRequest { Content = "public class File { }" }
+                }
+            ],
+            RequiresTests = true,
+            MainFile = "", // Empty main file
+            TestFile = "/workspace/Tests.cs"
+        };
+
+        var buildResult = new BuildResult {
+            Success = true,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(2)
+        };
+
+        var testResult = new TestValidationResult {
+            AllPassed = true,
+            TotalTests = 0,
+            PassedTests = 0,
+            Attempts = 1,
+            Duration = TimeSpan.FromSeconds(1)
+        };
+
+        var qualityResult = new QualityResult {
+            Success = true,
+            Issues = []
+        };
+
+        var mocks = CreateMocks();
+        SetupSuccessfulExecution(mocks, actionPlan, buildResult, testResult, qualityResult, null, null);
+
+        var executor = CreateExecutor(mocks);
+
+        // Act
+        var result = await executor.ExecuteStepAsync(containerId, step, context);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        // Test generator should not be called
+        mocks.TestGenerator.Verify(
+            t => t.GenerateTestsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // Helper methods
     private static (
         Mock<IStepAnalyzer> StepAnalyzer,
