@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
 
-internal sealed class CodeQualityChecker : ICodeQualityChecker {
+public sealed class CodeQualityChecker : ICodeQualityChecker {
     private readonly IContainerManager _containerManager;
     private readonly ILogger<CodeQualityChecker> _logger;
 
