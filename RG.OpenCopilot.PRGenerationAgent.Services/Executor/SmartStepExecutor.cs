@@ -86,15 +86,13 @@ internal sealed class SmartStepExecutor : ISmartStepExecutor {
             }
 
             // Phase 4: Verify build
-            var buildStart = Stopwatch.StartNew();
             var buildResult = await _buildVerifier.VerifyBuildAsync(
                 containerId: containerId,
                 maxRetries: 3,
                 cancellationToken: cancellationToken);
-            buildStart.Stop();
             _logger.LogInformation("Build verification complete. Success: {Success}", buildResult.Success);
 
-            metrics.BuildDuration = buildStart.Elapsed;
+            metrics.BuildDuration = buildResult.Duration;
             metrics.BuildAttempts = buildResult.Attempts;
             metrics.LLMCalls += buildResult.FixesApplied.Count;
 
@@ -109,15 +107,13 @@ internal sealed class SmartStepExecutor : ISmartStepExecutor {
             }
 
             // Phase 5: Validate tests
-            var testStart = Stopwatch.StartNew();
             var testResult = await _testValidator.RunAndValidateTestsAsync(
                 containerId: containerId,
                 maxRetries: 2,
                 cancellationToken: cancellationToken);
-            testStart.Stop();
             _logger.LogInformation("Test validation complete. All passed: {AllPassed}", testResult.AllPassed);
 
-            metrics.TestDuration = testStart.Elapsed;
+            metrics.TestDuration = testResult.Duration;
             metrics.TestAttempts = testResult.Attempts;
             metrics.LLMCalls += testResult.FixesApplied.Count;
 
