@@ -1,0 +1,4 @@
+*.md
+build.sh
+.git
+.gitignore

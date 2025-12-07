@@ -31,8 +31,8 @@ public sealed class DockerContainerManager : IContainerManager {
 
         _logger.LogInformation("Creating container {ContainerName}", containerName);
 
-        // Use a base image with git and common build tools
-        // We'll use Ubuntu with git, dotnet, node, python pre-installed
+        // Use multi-language builder image with all build tools pre-installed
+        // The opencopilot-builder image includes .NET, Node.js, Java, Go, Rust, and utilities
         var result = await _commandExecutor.ExecuteCommandAsync(
             workingDirectory: Directory.GetCurrentDirectory(),
             command: "docker",
@@ -41,7 +41,7 @@ public sealed class DockerContainerManager : IContainerManager {
                 "-d",
                 "--name", containerName,
                 "-w", WorkDir,
-                "mcr.microsoft.com/dotnet/sdk:10.0",
+                "opencopilot-builder:latest",
                 "sleep", "infinity"
             },
             cancellationToken: cancellationToken);
@@ -53,9 +53,7 @@ public sealed class DockerContainerManager : IContainerManager {
         var containerId = result.Output.Trim();
         _logger.LogInformation("Created container {ContainerId}", containerId);
 
-        // Install git in the container
-        await ExecuteInContainerAsync(containerId: containerId, command: "apt-get", args: new[] { "update" }, cancellationToken: cancellationToken);
-        await ExecuteInContainerAsync(containerId: containerId, command: "apt-get", args: new[] { "install", "-y", "git" }, cancellationToken: cancellationToken);
+        // Git is already installed in the builder image, no need to install it
 
         // Clone the repository inside the container
         var repoUrl = $"https://x-access-token:{token}@github.com/{owner}/{repo}.git";

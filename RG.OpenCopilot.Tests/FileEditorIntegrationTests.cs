@@ -248,7 +248,7 @@ public class FileEditorIntegrationTests {
 
             _logger.LogInformation("Creating test container {ContainerName}", containerName);
 
-            // Use a base image for testing - just need a container with basic shell commands
+            // Use multi-language builder image with all build tools pre-installed
             var result = await _commandExecutor.ExecuteCommandAsync(
                 workingDirectory: Directory.GetCurrentDirectory(),
                 command: "docker",
@@ -257,7 +257,7 @@ public class FileEditorIntegrationTests {
                     "-d",
                     "--name", containerName,
                     "-w", WorkDir,
-                    "mcr.microsoft.com/dotnet/sdk:10.0",
+                    "opencopilot-builder:latest",
                     "sleep", "infinity"
                 },
                 cancellationToken: cancellationToken);
