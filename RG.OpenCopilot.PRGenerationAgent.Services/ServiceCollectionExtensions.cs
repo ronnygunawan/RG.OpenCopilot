@@ -86,6 +86,8 @@ public static class ServiceCollectionExtensions {
         services.AddSingleton<IBuildVerifier, BuildVerifier>();
         services.AddSingleton<ITestValidator, TestValidator>();
         services.AddSingleton<ICodeQualityChecker, CodeQualityChecker>();
+        services.AddSingleton<ISmartStepExecutor, SmartStepExecutor>();
+        services.AddSingleton<ITestGenerator, TestGenerator>();
 
         // Configure GitHub client
         services.AddSingleton<IGitHubClient>(sp => {

@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="RG.OpenCopilot.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\RG.OpenCopilot.PRGenerationAgent\RG.OpenCopilot.PRGenerationAgent.csproj" />
   </ItemGroup>
 
