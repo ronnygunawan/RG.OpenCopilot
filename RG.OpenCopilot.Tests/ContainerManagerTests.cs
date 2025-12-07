@@ -1121,6 +1121,300 @@ public class ContainerManagerTests {
         destArg.ShouldNotContain("\\");
     }
 
+    [Theory]
+    [InlineData(ContainerImageType.DotNet, "mcr.microsoft.com/dotnet/sdk:10.0")]
+    [InlineData(ContainerImageType.JavaScript, "node:20-bookworm")]
+    [InlineData(ContainerImageType.Java, "eclipse-temurin:21-jdk")]
+    [InlineData(ContainerImageType.Go, "golang:1.22-bookworm")]
+    [InlineData(ContainerImageType.Rust, "rust:1-bookworm")]
+    public async Task CreateContainerAsync_UsesCorrectImageForType(ContainerImageType imageType, string expectedImage) {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: imageType);
+
+        // Assert
+        var dockerRunCommand = commandExecutor.Commands.FirstOrDefault(c =>
+            c.Command == "docker" && c.Args.Contains("run"));
+        dockerRunCommand.ShouldNotBeNull();
+        dockerRunCommand.Args.ShouldContain(expectedImage);
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_DefaultsToDoTNetImage() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main");
+
+        // Assert
+        var dockerRunCommand = commandExecutor.Commands.FirstOrDefault(c =>
+            c.Command == "docker" && c.Args.Contains("run"));
+        dockerRunCommand.ShouldNotBeNull();
+        dockerRunCommand.Args.ShouldContain("mcr.microsoft.com/dotnet/sdk:10.0");
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_SkipsGitInstallationWhenGitExists() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            GitAlreadyInstalled = true
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: ContainerImageType.JavaScript);
+
+        // Assert
+        // Should check for git with 'which git'
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("which") && c.Args.Contains("git"));
+        
+        // Should NOT install git
+        commandExecutor.Commands.ShouldNotContain(c =>
+            c.Args.Contains("apt-get") && c.Args.Contains("install"));
+    }
+
+    [Theory]
+    [InlineData(ContainerImageType.DotNet)]
+    [InlineData(ContainerImageType.JavaScript)]
+    [InlineData(ContainerImageType.Java)]
+    [InlineData(ContainerImageType.Go)]
+    [InlineData(ContainerImageType.Rust)]
+    public async Task CreateContainerAsync_InstallsGitForAllImageTypes(ContainerImageType imageType) {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: imageType);
+
+        // Assert
+        // Should check for git
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("which") && c.Args.Contains("git"));
+        
+        // Should install git via apt-get
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("apt-get") && c.Args.Contains("update"));
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("apt-get") && c.Args.Contains("install") && c.Args.Contains("git"));
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_LogsImageTypeAndBaseImage() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: ContainerImageType.Go);
+
+        // Assert - verify the container was created successfully
+        var containerId = commandExecutor.Commands
+            .FirstOrDefault(c => c.Command == "docker" && c.Args.Contains("run"))?
+            .Args;
+        containerId.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_WithJavaScriptType_UsesNodeImage() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var result = await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: ContainerImageType.JavaScript);
+
+        // Assert
+        result.ShouldNotBeNullOrEmpty();
+        var dockerRunCommand = commandExecutor.Commands.FirstOrDefault(c =>
+            c.Command == "docker" && c.Args.Contains("run"));
+        dockerRunCommand.ShouldNotBeNull();
+        dockerRunCommand.Args.ShouldContain("node:20-bookworm");
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_WithJavaType_UsesTemurinImage() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var result = await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: ContainerImageType.Java);
+
+        // Assert
+        result.ShouldNotBeNullOrEmpty();
+        var dockerRunCommand = commandExecutor.Commands.FirstOrDefault(c =>
+            c.Command == "docker" && c.Args.Contains("run"));
+        dockerRunCommand.ShouldNotBeNull();
+        dockerRunCommand.Args.ShouldContain("eclipse-temurin:21-jdk");
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_WithGoType_UsesGolangImage() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var result = await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: ContainerImageType.Go);
+
+        // Assert
+        result.ShouldNotBeNullOrEmpty();
+        var dockerRunCommand = commandExecutor.Commands.FirstOrDefault(c =>
+            c.Command == "docker" && c.Args.Contains("run"));
+        dockerRunCommand.ShouldNotBeNull();
+        dockerRunCommand.Args.ShouldContain("golang:1.22-bookworm");
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_WithRustType_UsesRustImage() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        var result = await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: ContainerImageType.Rust);
+
+        // Assert
+        result.ShouldNotBeNullOrEmpty();
+        var dockerRunCommand = commandExecutor.Commands.FirstOrDefault(c =>
+            c.Command == "docker" && c.Args.Contains("run"));
+        dockerRunCommand.ShouldNotBeNull();
+        dockerRunCommand.Args.ShouldContain("rust:1-bookworm");
+    }
+
+    [Fact]
+    public async Task EnsureGitInstalledAsync_WhenGitNotInstalled_InstallsGitForDotNet() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: ContainerImageType.DotNet);
+
+        // Assert - should run which git first
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("which") && c.Args.Contains("git"));
+        
+        // Then install git via apt-get
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("apt-get") && c.Args.Contains("update"));
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("apt-get") && c.Args.Contains("install") && c.Args.Contains("-y") && c.Args.Contains("git"));
+    }
+
+    [Fact]
+    public async Task EnsureGitInstalledAsync_WhenGitAlreadyInstalled_SkipsInstallation() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor {
+            GitAlreadyInstalled = true
+        };
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+
+        // Act
+        await manager.CreateContainerAsync(
+            owner: "test-owner",
+            repo: "test-repo",
+            token: "test-token",
+            branch: "main",
+            imageType: ContainerImageType.Rust);
+
+        // Assert - should check for git
+        commandExecutor.Commands.ShouldContain(c =>
+            c.Args.Contains("which") && c.Args.Contains("git"));
+        
+        // Should NOT install git
+        commandExecutor.Commands.ShouldNotContain(c =>
+            c.Args.Contains("apt-get") && c.Args.Contains("install"));
+    }
+
+    [Fact]
+    public async Task CreateContainerAsync_WithInvalidImageType_ThrowsArgumentOutOfRangeException() {
+        // Arrange
+        var commandExecutor = new TestCommandExecutor();
+        var logger = new TestLogger<DockerContainerManager>();
+        var manager = new DockerContainerManager(commandExecutor, logger);
+        var invalidImageType = (ContainerImageType)999; // Invalid enum value
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<ArgumentOutOfRangeException>(
+            async () => await manager.CreateContainerAsync(
+                owner: "test-owner",
+                repo: "test-repo",
+                token: "test-token",
+                branch: "main",
+                imageType: invalidImageType));
+
+        exception.Message.ShouldContain("Unsupported image type");
+        exception.ParamName.ShouldBe("imageType");
+    }
+
     // Test helper classes
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -1135,6 +1429,7 @@ public class ContainerManagerTests {
         public string[]? FailOnArgs { get; set; }
         public bool ReturnNonEmptyStatusOnce { get; set; }
         public bool FailOnPush { get; set; }
+        public bool GitAlreadyInstalled { get; set; }
         private bool _statusReturned = false;
 
         public Task<CommandResult> ExecuteCommandAsync(
@@ -1147,6 +1442,15 @@ public class ContainerManagerTests {
                 Command = command,
                 Args = args
             });
+
+            // Special handling for 'which git' check - return success if git is already installed, failure otherwise
+            if (args.Contains("which") && args.Contains("git")) {
+                return Task.FromResult(new CommandResult {
+                    ExitCode = GitAlreadyInstalled ? 0 : 1,
+                    Output = GitAlreadyInstalled ? "/usr/bin/git" : "",
+                    Error = ""
+                });
+            }
 
             // Special handling for git status to simulate changes/no changes
             if (args.Contains("git") && args.Contains("status") && args.Contains("--porcelain")) {

@@ -242,7 +242,11 @@ public class FileEditorIntegrationTests {
             _logger = logger;
         }
 
-        public async Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default) {
+        public Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default) {
+            return CreateContainerAsync(owner, repo, token, branch, ContainerImageType.DotNet, cancellationToken);
+        }
+
+        public async Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, ContainerImageType imageType, CancellationToken cancellationToken = default) {
             // Create a unique container name
             var containerName = $"opencopilot-test-{Guid.NewGuid():N}".ToLowerInvariant();
 

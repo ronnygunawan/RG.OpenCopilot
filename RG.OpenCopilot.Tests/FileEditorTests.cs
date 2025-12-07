@@ -298,6 +298,10 @@ public class FileEditorTests {
             return Task.FromResult("test-container");
         }
 
+        public Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, ContainerImageType imageType, CancellationToken cancellationToken = default) {
+            return Task.FromResult("test-container");
+        }
+
         public Task<CommandResult> ExecuteInContainerAsync(string containerId, string command, string[] args, CancellationToken cancellationToken = default) {
             if (command == "test" && args.Length >= 2 && args[0] == "-f") {
                 var filePath = args[1];

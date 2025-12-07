@@ -305,6 +305,10 @@ public class FileAnalyzerIntegrationTests {
             return Task.FromResult("test-container");
         }
 
+        public Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, ContainerImageType imageType, CancellationToken cancellationToken = default) {
+            return Task.FromResult("test-container");
+        }
+
         public Task<CommandResult> ExecuteInContainerAsync(string containerId, string command, string[] args, CancellationToken cancellationToken = default) {
             if (command == "find") {
                 string key;

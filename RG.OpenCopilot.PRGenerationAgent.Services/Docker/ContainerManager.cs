@@ -4,10 +4,29 @@ using RG.OpenCopilot.PRGenerationAgent;
 namespace RG.OpenCopilot.PRGenerationAgent.Services.Docker;
 
 /// <summary>
+/// Supported container image types for different programming languages and ecosystems.
+/// NOTE: The multi-language builder image (combining all tools) is planned as future technical debt.
+/// For now, we use language-specific images to optimize container startup time and resource usage.
+/// </summary>
+public enum ContainerImageType {
+    /// <summary>.NET projects (C#, F#, VB.NET)</summary>
+    DotNet,
+    /// <summary>JavaScript/TypeScript projects using Node.js</summary>
+    JavaScript,
+    /// <summary>Java projects using Maven or Gradle</summary>
+    Java,
+    /// <summary>Go projects</summary>
+    Go,
+    /// <summary>Rust projects using Cargo</summary>
+    Rust
+}
+
+/// <summary>
 /// Manages Docker containers for executing agent tasks in isolated environments
 /// </summary>
 public interface IContainerManager : IDirectoryOperations {
     Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default);
+    Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, ContainerImageType imageType, CancellationToken cancellationToken = default);
     Task<CommandResult> ExecuteInContainerAsync(string containerId, string command, string[] args, CancellationToken cancellationToken = default);
     Task<string> ReadFileInContainerAsync(string containerId, string filePath, CancellationToken cancellationToken = default);
     Task WriteFileInContainerAsync(string containerId, string filePath, string content, CancellationToken cancellationToken = default);
@@ -25,14 +44,31 @@ public sealed class DockerContainerManager : IContainerManager {
         _logger = logger;
     }
 
-    public async Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default) {
+    /// <summary>
+    /// Creates a container with the default .NET image for backward compatibility
+    /// </summary>
+    public Task<string> CreateContainerAsync(string owner, string repo, string token, string branch, CancellationToken cancellationToken = default) {
+        return CreateContainerAsync(owner, repo, token, branch, ContainerImageType.DotNet, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a container with a language-specific Docker image
+    /// </summary>
+    public async Task<string> CreateContainerAsync(
+        string owner,
+        string repo,
+        string token,
+        string branch,
+        ContainerImageType imageType,
+        CancellationToken cancellationToken = default) {
         // Create a unique container name
         var containerName = $"opencopilot-{owner}-{repo}-{Guid.NewGuid():N}".ToLowerInvariant();
 
-        _logger.LogInformation("Creating container {ContainerName}", containerName);
+        _logger.LogInformation("Creating {ImageType} container {ContainerName}", imageType, containerName);
 
-        // Use a base image with git and common build tools
-        // We'll use Ubuntu with git, dotnet, node, python pre-installed
+        // Select the appropriate base image based on language type
+        var baseImage = GetBaseImage(imageType);
+
         var result = await _commandExecutor.ExecuteCommandAsync(
             workingDirectory: Directory.GetCurrentDirectory(),
             command: "docker",
@@ -41,7 +77,7 @@ public sealed class DockerContainerManager : IContainerManager {
                 "-d",
                 "--name", containerName,
                 "-w", WorkDir,
-                "mcr.microsoft.com/dotnet/sdk:10.0",
+                baseImage,
                 "sleep", "infinity"
             },
             cancellationToken: cancellationToken);
@@ -51,11 +87,10 @@ public sealed class DockerContainerManager : IContainerManager {
         }
 
         var containerId = result.Output.Trim();
-        _logger.LogInformation("Created container {ContainerId}", containerId);
+        _logger.LogInformation("Created container {ContainerId} with image {BaseImage}", containerId, baseImage);
 
-        // Install git in the container
-        await ExecuteInContainerAsync(containerId: containerId, command: "apt-get", args: new[] { "update" }, cancellationToken: cancellationToken);
-        await ExecuteInContainerAsync(containerId: containerId, command: "apt-get", args: new[] { "install", "-y", "git" }, cancellationToken: cancellationToken);
+        // Install git if not already present in the image
+        await EnsureGitInstalledAsync(containerId, imageType, cancellationToken);
 
         // Clone the repository inside the container
         var repoUrl = $"https://x-access-token:{token}@github.com/{owner}/{repo}.git";
@@ -72,6 +107,51 @@ public sealed class DockerContainerManager : IContainerManager {
 
         _logger.LogInformation("Cloned repository into container {ContainerId}", containerId);
         return containerId;
+    }
+
+    /// <summary>
+    /// Returns the Docker image name for the specified language type
+    /// </summary>
+    private static string GetBaseImage(ContainerImageType imageType) {
+        return imageType switch {
+            ContainerImageType.DotNet => "mcr.microsoft.com/dotnet/sdk:10.0",
+            ContainerImageType.JavaScript => "node:20-bookworm",
+            ContainerImageType.Java => "eclipse-temurin:21-jdk",
+            ContainerImageType.Go => "golang:1.22-bookworm",
+            ContainerImageType.Rust => "rust:1-bookworm",
+            _ => throw new ArgumentOutOfRangeException(nameof(imageType), $"Unsupported image type: {imageType}")
+        };
+    }
+
+    /// <summary>
+    /// Ensures git is installed in the container
+    /// </summary>
+    private async Task EnsureGitInstalledAsync(string containerId, ContainerImageType imageType, CancellationToken cancellationToken) {
+        // Check if git is already available
+        var gitCheck = await ExecuteInContainerAsync(containerId, "which", new[] { "git" }, cancellationToken);
+        if (gitCheck.Success) {
+            _logger.LogDebug("Git already installed in container {ContainerId}", containerId);
+            return;
+        }
+
+        _logger.LogInformation("Installing git in container {ContainerId}", containerId);
+
+        // Install git based on the base image's package manager
+        switch (imageType) {
+            case ContainerImageType.DotNet:
+            case ContainerImageType.JavaScript:
+            case ContainerImageType.Go:
+            case ContainerImageType.Rust:
+            case ContainerImageType.Java:
+                // All use Debian-based images (bookworm)
+                await ExecuteInContainerAsync(containerId, "apt-get", new[] { "update" }, cancellationToken);
+                await ExecuteInContainerAsync(containerId, "apt-get", new[] { "install", "-y", "git" }, cancellationToken);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(imageType), $"Don't know how to install git for image type: {imageType}");
+        }
+
+        _logger.LogInformation("Git installed successfully in container {ContainerId}", containerId);
     }
 
     public async Task<CommandResult> ExecuteInContainerAsync(string containerId, string command, string[] args, CancellationToken cancellationToken = default) {
