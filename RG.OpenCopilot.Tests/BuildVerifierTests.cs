@@ -1085,7 +1085,388 @@ public class BuildVerifierTests {
         errors[0].Category.ShouldBe(ErrorCategory.Type);
     }
 
+    [Fact]
+    public async Task RunBuildAsync_WithMissingDotnetTool_ReturnsToolNotInstalledError() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./Project.csproj"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Length == 1 && args[0] == "dotnet"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "which: no dotnet in (/usr/bin)"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("dotnet");
+        result.Error.ShouldContain("is not installed");
+        result.Error.ShouldContain("Install .NET SDK");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMissingNpmTool_ReturnsToolNotInstalledError() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("package.json")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./package.json"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Length == 1 && args[0] == "npm"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "which: no npm in (/usr/bin)"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("npm");
+        result.Error.ShouldContain("is not installed");
+        result.Error.ShouldContain("Install Node.js");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMissingMavenTool_ReturnsToolNotInstalledError() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("package.json")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("build.gradle")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("pom.xml")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./pom.xml"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Length == 1 && args[0] == "mvn"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "which: no mvn in (/usr/bin)"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("mvn");
+        result.Error.ShouldContain("is not installed");
+        result.Error.ShouldContain("Install Maven");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMissingGoTool_ReturnsToolNotInstalledError() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("package.json")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("build.gradle")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("pom.xml")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("go.mod")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./go.mod"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Length == 1 && args[0] == "go"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "which: no go in (/usr/bin)"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("go");
+        result.Error.ShouldContain("is not installed");
+        result.Error.ShouldContain("Install Go");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMissingCargoTool_ReturnsToolNotInstalledError() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("package.json")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("build.gradle")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("pom.xml")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("go.mod")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult { ExitCode = 0, Output = "" });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("Cargo.toml")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./Cargo.toml"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Length == 1 && args[0] == "cargo"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "which: no cargo in (/usr/bin)"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("cargo");
+        result.Error.ShouldContain("is not installed");
+        result.Error.ShouldContain("Install Rust");
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithMissingTool_SetsToolAvailableToFalse() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./Project.csproj"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Length == 1 && args[0] == "dotnet"),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "which: no dotnet in (/usr/bin)"
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 3);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ToolAvailable.ShouldBeFalse();
+        result.MissingTool.ShouldBe("dotnet");
+        result.Output.ShouldContain("is not installed");
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithAvailableTool_SetsToolAvailableToTrue() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Build succeeded."
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 3);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.ToolAvailable.ShouldBeTrue();
+        result.MissingTool.ShouldBeNull();
+    }
+
     private void SetupBuildToolDetection(string? buildTool) {
+        // Setup which command mocks for tool availability check
+        if (buildTool != null) {
+            var toolCommand = buildTool switch {
+                "dotnet" => "dotnet",
+                "npm" => "npm",
+                "gradle" => "gradle",
+                "maven" => "mvn",
+                "go" => "go",
+                "cargo" => "cargo",
+                _ => null
+            };
+
+            if (toolCommand != null) {
+                _containerManager
+                    .Setup(c => c.ExecuteInContainerAsync(
+                        It.IsAny<string>(),
+                        "which",
+                        It.Is<string[]>(args => args.Length == 1 && args[0] == toolCommand),
+                        It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new CommandResult {
+                        ExitCode = 0,
+                        Output = $"/usr/bin/{toolCommand}"
+                    });
+            }
+        }
+
         if (buildTool == "dotnet") {
             _containerManager
                 .Setup(c => c.ExecuteInContainerAsync(

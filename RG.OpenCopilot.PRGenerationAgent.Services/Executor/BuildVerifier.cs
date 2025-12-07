@@ -54,7 +54,8 @@ public sealed class BuildVerifier : IBuildVerifier {
                     Output = buildResult.Output,
                     Errors = [],
                     FixesApplied = allFixesApplied,
-                    Duration = stopwatch.Elapsed
+                    Duration = stopwatch.Elapsed,
+                    ToolAvailable = true
                 };
             }
 
@@ -69,7 +70,24 @@ public sealed class BuildVerifier : IBuildVerifier {
                     Output = buildResult.Output,
                     Errors = [],
                     FixesApplied = allFixesApplied,
-                    Duration = stopwatch.Elapsed
+                    Duration = stopwatch.Elapsed,
+                    ToolAvailable = true
+                };
+            }
+
+            // Check if the build failed due to missing tool
+            if (buildResult.Error.Contains("is not installed")) {
+                _logger.LogWarning("Build failed due to missing tool: {BuildTool}", buildTool);
+                stopwatch.Stop();
+                return new BuildResult {
+                    Success = false,
+                    Attempts = attempts,
+                    Output = buildResult.Output + "\n" + buildResult.Error,
+                    Errors = [],
+                    FixesApplied = allFixesApplied,
+                    Duration = stopwatch.Elapsed,
+                    ToolAvailable = false,
+                    MissingTool = buildTool
                 };
             }
 
@@ -84,7 +102,8 @@ public sealed class BuildVerifier : IBuildVerifier {
                     Output = buildResult.Output + "\n" + buildResult.Error,
                     Errors = [],
                     FixesApplied = allFixesApplied,
-                    Duration = stopwatch.Elapsed
+                    Duration = stopwatch.Elapsed,
+                    ToolAvailable = true
                 };
             }
 
@@ -100,7 +119,8 @@ public sealed class BuildVerifier : IBuildVerifier {
                     Output = buildResult.Output + "\n" + buildResult.Error,
                     Errors = errors,
                     FixesApplied = allFixesApplied,
-                    Duration = stopwatch.Elapsed
+                    Duration = stopwatch.Elapsed,
+                    ToolAvailable = true
                 };
             }
 
@@ -115,7 +135,8 @@ public sealed class BuildVerifier : IBuildVerifier {
                     Output = buildResult.Output + "\n" + buildResult.Error,
                     Errors = errors,
                     FixesApplied = allFixesApplied,
-                    Duration = stopwatch.Elapsed
+                    Duration = stopwatch.Elapsed,
+                    ToolAvailable = true
                 };
             }
 
@@ -154,7 +175,8 @@ public sealed class BuildVerifier : IBuildVerifier {
             Output = "",
             Errors = [],
             FixesApplied = allFixesApplied,
-            Duration = stopwatch.Elapsed
+            Duration = stopwatch.Elapsed,
+            ToolAvailable = true
         };
     }
 
@@ -167,6 +189,20 @@ public sealed class BuildVerifier : IBuildVerifier {
                 ExitCode = 1,
                 Output = "",
                 Error = "No build tool detected"
+            };
+        }
+
+        // Verify tool availability before running build
+        var toolAvailable = await VerifyToolAvailabilityAsync(containerId, buildTool, cancellationToken);
+        if (!toolAvailable) {
+            var toolCommand = GetToolCommand(buildTool);
+            var installInstructions = GetInstallationInstructions(buildTool);
+            _logger.LogWarning("Build tool '{BuildTool}' is not available in container {ContainerId}. {InstallInstructions}",
+                buildTool, containerId, installInstructions);
+            return new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = $"Build tool '{toolCommand}' is not installed. {installInstructions}"
             };
         }
 
@@ -567,6 +603,46 @@ public sealed class BuildVerifier : IBuildVerifier {
             _logger.LogError(ex, "Error parsing fixes from LLM response");
             return [];
         }
+    }
+
+    private async Task<bool> VerifyToolAvailabilityAsync(string containerId, string buildTool, CancellationToken cancellationToken) {
+        var toolCommand = GetToolCommand(buildTool);
+        
+        if (toolCommand == null) {
+            return false;
+        }
+        
+        var result = await _containerManager.ExecuteInContainerAsync(
+            containerId: containerId,
+            command: "which",
+            args: new[] { toolCommand },
+            cancellationToken: cancellationToken);
+        
+        return result.Success;
+    }
+
+    private static string? GetToolCommand(string buildTool) {
+        return buildTool switch {
+            "dotnet" => "dotnet",
+            "npm" => "npm",
+            "gradle" => "gradle",
+            "maven" => "mvn",
+            "go" => "go",
+            "cargo" => "cargo",
+            _ => null
+        };
+    }
+
+    private static string GetInstallationInstructions(string buildTool) {
+        return buildTool switch {
+            "dotnet" => "Install .NET SDK: https://dotnet.microsoft.com/download",
+            "npm" => "Install Node.js and npm: https://nodejs.org/",
+            "gradle" => "Install Gradle: https://gradle.org/install/",
+            "maven" => "Install Maven: https://maven.apache.org/install.html",
+            "go" => "Install Go: https://golang.org/doc/install",
+            "cargo" => "Install Rust and Cargo: https://www.rust-lang.org/tools/install",
+            _ => "Please install the required build tool."
+        };
     }
 
     private sealed class FixResponse {

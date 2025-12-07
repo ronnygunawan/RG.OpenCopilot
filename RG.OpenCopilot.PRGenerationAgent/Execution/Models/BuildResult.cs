@@ -7,4 +7,6 @@ public sealed class BuildResult {
     public List<BuildError> Errors { get; init; } = [];
     public List<CodeFix> FixesApplied { get; init; } = [];
     public TimeSpan Duration { get; init; }
+    public bool ToolAvailable { get; init; } = true;
+    public string? MissingTool { get; init; }
 }
