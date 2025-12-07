@@ -1148,6 +1148,15 @@ public class ContainerManagerTests {
                 Args = args
             });
 
+            // Special handling for 'which git' check - return failure to trigger git installation
+            if (args.Contains("which") && args.Contains("git")) {
+                return Task.FromResult(new CommandResult {
+                    ExitCode = 1,
+                    Output = "",
+                    Error = ""
+                });
+            }
+
             // Special handling for git status to simulate changes/no changes
             if (args.Contains("git") && args.Contains("status") && args.Contains("--porcelain")) {
                 if (ReturnNonEmptyStatusOnce && !_statusReturned) {
