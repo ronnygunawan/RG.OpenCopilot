@@ -32,6 +32,8 @@ RUN ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
 
 # Install Node.js 20 LTS
 ARG NODE_VERSION=20.18.1
+# Note: Using --no-check-certificate due to CI environment SSL issues
+# In production, use curl with proper SSL verification or system packages
 RUN wget --no-check-certificate https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz -O /tmp/node.tar.xz \
     && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
     && rm /tmp/node.tar.xz
@@ -47,6 +49,8 @@ ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 # Install Maven 3.9+
 ARG MAVEN_VERSION=3.9.9
+# Note: Using --no-check-certificate due to CI environment SSL issues
+# In production, use curl with proper SSL verification or system packages
 RUN wget --no-check-certificate https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz -O /tmp/maven.tar.gz \
     && tar -xzf /tmp/maven.tar.gz -C /opt \
     && ln -s /opt/apache-maven-${MAVEN_VERSION} /opt/maven \
@@ -58,6 +62,8 @@ ENV PATH="${MAVEN_HOME}/bin:${PATH}"
 
 # Install Go 1.22+
 ARG GO_VERSION=1.22.9
+# Note: Using --no-check-certificate due to CI environment SSL issues
+# In production, use curl with proper SSL verification or system packages
 RUN wget --no-check-certificate https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz -O /tmp/go.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && rm /tmp/go.tar.gz
@@ -67,10 +73,16 @@ ENV GOPATH=/go
 ENV PATH="${GOROOT}/bin:${GOPATH}/bin:${PATH}"
 
 # Install Rust and Cargo (stable channel)
+# Note: Using --no-check-certificate due to CI environment SSL issues
+# In production, use curl with proper SSL verification
 RUN wget --no-check-certificate -O /tmp/rustup.sh https://sh.rustup.rs \
     && sh /tmp/rustup.sh -y --default-toolchain stable \
     && rm /tmp/rustup.sh
 ENV PATH="/root/.cargo/bin:${PATH}"
+
+# NOTE: This image runs as root user for build tool compatibility
+# For production use, consider creating a non-root user with appropriate permissions
+# Example: RUN useradd -m -s /bin/bash builder && chown -R builder:builder /workspace
 
 # Verify all tools are installed with version checks
 RUN echo "=== Verifying installed tools ===" \

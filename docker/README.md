@@ -198,6 +198,69 @@ Update the builder image when:
   - Rust stable
   - Ubuntu 24.04 LTS base
 
+## Security Considerations
+
+### SSL Certificate Verification
+
+**Note:** The Dockerfile uses `wget --no-check-certificate` for downloading tools due to SSL certificate issues in some CI environments.
+
+**For Production Builds:**
+1. Remove `--no-check-certificate` flags
+2. Ensure proper CA certificates are installed
+3. Use corporate proxy settings if needed
+4. Consider using system package managers (apt, snap) instead of direct downloads
+
+**Alternative Secure Download Method:**
+```dockerfile
+# Update CA certificates first
+RUN apt-get update && apt-get install -y ca-certificates
+
+# Download with SSL verification
+RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz \
+    -o /tmp/node.tar.xz
+```
+
+### Root User
+
+The image runs as root user by default for compatibility with all build tools.
+
+**For Enhanced Security:**
+1. Create a non-root user
+2. Grant appropriate permissions
+3. Switch to non-root user
+
+**Example:**
+```dockerfile
+# Add after tool installation
+RUN useradd -m -s /bin/bash builder \
+    && chown -R builder:builder /workspace
+
+USER builder
+```
+
+**Trade-offs:**
+- ✅ Better security isolation
+- ❌ May require additional permission configuration
+- ❌ Some build tools expect root access
+
+### Container Security
+
+When running containers from this image:
+- Use `--read-only` flag for read-only root filesystem
+- Limit container capabilities with `--cap-drop`
+- Use security profiles (AppArmor, SELinux)
+- Scan image for vulnerabilities regularly
+
+**Example Secure Container Run:**
+```bash
+docker run \
+  --read-only \
+  --cap-drop ALL \
+  --security-opt no-new-privileges \
+  -v /workspace:/workspace:rw \
+  opencopilot-builder:latest
+```
+
 ## Troubleshooting
 
 ### Image Too Large
