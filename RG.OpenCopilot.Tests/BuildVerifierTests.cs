@@ -2205,6 +2205,499 @@ public class BuildVerifierTests {
         attemptCount.ShouldBeLessThanOrEqualTo(100);
     }
 
+    [Fact]
+    public async Task RunBuildAsync_WithNullContainerId_ThrowsException() {
+        // Arrange
+        string? containerId = null;
+
+        // Act & Assert
+        await Should.ThrowAsync<Exception>(
+            async () => await _verifier.RunBuildAsync(containerId: containerId!));
+    }
+
+    [Fact]
+    public async Task DetectBuildToolAsync_WithNullContainerId_ThrowsException() {
+        // Arrange
+        string? containerId = null;
+
+        // Act & Assert
+        await Should.ThrowAsync<Exception>(
+            async () => await _verifier.DetectBuildToolAsync(containerId: containerId!));
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithNullContainerId_ThrowsException() {
+        // Arrange
+        string? containerId = null;
+
+        // Act & Assert
+        await Should.ThrowAsync<Exception>(
+            async () => await _verifier.VerifyBuildAsync(containerId: containerId!));
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithContainerExecutionFailure_ReturnsError() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                It.IsAny<string>(),
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Container has stopped"));
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            async () => await _verifier.DetectBuildToolAsync(containerId: containerId));
+        
+        exception.Message.ShouldBe("Container has stopped");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithPermissionDenied_ReturnsError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 126,
+                Output = "",
+                Error = "Permission denied"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ExitCode.ShouldBe(126);
+        result.Error.ShouldContain("Permission denied");
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithMalformedOutput_HandlesGracefully() {
+        // Arrange
+        var malformedOutput = """
+            ��@#$%^&*()
+            Random text without structure
+            �������
+            Not a valid error format
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: malformedOutput,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.ShouldBeEmpty(); // Should handle gracefully, not crash
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithVeryLargeOutput_HandlesGracefully() {
+        // Arrange
+        var largeOutput = string.Join("\n", Enumerable.Repeat("Program.cs(10,15): error CS1002: ; expected", 10000));
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: largeOutput,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBe(10000);
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithUnicodeCharacters_HandlesCorrectly() {
+        // Arrange
+        var unicodeOutput = """
+            Program.cs(10,15): error CS0246: 类型或命名空间名称"Package"找不到
+            Program.cs(20,10): error CS1503: Не удалось преобразовать тип
+            Program.cs(30,5): error CS1002: 예상되는 ;
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: unicodeOutput,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBeGreaterThan(0);
+        errors.ShouldAllBe(e => !string.IsNullOrEmpty(e.Message));
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithNetworkTimeout_ReturnsError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("Command execution timed out"));
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<TimeoutException>(
+            async () => await _verifier.RunBuildAsync(containerId: containerId));
+        
+        exception.Message.ShouldContain("timed out");
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithBuildOutputContainingNoErrors_ReturnsFailure() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "Build failed but no error details provided"
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 1);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Errors.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithAllToolsMissing_ReturnsFirstMissingTool() {
+        // Arrange
+        var containerId = "test-container";
+        
+        // Setup: no project files found
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = ""
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("No build tool detected");
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithMixedValidAndInvalidLines_ParsesValidOnes() {
+        // Arrange
+        var mixedOutput = """
+            Program.cs(10,15): error CS1002: ; expected
+            This is invalid garbage text
+            ������
+            Program.cs(20,10): error CS0246: Type not found
+            More random text
+            Program.cs(30,5): warning CS8618: Nullable reference
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: mixedOutput,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBeGreaterThanOrEqualTo(2); // At least the valid error lines
+        errors.ShouldAllBe(e => !string.IsNullOrEmpty(e.ErrorCode));
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithFileEditorThrowingOnEveryFix_StillCompletes() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "Program.cs(10,15): error CS1002: ; expected"
+            });
+
+        _fileEditor
+            .Setup(f => f.ModifyFileAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<Func<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new IOException("File is locked by another process"));
+
+        SetupLlmFixGeneration();
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 2);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.FixesApplied.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithCorruptedToolInstallation_ReturnsError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 139, // Segmentation fault
+                Output = "",
+                Error = "Segmentation fault (core dumped)"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ExitCode.ShouldBe(139);
+        result.Error.ShouldContain("Segmentation fault");
+    }
+
+    [Fact]
+    public async Task DetectBuildToolAsync_WithMultipleProjectFiles_ReturnsFirstDetected() {
+        // Arrange
+        var containerId = "test-container";
+        
+        // Setup both dotnet and npm project files present
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./Project.csproj"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("package.json")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./package.json"
+            });
+
+        // Act
+        var buildTool = await _verifier.DetectBuildToolAsync(containerId: containerId);
+
+        // Assert
+        buildTool.ShouldBe("dotnet"); // Should return first detected (dotnet checked before npm)
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithNullOutput_ThrowsArgumentNullException() {
+        // Arrange
+        string? nullOutput = null;
+
+        // Act & Assert
+        await Should.ThrowAsync<ArgumentNullException>(
+            async () => await _verifier.ParseBuildErrorsAsync(
+                output: nullOutput!,
+                buildTool: "dotnet"));
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithToolExitingImmediately_ReturnsError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 127, // Command not found
+                Output = "",
+                Error = "dotnet: command not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ExitCode.ShouldBe(127);
+        result.Error.ShouldContain("command not found");
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithZeroMaxRetries_DoesNotAttempt() {
+        // Arrange - This tests the boundary condition
+        var containerId = "test-container";
+        var attemptCount = 0;
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => {
+                attemptCount++;
+                return new CommandResult {
+                    ExitCode = 0,
+                    Output = "Build succeeded."
+                };
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 0);
+
+        // Assert - With maxRetries=0, the loop doesn't run (attempts <= 0)
+        result.Success.ShouldBeFalse();
+        attemptCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithEmptyBuildTool_ReturnsEmptyList() {
+        // Arrange
+        var output = "Program.cs(10,15): error CS1002: ; expected";
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "");
+
+        // Assert
+        errors.ShouldBeEmpty(); // Empty build tool means we can't parse
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithDiskFullError_ReturnsError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "No space left on device"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("No space left on device");
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithNegativeMaxRetries_HandlesGracefully() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Build succeeded."
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: -1);
+
+        // Assert - Should handle negative value gracefully
+        result.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithWhichCommandNotAvailable_HandlesGracefully() {
+        // Arrange
+        var containerId = "test-container";
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "find",
+                It.Is<string[]>(args => args.Contains("*.csproj")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "./Project.csproj"
+            });
+
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.IsAny<string[]>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 127,
+                Output = "",
+                Error = "which: command not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("is not installed");
+    }
+
     private async Task VerifyToolCommandMapping(string buildTool, string expectedCommand) {
         var containerId = "test-container";
         var wasCalledWithCorrectCommand = false;
