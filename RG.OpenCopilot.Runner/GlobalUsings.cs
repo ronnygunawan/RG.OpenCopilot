@@ -1,7 +1,0 @@
-// Global usings for RG.OpenCopilot.Runner
-global using RG.OpenCopilot.PRGenerationAgent.Planning.Models;
-global using RG.OpenCopilot.PRGenerationAgent.Planning.Services;
-global using RG.OpenCopilot.PRGenerationAgent.Execution.Models;
-global using RG.OpenCopilot.PRGenerationAgent.Execution.Services;
-global using RG.OpenCopilot.PRGenerationAgent.FileOperations.Models;
-global using RG.OpenCopilot.PRGenerationAgent.FileOperations.Services;
