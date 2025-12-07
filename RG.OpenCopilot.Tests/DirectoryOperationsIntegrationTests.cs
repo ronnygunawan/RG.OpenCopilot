@@ -34,7 +34,7 @@ public class DirectoryOperationsIntegrationTests : IDisposable {
                 "-d",
                 "--name", containerName,
                 "-w", "/workspace",
-                "opencopilot-builder:latest",
+                "mcr.microsoft.com/dotnet/sdk:10.0",
                 "sleep", "infinity"
             });
 

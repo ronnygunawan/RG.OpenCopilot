@@ -42,28 +42,14 @@ All projects target `.NET 10.0` with nullable reference types and implicit using
 
 The codebase follows **SOLID principles** and **DDD patterns** with feature-based organization (organized by feature first, then by architectural layer), anti-corruption layers for external dependencies, and clear separation of concerns.
 
-## Multi-Language Builder Image
-
-The project uses a custom Docker image (`opencopilot-builder`) that includes all build tools required across different ecosystems:
-
-- **.NET SDK 10.0** - For building C#, F#, and VB.NET projects
-- **Node.js 20 LTS + npm** - For JavaScript/TypeScript projects
-- **Java 21 + Maven 3.9+ + Gradle** - For Java projects
-- **Go 1.22+** - For Go projects
-- **Rust + Cargo** - For Rust projects
-- **Build utilities** - git, curl, wget, bash, find, build-essential
-
-See **[docker/README.md](docker/README.md)** for image details and **[docker/INTEGRATION.md](docker/INTEGRATION.md)** for build and deployment instructions.
-
 ## Features
 
 ### Container-Based Executor
-- **Docker Integration**: Executes code changes in isolated Docker containers using the multi-language builder image
-- **Multi-Language Support**: Supports .NET, Node.js, Java (Maven/Gradle), Go, and Rust projects
+- **Docker Integration**: Executes code changes in isolated Docker containers
 - **Repository Cloning**: Automatic repository cloning inside containers
 - **File Operations**: Read and write files in containers using Docker exec
 - **Directory Operations**: Create, move, copy, delete directories and files with workspace safety validation
-- **Build & Test**: Automatic detection and execution of builds and tests across different ecosystems
+- **Build & Test**: Automatic detection and execution of .NET, Node.js, and Python projects
 - **Git Integration**: Commits and pushes changes from containers
 
 ### File Analysis
