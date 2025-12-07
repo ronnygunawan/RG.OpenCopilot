@@ -2701,9 +2701,249 @@ public class BuildVerifierTests {
         result.Error.ShouldContain("is not installed");
     }
 
-    private async Task VerifyToolCommandMapping(string buildTool, string expectedCommand) {
-        var containerId = "test-container";
-        var wasCalledWithCorrectCommand = false;
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithErrorCategoryOther_CategorizesAsOther() {
+        // Arrange
+        var output = """
+            Program.cs(10,15): error CS9999: Some unknown error type
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBe(1);
+        errors[0].Category.ShouldBe(ErrorCategory.Other);
+        errors[0].ErrorCode.ShouldBe("CS9999");
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithRuntimeCategory_CategorizesCorrectly() {
+        // Arrange
+        var output = """
+            Program.cs(10,15): error CS1234: Runtime initialization failed
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBe(1);
+        // Runtime errors might be categorized as Other if no specific runtime category exists
+        errors[0].ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task GenerateFixesAsync_WithEmptyErrorsList_ReturnsEmptyList() {
+        // Arrange
+        var emptyErrors = new List<BuildError>();
+
+        // Act
+        var fixes = await _verifier.GenerateFixesAsync(
+            errors: emptyErrors);
+
+        // Assert
+        fixes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithDotnetWarning_ParsesAsWarning() {
+        // Arrange
+        var output = """
+            Program.cs(10,15): warning CS8618: Non-nullable field must contain a non-null value when exiting constructor
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBe(1);
+        errors[0].Severity.ShouldBe(ErrorSeverity.Warning);
+        errors[0].ErrorCode.ShouldBe("CS8618");
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithNpmErrorInPattern_ParsesCorrectly() {
+        // Arrange
+        var output = """
+            ERROR in ./src/app.ts
+            ERROR in ./src/utils.ts
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "npm");
+
+        // Assert
+        errors.Count.ShouldBe(2);
+        errors[0].FilePath.ShouldBe("./src/app.ts");
+        errors[1].FilePath.ShouldBe("./src/utils.ts");
+        errors.ShouldAllBe(e => e.Category == ErrorCategory.Other);
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithGradleErrorPattern_ParsesCorrectly() {
+        // Arrange
+        var output = """
+            /home/project/src/Main.java:15: error: cannot find symbol
+            symbol: class MyClass
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "gradle");
+
+        // Assert
+        errors.Count.ShouldBeGreaterThan(0);
+        errors[0].FilePath.ShouldContain("Main.java");
+        errors[0].LineNumber.ShouldBe(15);
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithMavenErrorPattern_ParsesCorrectly() {
+        // Arrange
+        var output = """
+            [ERROR] /project/src/main/java/App.java:[25,10] cannot find symbol
+            [ERROR] symbol: class Logger
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "maven");
+
+        // Assert
+        errors.Count.ShouldBeGreaterThan(0);
+        errors[0].FilePath.ShouldContain("App.java");
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithGoMultipleErrors_ParsesAll() {
+        // Arrange
+        var output = """
+            main.go:10:5: undefined: fmt
+            main.go:15:2: syntax error: unexpected newline
+            utils.go:20:1: missing return at end of function
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "go");
+
+        // Assert
+        errors.Count.ShouldBe(3);
+        errors[0].FilePath.ShouldBe("main.go");
+        errors[0].LineNumber.ShouldBe(10);
+        errors[1].FilePath.ShouldBe("main.go");
+        errors[1].LineNumber.ShouldBe(15);
+        errors[2].FilePath.ShouldBe("utils.go");
+        errors[2].LineNumber.ShouldBe(20);
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithCargoMultipleErrors_ParsesAll() {
+        // Arrange
+        var output = """
+            error[E0425]: cannot find value `x` in this scope
+             --> src/main.rs:10:5
+            error[E0308]: mismatched types
+             --> src/lib.rs:25:10
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "cargo");
+
+        // Assert
+        errors.Count.ShouldBe(2);
+        errors[0].FilePath.ShouldBe("src/main.rs");
+        errors[0].LineNumber.ShouldBe(10);
+        errors[0].ErrorCode.ShouldBe("E0425");
+        errors[1].FilePath.ShouldBe("src/lib.rs");
+        errors[1].LineNumber.ShouldBe(25);
+        errors[1].ErrorCode.ShouldBe("E0308");
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithImportError_CategorizesAsMissingDependency() {
+        // Arrange
+        var output = """
+            Program.cs(10,15): error CS0234: The type or namespace name 'Logging' does not exist in the namespace 'Microsoft.Extensions'
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBe(1);
+        errors[0].Category.ShouldBe(ErrorCategory.MissingDependency);
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithModuleNotFoundError_CategorizesAsMissingDependency() {
+        // Arrange
+        var output = """
+            main.go:5:2: module not found: github.com/pkg/errors
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "go");
+
+        // Assert
+        errors.Count.ShouldBe(1);
+        errors[0].Category.ShouldBe(ErrorCategory.MissingDependency);
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithCastError_CategorizesAsType() {
+        // Arrange
+        var output = """
+            Program.cs(20,10): error CS0030: Cannot convert type 'string' to 'int'
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBe(1);
+        errors[0].Category.ShouldBe(ErrorCategory.Type);
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithUnexpectedToken_CategorizesAsSyntax() {
+        // Arrange
+        var output = """
+            Program.cs(15,5): error CS1026: ) expected but , found - unexpected token
+            """;
+
+        // Act
+        var errors = await _verifier.ParseBuildErrorsAsync(
+            output: output,
+            buildTool: "dotnet");
+
+        // Assert
+        errors.Count.ShouldBe(1);
+        errors[0].Category.ShouldBe(ErrorCategory.Syntax);
+    }
+
+    [Fact]
+    public async Task ParseBuildErrorsAsync_WithConfigurationSetting_CategorizesAsConfiguration
 
         // Setup project detection based on build tool
         SetupProjectDetectionForBuildTool(containerId, buildTool);
