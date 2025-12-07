@@ -167,6 +167,39 @@ public class FeatureTests {
   - Test every branch, including all if/else statements, early returns, and exception throws
   - Example: If a method can throw 3 different exceptions, write 3 tests for those paths
 
+### Anti-Pattern: Never Normalize Bugs in Tests
+- **CRITICAL RULE**: When you discover a bug in the code, **FIX THE BUG** - do NOT write tests that accept the buggy behavior
+- **The Lumon Principle**: "Upon the identification of defective operational conduct, one's obligation is to remedy the aberration at its locus of origin, rather than pervert the evaluative apparatus into a complicit accomplice that normalizes said malfunction."
+- In plain terms: Fix bugs in the code, not in the tests
+- **Anti-Pattern Example** (NEVER DO THIS):
+  ```csharp
+  // BAD: Test accepts buggy behavior
+  [Fact]
+  public void GetToken_WithMissingCredentials_ReturnsEmptyString() {
+      var token = provider.GetToken();
+      token.ShouldBe(""); // Accepting empty string as valid behavior
+  }
+  ```
+- **Correct Approach** (ALWAYS DO THIS):
+  ```csharp
+  // GOOD: Test verifies proper error handling
+  [Fact]
+  public void GetToken_WithMissingCredentials_ThrowsException() {
+      var exception = Should.Throw<InvalidOperationException>(() => provider.GetToken());
+      exception.Message.ShouldBe("Credentials must be configured");
+  }
+  ```
+- **When you find buggy behavior:**
+  1. Fix the implementation to behave correctly
+  2. Update or write tests to verify the correct behavior
+  3. Never write tests that validate incorrect behavior just to make tests pass
+- **Examples of buggy behavior that must be fixed:**
+  - Returning empty strings or null when exceptions should be thrown
+  - Silently failing validation instead of reporting errors
+  - Accepting invalid input without proper error handling
+  - Using magic numbers or sentinel values to indicate errors instead of proper exceptions
+  - Logging warnings and continuing when the operation should fail
+
 ## Architecture Patterns
 
 ### Project Organization

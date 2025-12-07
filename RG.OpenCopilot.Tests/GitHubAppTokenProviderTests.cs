@@ -8,7 +8,7 @@ namespace RG.OpenCopilot.Tests;
 
 public class GitHubAppTokenProviderTests {
     [Fact]
-    public async Task GetInstallationTokenAsync_WithMissingCredentials_ReturnsEmptyString() {
+    public async Task GetInstallationTokenAsync_WithMissingCredentials_ThrowsInvalidOperationException() {
         // Arrange
         var mockClient = new Mock<IGitHubClient>();
         var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
@@ -21,11 +21,11 @@ public class GitHubAppTokenProviderTests {
         var logger = new TestLogger<GitHubAppTokenProvider>();
         var provider = new GitHubAppTokenProvider(mockClient.Object, mockJwtGenerator.Object, configuration, logger);
 
-        // Act
-        var token = await provider.GetInstallationTokenAsync(installationId: 123);
-
-        // Assert
-        token.ShouldBe("");
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            () => provider.GetInstallationTokenAsync(installationId: 123));
+        
+        exception.Message.ShouldBe("GitHub App credentials (AppId and PrivateKey) must be configured to generate installation tokens");
         mockJwtGenerator.Verify(j => j.GenerateJwtToken(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
