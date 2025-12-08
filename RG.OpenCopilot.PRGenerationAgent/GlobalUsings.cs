@@ -9,3 +9,5 @@ global using RG.OpenCopilot.PRGenerationAgent.CodeGeneration.Models;
 global using RG.OpenCopilot.PRGenerationAgent.CodeGeneration.Services;
 global using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Models;
 global using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
+global using RG.OpenCopilot.PRGenerationAgent.DependencyManagement.Models;
+global using RG.OpenCopilot.PRGenerationAgent.DependencyManagement.Services;

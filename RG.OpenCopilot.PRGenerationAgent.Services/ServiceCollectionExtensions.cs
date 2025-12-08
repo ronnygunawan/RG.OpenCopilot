@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Octokit;
 using RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
+using RG.OpenCopilot.PRGenerationAgent.Services.DependencyManagement;
 using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
 using RG.OpenCopilot.PRGenerationAgent.Services.Executor;
 using RG.OpenCopilot.PRGenerationAgent.Services.FileOperations;
@@ -91,6 +92,7 @@ public static class ServiceCollectionExtensions {
         services.AddSingleton<ISmartStepExecutor, SmartStepExecutor>();
         services.AddSingleton<ITestGenerator, TestGenerator>();
         services.AddSingleton<IProgressReporter, ProgressReporter>();
+        services.AddSingleton<IDependencyManager, DependencyManager>();
 
         // Configure GitHub client
         services.AddSingleton<IGitHubClient>(sp => {
