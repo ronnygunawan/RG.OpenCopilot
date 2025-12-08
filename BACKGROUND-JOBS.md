@@ -36,10 +36,208 @@ Background job processing is configured in `appsettings.json`:
 - **MaxQueueSize**: Maximum number of jobs in the queue, 0 for unlimited (default: 100)
 - **EnablePrioritization**: Whether to process higher priority jobs first (default: true)
 - **ShutdownTimeoutSeconds**: Time to wait for jobs to complete during shutdown (default: 30)
-- **EnableRetry**: Whether to automatically retry failed jobs (default: true)
-- **RetryDelayMilliseconds**: Delay between retry attempts (default: 5000)
+- **EnableRetry**: (Deprecated) Whether to automatically retry failed jobs (default: true). Use RetryPolicy instead.
+- **RetryDelayMilliseconds**: (Deprecated) Delay between retry attempts (default: 5000). Use RetryPolicy instead.
+
+### Advanced Retry Configuration
+
+For more control over retry behavior, configure the retry policy with backoff strategies and jitter:
+
+```json
+{
+  "BackgroundJobs": {
+    "MaxConcurrency": 2,
+    "MaxQueueSize": 100,
+    "EnablePrioritization": true,
+    "ShutdownTimeoutSeconds": 30,
+    "RetryPolicy": {
+      "Enabled": true,
+      "MaxRetries": 3,
+      "BackoffStrategy": "Exponential",
+      "BaseDelayMilliseconds": 5000,
+      "MaxDelayMilliseconds": 300000,
+      "MinJitterFactor": 0.0,
+      "MaxJitterFactor": 0.2
+    }
+  }
+}
+```
+
+#### Retry Policy Options
+
+- **Enabled**: Whether to retry failed jobs (default: true)
+- **MaxRetries**: Maximum number of retry attempts (default: 3)
+- **BackoffStrategy**: Strategy for calculating retry delays. Options:
+  - `Constant`: Fixed delay between retries (uses BaseDelayMilliseconds)
+  - `Linear`: Linearly increasing delay (baseDelay × (retryCount + 1))
+  - `Exponential`: Exponentially increasing delay (baseDelay × 2^retryCount) - **recommended**
+- **BaseDelayMilliseconds**: Base delay for retry calculations (default: 5000ms)
+- **MaxDelayMilliseconds**: Maximum delay cap to prevent exponential explosion (default: 300000ms = 5 minutes)
+- **MinJitterFactor**: Minimum random jitter as a percentage (-0.1 = reduce by up to 10%)
+- **MaxJitterFactor**: Maximum random jitter as a percentage (0.2 = increase by up to 20%)
+
+#### Backoff Strategy Examples
+
+**Constant Backoff:**
+```
+Retry 1: 5000ms
+Retry 2: 5000ms
+Retry 3: 5000ms
+```
+
+**Linear Backoff (BaseDelay = 5000ms):**
+```
+Retry 1: 5000ms  (5000 × 1)
+Retry 2: 10000ms (5000 × 2)
+Retry 3: 15000ms (5000 × 3)
+```
+
+**Exponential Backoff (BaseDelay = 5000ms):**
+```
+Retry 1: 5000ms  (5000 × 2^0)
+Retry 2: 10000ms (5000 × 2^1)
+Retry 3: 20000ms (5000 × 2^2)
+Retry 4: 40000ms (5000 × 2^3)
+```
+
+With jitter (MinJitter = -0.1, MaxJitter = 0.2), delays will vary ±10-20% to prevent thundering herd problems.
+
+## Idempotency and Deduplication
+
+Background jobs support idempotency keys to prevent duplicate execution of the same logical operation. When a job is dispatched with an idempotency key, the system ensures that only one job with that key can be in-flight at any time.
+
+### Using Idempotency Keys
+
+```csharp
+var payload = new MyJobPayload {
+    TaskId = "task-123",
+    Operation = "process-data"
+};
+
+var job = new BackgroundJob {
+    Type = "MyJob",
+    Payload = JsonSerializer.Serialize(payload),
+    IdempotencyKey = $"MyJob:{payload.TaskId}:{payload.Operation}",  // Unique identifier
+    Metadata = new Dictionary<string, string> {
+        ["TaskId"] = payload.TaskId
+    }
+};
+
+var dispatched = await _jobDispatcher.DispatchAsync(job);
+if (!dispatched) {
+    // Job with this idempotency key is already in-flight
+    _logger.LogWarning("Duplicate job detected, skipping dispatch");
+}
+```
+
+### Idempotency Key Best Practices
+
+1. **Make keys unique but consistent**: Include all parameters that define the unique operation
+2. **Use descriptive prefixes**: Start with job type to avoid collisions across different job types
+3. **Include version if needed**: `MyJob:v2:task-123` for versioned operations
+4. **Clean format**: Use colons (`:`) or hyphens (`-`) as separators
+5. **Avoid timestamps**: Don't include timestamps or random values that change between retries
+
+**Good Examples:**
+```csharp
+IdempotencyKey = $"GeneratePlan:{owner}/{repo}/issues/{issueNumber}"
+IdempotencyKey = $"ProcessPayment:{orderId}:{userId}"
+IdempotencyKey = $"SendEmail:{templateId}:{recipientEmail}:{timestamp.Date}"
+```
+
+**Bad Examples:**
+```csharp
+IdempotencyKey = Guid.NewGuid().ToString()  // Changes every time!
+IdempotencyKey = $"job-{DateTime.Now.Ticks}"  // Not idempotent!
+```
+
+## Attempt History and Dead-Letter Queue
+
+All job execution attempts are tracked and stored, providing full visibility into retry history. When a job exceeds its maximum retry attempts, it's moved to the dead-letter queue with complete attempt history.
+
+### Attempt Tracking
+
+Each attempt records:
+- Attempt number (1-based)
+- Start and completion timestamps
+- Success/failure status
+- Error message and exception type
+- Processing duration
+- Backoff strategy used
+- Delay before this attempt
+
+### Accessing Attempt History
+
+```csharp
+var jobStatus = await _jobStatusStore.GetStatusAsync(jobId);
+if (jobStatus != null) {
+    foreach (var attempt in jobStatus.Attempts) {
+        _logger.LogInformation(
+            "Attempt {AttemptNumber}: {Status} after {Duration}ms - {Error}",
+            attempt.AttemptNumber,
+            attempt.Succeeded ? "Success" : "Failed",
+            attempt.DurationMs,
+            attempt.ErrorMessage);
+    }
+}
+```
+
+### Dead-Letter Queue
+
+Jobs that exhaust all retry attempts move to the dead-letter queue for manual intervention:
+
+```csharp
+// Get all dead-letter jobs
+var deadLetterJobs = await _jobStatusStore.GetJobsByStatusAsync(
+    BackgroundJobStatus.DeadLetter, 
+    skip: 0,
+    take: 100);
+
+foreach (var job in deadLetterJobs) {
+    _logger.LogError(
+        "Dead-letter job {JobId}: {JobType} failed after {RetryCount} retries. Last error: {Error}",
+        job.JobId,
+        job.JobType,
+        job.RetryCount,
+        job.ErrorMessage);
+    
+    // Review attempt history
+    foreach (var attempt in job.Attempts) {
+        _logger.LogInformation(
+            "  Attempt {Number}: {Error}",
+            attempt.AttemptNumber,
+            attempt.ErrorMessage);
+    }
+}
+```
+
+### Dead-Letter Queue Recovery
+
+To retry a dead-letter job after fixing the underlying issue:
+
+1. Retrieve the job from status store
+2. Create a new job with the same payload
+3. Optionally adjust MaxRetries or other parameters
+4. Dispatch the new job
+
+```csharp
+var deadLetterJob = await _jobStatusStore.GetStatusAsync(jobId);
+if (deadLetterJob != null && deadLetterJob.Status == BackgroundJobStatus.DeadLetter) {
+    // Create new job with same payload but reset retry count
+    var retryJob = new BackgroundJob {
+        Type = deadLetterJob.JobType,
+        Payload = /* original payload from job */,
+        MaxRetries = 5,  // Maybe increase retries
+        Priority = 10,   // Higher priority for manual retry
+        Metadata = deadLetterJob.Metadata
+    };
+    
+    await _jobDispatcher.DispatchAsync(retryJob);
+}
+```
 
 ## Adding New Job Types
+
 
 To add a new job type, follow these steps:
 
@@ -651,3 +849,212 @@ Error: Job ghi789 moved to DeadLetter queue after 3 retries
 ```
 
 These logs can be integrated with centralized logging systems (e.g., ELK, Application Insights) for monitoring and alerting.
+
+## Operational Playbooks
+
+### Playbook: High Job Failure Rate
+
+**Symptoms:**
+- Failure rate > 20%
+- Many jobs in dead-letter queue
+- Repeated retry attempts
+
+**Diagnosis Steps:**
+1. Check metrics: `GET /jobs/metrics`
+2. Identify failing job types: Review `metricsByType` in metrics response
+3. Get recent failures: `GET /jobs?status=failed&take=50`
+4. Review attempt history for patterns in error messages
+
+**Common Causes and Fixes:**
+- **External service down**: Temporarily increase retry delays, check service status
+- **Invalid payload**: Fix payload generation logic, clear dead-letter queue
+- **Resource exhaustion**: Increase `MaxConcurrency` or reduce job load
+- **Transient network issues**: Ensure exponential backoff is enabled with jitter
+
+**Actions:**
+```bash
+# Check current metrics
+curl http://localhost:5000/jobs/metrics
+
+# Get failed jobs with details
+curl "http://localhost:5000/jobs?status=failed&type=GeneratePlan&take=20"
+
+# Review dead-letter jobs
+curl "http://localhost:5000/jobs/dead-letter?take=20"
+```
+
+### Playbook: Queue Backlog
+
+**Symptoms:**
+- `queueDepth` > 50
+- High `averageQueueWaitTimeMs`
+- Jobs waiting long before processing
+
+**Diagnosis Steps:**
+1. Check current queue depth: `GET /jobs/metrics`
+2. Identify job type distribution in queue
+3. Check if processors are stuck or slow
+
+**Common Causes and Fixes:**
+- **Insufficient concurrency**: Increase `MaxConcurrency` in config
+- **Slow job handlers**: Optimize handler code or add timeout limits
+- **Burst of jobs**: Increase `MaxQueueSize` temporarily
+- **Stuck jobs**: Restart application to clear processors
+
+**Actions:**
+```bash
+# Check queue status
+curl http://localhost:5000/jobs/metrics | jq '.queueDepth'
+
+# List queued jobs
+curl "http://localhost:5000/jobs?status=queued&take=100"
+
+# Restart app to clear stuck processors (if needed)
+# systemctl restart opencopilot  # or appropriate restart command
+```
+
+### Playbook: Dead-Letter Queue Growth
+
+**Symptoms:**
+- `deadLetterCount` increasing
+- Jobs exhausting all retries
+- Persistent failures
+
+**Diagnosis Steps:**
+1. Get all dead-letter jobs: `GET /jobs/dead-letter`
+2. Review attempt history for each job
+3. Identify common error patterns
+4. Check if issue is fixed
+
+**Recovery Steps:**
+```csharp
+// 1. Get dead-letter jobs
+var deadLetterJobs = await statusStore.GetJobsByStatusAsync(
+    BackgroundJobStatus.DeadLetter);
+
+// 2. Review errors and fix root cause
+foreach (var job in deadLetterJobs) {
+    // Check attempt history
+    foreach (var attempt in job.Attempts) {
+        Console.WriteLine($"Attempt {attempt.AttemptNumber}: {attempt.ErrorMessage}");
+    }
+}
+
+// 3. After fixing issue, retry dead-letter jobs
+foreach (var deadJob in deadLetterJobs) {
+    var retryJob = new BackgroundJob {
+        Type = deadJob.JobType,
+        Payload = /* get from original job */,
+        MaxRetries = 5,
+        Priority = 10  // High priority for recovery
+    };
+    await jobDispatcher.DispatchAsync(retryJob);
+}
+
+// 4. Clean up old dead-letter jobs after successful retry
+foreach (var deadJob in deadLetterJobs) {
+    await statusStore.DeleteStatusAsync(deadJob.JobId);
+}
+```
+
+### Playbook: Duplicate Job Detection
+
+**Symptoms:**
+- Jobs with same idempotency key rejected
+- Dispatch returns `false`
+- Warnings in logs about duplicate jobs
+
+**Diagnosis Steps:**
+1. Check if duplicate is intentional or bug
+2. Review idempotency key generation logic
+3. Check if previous job is stuck
+
+**Common Causes and Fixes:**
+- **Retry logic bug**: Fix caller to not retry on success
+- **Stuck in-flight job**: Clear deduplication cache or restart
+- **Race condition**: Add proper synchronization in caller
+
+**Actions:**
+```csharp
+// Check if job with key is in-flight
+var inFlightJobId = await deduplicationService.GetInFlightJobAsync(idempotencyKey);
+if (inFlightJobId != null) {
+    // Check job status
+    var status = await statusStore.GetStatusAsync(inFlightJobId);
+    if (status != null) {
+        Console.WriteLine($"Job {inFlightJobId} is {status.Status}");
+        
+        // If job is stuck (processing > 30 minutes), may need to cancel
+        if (status.Status == BackgroundJobStatus.Processing && 
+            DateTime.UtcNow - status.StartedAt > TimeSpan.FromMinutes(30)) {
+            // Cancel stuck job
+            jobDispatcher.CancelJob(inFlightJobId);
+        }
+    }
+}
+```
+
+### Playbook: Slow Job Processing
+
+**Symptoms:**
+- `averageProcessingDurationMs` > 30 seconds
+- Jobs timing out
+- High CPU/memory usage
+
+**Diagnosis Steps:**
+1. Identify slow job types from metrics
+2. Review job handler code for inefficiencies
+3. Check for external service latency
+4. Monitor resource utilization
+
+**Optimization Steps:**
+- Add caching for frequently accessed data
+- Implement pagination for large data processing
+- Add timeouts to external service calls
+- Consider breaking large jobs into smaller chunks
+- Use async/await properly to avoid blocking
+
+**Monitoring:**
+```csharp
+// Get per-type metrics
+var metrics = await statusStore.GetMetricsAsync();
+foreach (var typeMetric in metrics.MetricsByType.Values) {
+    if (typeMetric.AverageProcessingDurationMs > 30000) {
+        Console.WriteLine(
+            $"Slow job type: {typeMetric.JobType} - " +
+            $"Avg duration: {typeMetric.AverageProcessingDurationMs}ms");
+    }
+}
+```
+
+### Best Practices for Operations
+
+1. **Monitor Continuously**
+   - Set up alerts for high failure rates (> 20%)
+   - Alert on queue depth (> 50 jobs)
+   - Alert on dead-letter growth (> 10 jobs)
+   - Monitor average processing time
+
+2. **Regular Maintenance**
+   - Review dead-letter queue weekly
+   - Clean up old completed jobs monthly
+   - Analyze metrics trends for capacity planning
+   - Update retry policies based on observed patterns
+
+3. **Incident Response**
+   - Keep logs for at least 30 days
+   - Document failure patterns and resolutions
+   - Test recovery procedures regularly
+   - Have runbooks for common issues
+
+4. **Capacity Planning**
+   - Monitor queue depth trends
+   - Track peak vs. average load
+   - Plan for 2x capacity during peak times
+   - Consider auto-scaling based on queue depth
+
+5. **Testing**
+   - Test retry logic with simulated failures
+   - Verify idempotency with duplicate requests
+   - Load test with realistic job volumes
+   - Test dead-letter queue recovery procedures
