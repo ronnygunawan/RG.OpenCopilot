@@ -36,6 +36,28 @@ public sealed class BackgroundJobOptions {
 
     /// <summary>
     /// Retry policy configuration for failed jobs
+    /// If not explicitly set, it will be derived from the deprecated EnableRetry and RetryDelayMilliseconds properties
     /// </summary>
-    public RetryPolicy RetryPolicy { get; init; } = RetryPolicy.Default;
+    public RetryPolicy RetryPolicy {
+        get {
+            // If explicitly set (non-default), use it
+            if (_retryPolicy != null) {
+                return _retryPolicy;
+            }
+
+            // Otherwise, create from deprecated properties for backward compatibility
+            return new RetryPolicy {
+                Enabled = EnableRetry,
+                MaxRetries = 3,
+                BackoffStrategy = RetryBackoffStrategy.Constant,
+                BaseDelayMilliseconds = RetryDelayMilliseconds,
+                MaxDelayMilliseconds = 300000,
+                MinJitterFactor = 0.0,
+                MaxJitterFactor = 0.0 // No jitter for backward compatibility
+            };
+        }
+        init => _retryPolicy = value;
+    }
+
+    private readonly RetryPolicy? _retryPolicy;
 }

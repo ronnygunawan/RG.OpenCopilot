@@ -17,7 +17,8 @@ public interface IRetryPolicyCalculator {
     /// </summary>
     /// <param name="policy">Retry policy configuration</param>
     /// <param name="retryCount">Current retry count</param>
+    /// <param name="maxRetries">Maximum retries allowed for this specific job</param>
     /// <param name="shouldRetry">Whether the job result indicates retry is appropriate</param>
     /// <returns>True if job should be retried, false otherwise</returns>
-    bool ShouldRetry(RetryPolicy policy, int retryCount, bool shouldRetry);
+    bool ShouldRetry(RetryPolicy policy, int retryCount, int maxRetries, bool shouldRetry);
 }

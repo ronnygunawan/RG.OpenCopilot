@@ -158,7 +158,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
 
                 // Use retry policy to determine if job should be retried
                 var retryPolicy = _options.RetryPolicy;
-                var shouldRetry = _retryPolicyCalculator.ShouldRetry(retryPolicy, job.RetryCount, result.ShouldRetry);
+                var shouldRetry = _retryPolicyCalculator.ShouldRetry(retryPolicy, job.RetryCount, job.MaxRetries, result.ShouldRetry);
 
                 if (shouldRetry) {
                     // Calculate retry delay using policy calculator

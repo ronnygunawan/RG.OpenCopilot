@@ -30,7 +30,7 @@ internal sealed class RetryPolicyCalculator : IRetryPolicyCalculator {
     }
 
     /// <inheritdoc />
-    public bool ShouldRetry(RetryPolicy policy, int retryCount, bool shouldRetry) {
+    public bool ShouldRetry(RetryPolicy policy, int retryCount, int maxRetries, bool shouldRetry) {
         if (!policy.Enabled) {
             return false;
         }
@@ -39,7 +39,7 @@ internal sealed class RetryPolicyCalculator : IRetryPolicyCalculator {
             return false;
         }
 
-        return retryCount < policy.MaxRetries;
+        return retryCount < maxRetries;
     }
 
     private int ApplyJitter(int delay, double minJitterFactor, double maxJitterFactor) {
