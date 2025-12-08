@@ -12,6 +12,7 @@ global using RG.OpenCopilot.PRGenerationAgent.CodeGeneration.Services;
 global using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Models;
 global using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
 global using RG.OpenCopilot.PRGenerationAgent.Services.Executor;
+global using RG.OpenCopilot.PRGenerationAgent.Services.FileOperations;
 global using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Authentication;
 global using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Git.Adapters;
 global using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Git.Services;
