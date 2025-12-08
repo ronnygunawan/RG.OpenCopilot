@@ -81,7 +81,9 @@ public partial class Program {
                 return Results.Ok(status);
             }
             catch (Exception ex) {
-                logger.LogError(ex, "Error retrieving job status for {JobId}", jobId);
+                // Sanitize jobId before logging to prevent log forging
+                var jobIdSanitized = jobId.Replace("\r", "").Replace("\n", "");
+                logger.LogError(ex, "Error retrieving job status for {JobId}", jobIdSanitized);
                 return Results.StatusCode(500);
             }
         });
