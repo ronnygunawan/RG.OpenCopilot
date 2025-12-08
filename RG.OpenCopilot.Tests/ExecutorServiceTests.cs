@@ -19,6 +19,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -49,6 +50,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -92,6 +94,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -130,6 +133,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -174,6 +178,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -214,6 +219,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -305,6 +311,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -342,6 +349,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -382,6 +390,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -419,6 +428,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -461,6 +471,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -499,6 +510,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -537,6 +549,7 @@ public class ExecutorServiceTests {
             executor,
             gitHubService,
             taskStore,
+            new TestProgressReporter(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -559,6 +572,92 @@ public class ExecutorServiceTests {
         // Act & Assert
         await Should.ThrowAsync<InvalidOperationException>(
             async () => await service.ExecutePlanAsync(task));
+    }
+
+    [Fact]
+    public async Task ExecutePlanAsync_WhenAllStepsComplete_FinalizesThePR() {
+        // Arrange
+        var tokenProvider = new TestTokenProvider();
+        var cloner = new TestRepositoryCloner();
+        var executor = new TestCommandExecutor();
+        var gitHubService = new TestGitHubService();
+        var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
+        var service = new ExecutorService(
+            tokenProvider,
+            cloner,
+            executor,
+            gitHubService,
+            taskStore,
+            progressReporter,
+            new TestLogger<ExecutorService>());
+
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Plan = new AgentPlan {
+                ProblemSummary = "Test",
+                Steps = [
+                    new PlanStep { Id = "1", Title = "Step 1", Details = "Do something", Done = true }
+                ]
+            }
+        };
+
+        await taskStore.CreateTaskAsync(task);
+
+        // Act
+        await service.ExecutePlanAsync(task);
+
+        // Assert
+        var updatedTask = await taskStore.GetTaskAsync(task.Id);
+        updatedTask.ShouldNotBeNull();
+        updatedTask.Status.ShouldBe(AgentTaskStatus.Completed);
+        progressReporter.PullRequestFinalized.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ExecutePlanAsync_WhenGitStatusFails_DoesNotFinalizePR() {
+        // Arrange
+        var tokenProvider = new TestTokenProvider();
+        var cloner = new TestRepositoryCloner();
+        var executor = new TestCommandExecutorThatFailsGitStatus(); // Executor that fails git status
+        var gitHubService = new TestGitHubService();
+        var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
+        var service = new ExecutorService(
+            tokenProvider,
+            cloner,
+            executor,
+            gitHubService,
+            taskStore,
+            progressReporter,
+            new TestLogger<ExecutorService>());
+
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Plan = new AgentPlan {
+                ProblemSummary = "Test",
+                Steps = [
+                    new PlanStep { Id = "1", Title = "Step 1", Details = "Do something", Done = false }
+                ]
+            }
+        };
+
+        await taskStore.CreateTaskAsync(task);
+
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(
+            async () => await service.ExecutePlanAsync(task));
+
+        // PR should not be finalized because execution failed
+        progressReporter.PullRequestFinalized.ShouldBeFalse();
     }
 
     // Test helper classes
@@ -773,6 +872,39 @@ public class ExecutorServiceTests {
                 Output = "",
                 Error = ""
             });
+        }
+    }
+
+    private class TestProgressReporter : IProgressReporter {
+        public bool PullRequestFinalized { get; private set; }
+
+        public Task ReportStepProgressAsync(AgentTask task, PlanStep step, StepExecutionResult result, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task ReportExecutionSummaryAsync(AgentTask task, List<StepExecutionResult> results, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task ReportIntermediateProgressAsync(AgentTask task, string stage, string message, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateProgressAsync(AgentTask task, int commentId, string updatedContent, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task UpdatePullRequestProgressAsync(AgentTask task, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task ReportCommitSummaryAsync(AgentTask task, string commitSha, string commitMessage, List<FileChange> changes, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task FinalizePullRequestAsync(AgentTask task, int prNumber, CancellationToken cancellationToken = default) {
+            PullRequestFinalized = true;
+            return Task.CompletedTask;
         }
     }
 }

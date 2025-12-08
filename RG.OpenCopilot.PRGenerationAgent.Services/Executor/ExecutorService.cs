@@ -11,6 +11,7 @@ public sealed class ExecutorService : IExecutorService {
     private readonly ICommandExecutor _commandExecutor;
     private readonly IGitHubService _gitHubService;
     private readonly IAgentTaskStore _taskStore;
+    private readonly IProgressReporter _progressReporter;
     private readonly ILogger<ExecutorService> _logger;
 
     public ExecutorService(
@@ -19,12 +20,14 @@ public sealed class ExecutorService : IExecutorService {
         ICommandExecutor commandExecutor,
         IGitHubService gitHubService,
         IAgentTaskStore taskStore,
+        IProgressReporter progressReporter,
         ILogger<ExecutorService> logger) {
         _tokenProvider = tokenProvider;
         _repositoryCloner = repositoryCloner;
         _commandExecutor = commandExecutor;
         _gitHubService = gitHubService;
         _taskStore = taskStore;
+        _progressReporter = progressReporter;
         _logger = logger;
     }
 
@@ -109,6 +112,11 @@ public sealed class ExecutorService : IExecutorService {
                 task.Status = AgentTaskStatus.Completed;
                 task.CompletedAt = DateTime.UtcNow;
                 _logger.LogInformation("Task {TaskId} completed successfully", task.Id);
+                
+                // Finalize the PR: remove [WIP], rewrite description, archive WIP details
+                if (prNumber.HasValue) {
+                    await _progressReporter.FinalizePullRequestAsync(task, prNumber.Value, cancellationToken);
+                }
             }
             else if (failedSteps.Any()) {
                 task.Status = AgentTaskStatus.Failed;

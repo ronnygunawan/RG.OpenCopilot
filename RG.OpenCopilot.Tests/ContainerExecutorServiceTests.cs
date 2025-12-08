@@ -776,6 +776,7 @@ public class ContainerExecutorServiceTests {
     private class TestProgressReporter : IProgressReporter {
         public bool ProgressUpdated { get; private set; }
         public bool CommitSummaryReported { get; private set; }
+        public bool PullRequestFinalized { get; private set; }
 
         public Task ReportStepProgressAsync(AgentTask task, PlanStep step, StepExecutionResult result, int prNumber, CancellationToken cancellationToken = default) {
             return Task.CompletedTask;
@@ -800,6 +801,11 @@ public class ContainerExecutorServiceTests {
 
         public Task ReportCommitSummaryAsync(AgentTask task, string commitSha, string commitMessage, List<FileChange> changes, int prNumber, CancellationToken cancellationToken = default) {
             CommitSummaryReported = true;
+            return Task.CompletedTask;
+        }
+
+        public Task FinalizePullRequestAsync(AgentTask task, int prNumber, CancellationToken cancellationToken = default) {
+            PullRequestFinalized = true;
             return Task.CompletedTask;
         }
     }
