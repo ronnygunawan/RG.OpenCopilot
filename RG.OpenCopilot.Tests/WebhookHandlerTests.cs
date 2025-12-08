@@ -261,5 +261,43 @@ public class WebhookHandlerTests {
         public Task DeleteStatusAsync(string jobId, CancellationToken cancellationToken = default) {
             return Task.CompletedTask;
         }
+
+        public Task<List<BackgroundJobStatusInfo>> GetJobsByStatusAsync(
+            BackgroundJobStatus status,
+            int skip = 0,
+            int take = 100,
+            CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<BackgroundJobStatusInfo>());
+        }
+
+        public Task<List<BackgroundJobStatusInfo>> GetJobsByTypeAsync(
+            string jobType,
+            int skip = 0,
+            int take = 100,
+            CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<BackgroundJobStatusInfo>());
+        }
+
+        public Task<List<BackgroundJobStatusInfo>> GetJobsBySourceAsync(
+            string source,
+            int skip = 0,
+            int take = 100,
+            CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<BackgroundJobStatusInfo>());
+        }
+
+        public Task<List<BackgroundJobStatusInfo>> GetJobsAsync(
+            BackgroundJobStatus? status = null,
+            string? jobType = null,
+            string? source = null,
+            int skip = 0,
+            int take = 100,
+            CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<BackgroundJobStatusInfo>());
+        }
+
+        public Task<JobMetrics> GetMetricsAsync(CancellationToken cancellationToken = default) {
+            return Task.FromResult(new JobMetrics());
+        }
     }
 }

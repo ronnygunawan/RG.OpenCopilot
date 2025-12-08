@@ -378,3 +378,276 @@ internal sealed class ExecutePlanJobHandler : IJobHandler {
     }
 }
 ```
+
+## Job Status Tracking and Monitoring
+
+The RG.OpenCopilot background job system includes comprehensive status tracking and monitoring capabilities to help you understand job execution, identify bottlenecks, and troubleshoot failures.
+
+### Job Lifecycle Statuses
+
+Jobs transition through the following statuses during their lifecycle:
+
+- **Queued**: Job is in the queue waiting to be processed
+- **Processing**: Job is currently being executed
+- **Completed**: Job finished successfully
+- **Failed**: Job failed and will not be retried (or is not configured for retry)
+- **Cancelled**: Job was cancelled during execution
+- **Retried**: Job failed but will be retried
+- **DeadLetter**: Job exceeded maximum retry attempts and moved to dead-letter queue
+
+### Status Information
+
+Each job's status includes detailed tracking information:
+
+```csharp
+public sealed class BackgroundJobStatusInfo {
+    public string JobId { get; init; }              // Unique job identifier
+    public string JobType { get; init; }            // Type of job (e.g., "GeneratePlan")
+    public BackgroundJobStatus Status { get; init; } // Current status
+    
+    // Timestamps
+    public DateTime CreatedAt { get; init; }        // When job was created
+    public DateTime? StartedAt { get; init; }       // When processing started
+    public DateTime? CompletedAt { get; init; }     // When job completed
+    
+    // Retry information
+    public int RetryCount { get; init; }            // Current retry attempt
+    public int MaxRetries { get; init; }            // Maximum retry attempts
+    public DateTime? LastRetryAt { get; init; }     // When last retry occurred
+    
+    // Correlation tracking
+    public string Source { get; init; }             // Source that triggered job
+    public string? ParentJobId { get; init; }       // Parent job if spawned
+    public string? CorrelationId { get; init; }     // Correlation ID for tracking
+    
+    // Performance metrics
+    public long? ProcessingDurationMs { get; init; } // Processing duration
+    public long? QueueWaitTimeMs { get; init; }      // Time spent in queue
+    
+    // Error handling
+    public string? ErrorMessage { get; init; }       // Error message if failed
+    public Dictionary<string, string> Metadata { get; init; } // Additional metadata
+    public string? ResultData { get; init; }         // Job result data (JSON)
+}
+```
+
+### Monitoring API Endpoints
+
+The system exposes REST API endpoints for monitoring job status:
+
+#### Get Job Status
+
+Get status of a specific job:
+
+```http
+GET /jobs/{jobId}/status
+```
+
+Response:
+```json
+{
+  "jobId": "abc123",
+  "jobType": "GeneratePlan",
+  "status": "Completed",
+  "createdAt": "2025-12-08T12:00:00Z",
+  "startedAt": "2025-12-08T12:00:05Z",
+  "completedAt": "2025-12-08T12:00:30Z",
+  "processingDurationMs": 25000,
+  "queueWaitTimeMs": 5000,
+  "source": "Webhook",
+  "metadata": {
+    "TaskId": "owner/repo/issues/1",
+    "WebhookId": "webhook-123"
+  }
+}
+```
+
+#### List Jobs with Filtering
+
+List jobs with optional filters:
+
+```http
+GET /jobs?status=failed&type=GeneratePlan&source=Webhook&skip=0&take=20
+```
+
+Query Parameters:
+- `status`: Filter by job status (Queued, Processing, Completed, Failed, Cancelled, Retried, DeadLetter)
+- `type`: Filter by job type (e.g., "GeneratePlan", "ExecutePlan")
+- `source`: Filter by job source (e.g., "Webhook", "Manual")
+- `skip`: Number of jobs to skip for pagination (default: 0)
+- `take`: Number of jobs to return (default: 100, max: 100)
+
+Response:
+```json
+{
+  "jobs": [
+    {
+      "jobId": "abc123",
+      "jobType": "GeneratePlan",
+      "status": "Failed",
+      ...
+    }
+  ],
+  "count": 5,
+  "skip": 0,
+  "take": 20
+}
+```
+
+#### Get Job Metrics
+
+Get aggregated metrics for all jobs:
+
+```http
+GET /jobs/metrics
+```
+
+Response:
+```json
+{
+  "totalJobs": 100,
+  "queueDepth": 5,
+  "processingCount": 2,
+  "completedCount": 80,
+  "failedCount": 10,
+  "cancelledCount": 1,
+  "deadLetterCount": 2,
+  "averageProcessingDurationMs": 15000.0,
+  "averageQueueWaitTimeMs": 2500.0,
+  "failureRate": 0.10,
+  "metricsByType": {
+    "GeneratePlan": {
+      "jobType": "GeneratePlan",
+      "totalCount": 50,
+      "successCount": 45,
+      "failureCount": 5,
+      "averageProcessingDurationMs": 12000.0,
+      "failureRate": 0.10
+    },
+    "ExecutePlan": {
+      "jobType": "ExecutePlan",
+      "totalCount": 50,
+      "successCount": 35,
+      "failureCount": 5,
+      "averageProcessingDurationMs": 18000.0,
+      "failureRate": 0.10
+    }
+  }
+}
+```
+
+#### Get Dead-Letter Queue
+
+Get jobs in the dead-letter queue (jobs that exceeded max retries):
+
+```http
+GET /jobs/dead-letter?skip=0&take=20
+```
+
+Response:
+```json
+{
+  "jobs": [
+    {
+      "jobId": "abc123",
+      "jobType": "GeneratePlan",
+      "status": "DeadLetter",
+      "retryCount": 3,
+      "maxRetries": 3,
+      "errorMessage": "Failed to generate plan after 3 retries",
+      ...
+    }
+  ],
+  "count": 2,
+  "skip": 0,
+  "take": 20
+}
+```
+
+### Programmatic Access
+
+Access job status programmatically using `IJobStatusStore`:
+
+```csharp
+public class MyService {
+    private readonly IJobStatusStore _statusStore;
+
+    public MyService(IJobStatusStore statusStore) {
+        _statusStore = statusStore;
+    }
+
+    public async Task<BackgroundJobStatusInfo?> GetJobStatusAsync(string jobId) {
+        return await _statusStore.GetStatusAsync(jobId);
+    }
+
+    public async Task<List<BackgroundJobStatusInfo>> GetFailedJobsAsync() {
+        return await _statusStore.GetJobsByStatusAsync(BackgroundJobStatus.Failed);
+    }
+
+    public async Task<JobMetrics> GetMetricsAsync() {
+        return await _statusStore.GetMetricsAsync();
+    }
+}
+```
+
+### Monitoring Best Practices
+
+1. **Track Dead-Letter Queue**: Monitor `/jobs/dead-letter` endpoint regularly to identify jobs that are consistently failing
+2. **Set Up Alerts**:
+   - Alert when `deadLetterCount` exceeds a threshold
+   - Alert when `failureRate` exceeds a threshold (e.g., >20%)
+   - Alert when `averageQueueWaitTimeMs` is too high (indicates queue backlog)
+   - Alert when `queueDepth` exceeds capacity
+3. **Monitor Performance Metrics**:
+   - Track `averageProcessingDurationMs` to identify slow jobs
+   - Track `averageQueueWaitTimeMs` to identify queue bottlenecks
+   - Use `metricsByType` to identify problematic job types
+4. **Use Correlation IDs**: Set correlation IDs on related jobs for end-to-end tracking
+5. **Set Source Metadata**: Always set the `Source` metadata to track job origins
+
+### Example Monitoring Dashboard Query
+
+Example query to check system health:
+
+```csharp
+var metrics = await statusStore.GetMetricsAsync();
+
+// Check for high failure rate
+if (metrics.FailureRate > 0.2) {
+    logger.LogWarning("High failure rate detected: {FailureRate:P}", metrics.FailureRate);
+}
+
+// Check for queue backlog
+if (metrics.QueueDepth > 50) {
+    logger.LogWarning("Queue backlog detected: {QueueDepth} jobs queued", metrics.QueueDepth);
+}
+
+// Check for dead-letter queue growth
+if (metrics.DeadLetterCount > 10) {
+    logger.LogError("Dead-letter queue growing: {DeadLetterCount} jobs failed permanently", 
+        metrics.DeadLetterCount);
+}
+
+// Check for slow processing
+if (metrics.AverageProcessingDurationMs > 30000) {
+    logger.LogWarning("Average processing time is high: {Duration}ms", 
+        metrics.AverageProcessingDurationMs);
+}
+```
+
+### State Transition Logging
+
+The job processor automatically logs all state transitions:
+
+```
+Information: Job abc123 of type GeneratePlan transitioned to Queued
+Information: Job abc123 of type GeneratePlan transitioned to Processing (waited 2500ms in queue)
+Information: Job abc123 completed successfully (processing took 15000ms)
+
+Warning: Job def456 failed: Connection timeout
+Information: Job def456 transitioned to Retried (attempt 1/3)
+
+Error: Job ghi789 moved to DeadLetter queue after 3 retries
+```
+
+These logs can be integrated with centralized logging systems (e.g., ELK, Application Insights) for monitoring and alerting.
