@@ -41,4 +41,23 @@ public interface IProgressReporter {
         int commentId,
         string updatedContent,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates PR description to reflect completed steps
+    /// </summary>
+    Task UpdatePullRequestProgressAsync(
+        AgentTask task,
+        int prNumber,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Posts a commit summary comment to the PR
+    /// </summary>
+    Task ReportCommitSummaryAsync(
+        AgentTask task,
+        string commitSha,
+        string commitMessage,
+        List<FileChange> changes,
+        int prNumber,
+        CancellationToken cancellationToken = default);
 }

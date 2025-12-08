@@ -12,6 +12,7 @@ public sealed class ContainerExecutorService : IExecutorService {
     private readonly IContainerManager _containerManager;
     private readonly IGitHubService _gitHubService;
     private readonly IAgentTaskStore _taskStore;
+    private readonly IProgressReporter _progressReporter;
     private readonly ILogger<ContainerExecutorService> _logger;
 
     public ContainerExecutorService(
@@ -19,11 +20,13 @@ public sealed class ContainerExecutorService : IExecutorService {
         IContainerManager containerManager,
         IGitHubService gitHubService,
         IAgentTaskStore taskStore,
+        IProgressReporter progressReporter,
         ILogger<ContainerExecutorService> logger) {
         _tokenProvider = tokenProvider;
         _containerManager = containerManager;
         _gitHubService = gitHubService;
         _taskStore = taskStore;
+        _progressReporter = progressReporter;
         _logger = logger;
     }
 
@@ -34,6 +37,7 @@ public sealed class ContainerExecutorService : IExecutorService {
 
         _logger.LogInformation("Starting container-based execution of task {TaskId}", task.Id);
         task.Status = AgentTaskStatus.Executing;
+        task.StartedAt = DateTime.UtcNow;
         await _taskStore.UpdateTaskAsync(task, cancellationToken);
 
         string? containerId = null;
@@ -67,6 +71,13 @@ public sealed class ContainerExecutorService : IExecutorService {
             var completedSteps = new List<string>();
             var failedSteps = new List<string>();
 
+            // Get PR number for progress updates
+            var prNumber = await _gitHubService.GetPullRequestNumberForBranchAsync(
+                task.RepositoryOwner,
+                task.RepositoryName,
+                branchName,
+                cancellationToken);
+
             foreach (var step in task.Plan.Steps.Where(s => !s.Done)) {
                 _logger.LogInformation("Executing step: {StepTitle}", step.Title);
 
@@ -78,6 +89,14 @@ public sealed class ContainerExecutorService : IExecutorService {
                     completedSteps.Add(step.Title);
 
                     await _taskStore.UpdateTaskAsync(task, cancellationToken);
+
+                    // Update PR description to check off completed step
+                    if (prNumber.HasValue) {
+                        await _progressReporter.UpdatePullRequestProgressAsync(
+                            task,
+                            prNumber.Value,
+                            cancellationToken);
+                    }
                 }
                 catch (Exception ex) {
                     _logger.LogError(ex, "Failed to execute step: {StepTitle}", step.Title);
@@ -101,15 +120,16 @@ public sealed class ContainerExecutorService : IExecutorService {
                     branchName,
                     token,
                     cancellationToken);
+
+                // TODO: Get actual file changes from container and post commit summary
+                // This requires:
+                // 1. Track commit SHA returned from CommitAndPushAsync
+                // 2. Extract file changes from git diff or container file tracking
+                // 3. Call: await _progressReporter.ReportCommitSummaryAsync(task, commitSha, commitMessage, changes, prNumber.Value, cancellationToken)
+                // See issue: [Track commit changes for summary reporting]
             }
 
             // Post progress comment to PR
-            var prNumber = await _gitHubService.GetPullRequestNumberForBranchAsync(
-                task.RepositoryOwner,
-                task.RepositoryName,
-                branchName,
-                cancellationToken);
-
             if (prNumber.HasValue) {
                 var progressComment = FormatProgressComment(completedSteps, failedSteps);
                 await _gitHubService.PostPullRequestCommentAsync(
@@ -123,10 +143,12 @@ public sealed class ContainerExecutorService : IExecutorService {
             // Update task status
             if (task.Plan.Steps.All(s => s.Done)) {
                 task.Status = AgentTaskStatus.Completed;
+                task.CompletedAt = DateTime.UtcNow;
                 _logger.LogInformation("Task {TaskId} completed successfully", task.Id);
             }
             else if (failedSteps.Any()) {
                 task.Status = AgentTaskStatus.Failed;
+                task.CompletedAt = DateTime.UtcNow;
                 _logger.LogWarning("Task {TaskId} failed with {FailedCount} failed steps", task.Id, failedSteps.Count);
             }
 
@@ -135,6 +157,7 @@ public sealed class ContainerExecutorService : IExecutorService {
         catch (Exception ex) {
             _logger.LogError(ex, "Error executing task {TaskId}", task.Id);
             task.Status = AgentTaskStatus.Failed;
+            task.CompletedAt = DateTime.UtcNow;
             await _taskStore.UpdateTaskAsync(task, cancellationToken);
             throw;
         }

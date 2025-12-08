@@ -557,6 +557,264 @@ public class ProgressReporterTests {
         }
     }
 
+    [Fact]
+    public async Task UpdatePullRequestProgressAsync_UpdatesCheckedOffSteps() {
+        // Arrange
+        var mockGitHubService = new Mock<IGitHubService>();
+        var logger = new TestLogger<ProgressReporter>();
+        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+
+        var task = new AgentTask {
+            Id = "task-1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 123,
+            Plan = new AgentPlan {
+                Steps = [
+                    new PlanStep { Id = "1", Title = "Step 1", Details = "First step", Done = true },
+                    new PlanStep { Id = "2", Title = "Step 2", Details = "Second step", Done = false }
+                ]
+            }
+        };
+
+        var existingPrBody = """
+            ## Plan
+            
+            **Problem Summary:** Test problem
+            
+            ### Steps
+            
+            - [ ] **Step 1** - First step
+            - [ ] **Step 2** - Second step
+            
+            ### Constraints
+            
+            - Keep it simple
+            
+            ---
+            
+            _This PR was automatically created by RG.OpenCopilot._
+            """;
+
+        mockGitHubService.Setup(s => s.GetPullRequestAsync("owner", "repo", 456, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PullRequestInfo {
+                Number = 456,
+                HeadRef = "test-branch",
+                Title = "Test PR",
+                Body = existingPrBody
+            });
+
+        string? capturedBody = null;
+        mockGitHubService.Setup(s => s.UpdatePullRequestDescriptionAsync(
+                "owner",
+                "repo",
+                456,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, string, int, string, string, CancellationToken>((_, _, _, _, body, _) => {
+                capturedBody = body;
+            })
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await reporter.UpdatePullRequestProgressAsync(task, prNumber: 456);
+
+        // Assert
+        mockGitHubService.Verify(s => s.UpdatePullRequestDescriptionAsync(
+            "owner",
+            "repo",
+            456,
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), times: Times.Once);
+
+        capturedBody.ShouldNotBeNull();
+        capturedBody.ShouldContain("- [x] **Step 1**");
+        capturedBody.ShouldContain("- [ ] **Step 2**");
+    }
+
+    [Fact]
+    public async Task UpdatePullRequestProgressAsync_WithNoPlan_LogsWarning() {
+        // Arrange
+        var mockGitHubService = new Mock<IGitHubService>();
+        var logger = new TestLogger<ProgressReporter>();
+        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+
+        var task = new AgentTask {
+            Id = "task-1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 123,
+            Plan = null
+        };
+
+        // Act
+        await reporter.UpdatePullRequestProgressAsync(task, prNumber: 456);
+
+        // Assert
+        mockGitHubService.Verify(s => s.GetPullRequestAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<int>(),
+            It.IsAny<CancellationToken>()), times: Times.Never);
+    }
+
+    [Fact]
+    public async Task ReportCommitSummaryAsync_PostsFormattedComment() {
+        // Arrange
+        var mockGitHubService = new Mock<IGitHubService>();
+        var logger = new TestLogger<ProgressReporter>();
+        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+
+        var task = new AgentTask {
+            Id = "task-1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 123
+        };
+
+        var changes = new List<FileChange> {
+            new FileChange { Type = ChangeType.Created, Path = "src/NewFile.cs" },
+            new FileChange { Type = ChangeType.Modified, Path = "src/ExistingFile.cs" },
+            new FileChange { Type = ChangeType.Deleted, Path = "src/OldFile.cs" }
+        };
+
+        string? capturedComment = null;
+        mockGitHubService.Setup(s => s.PostPullRequestCommentAsync(
+                "owner",
+                "repo",
+                456,
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, string, int, string, CancellationToken>((_, _, _, comment, _) => {
+                capturedComment = comment;
+            })
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await reporter.ReportCommitSummaryAsync(
+            task,
+            commitSha: "abc123def456",
+            commitMessage: "Add authentication feature",
+            changes: changes,
+            prNumber: 456);
+
+        // Assert
+        mockGitHubService.Verify(s => s.PostPullRequestCommentAsync(
+            "owner",
+            "repo",
+            456,
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), times: Times.Once);
+
+        capturedComment.ShouldNotBeNull();
+        capturedComment.ShouldContain("📦 Commit Summary");
+        capturedComment.ShouldContain("abc123d");
+        capturedComment.ShouldContain("Add authentication feature");
+        capturedComment.ShouldContain("✨ `src/NewFile.cs`");
+        capturedComment.ShouldContain("✏️ `src/ExistingFile.cs`");
+        capturedComment.ShouldContain("🗑️ `src/OldFile.cs`");
+        capturedComment.ShouldContain("Total:** 3 file(s) changed");
+    }
+
+    [Fact]
+    public async Task ReportCommitSummaryAsync_WithNoChanges_ShowsNoChangesMessage() {
+        // Arrange
+        var mockGitHubService = new Mock<IGitHubService>();
+        var logger = new TestLogger<ProgressReporter>();
+        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+
+        var task = new AgentTask {
+            Id = "task-1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 123
+        };
+
+        string? capturedComment = null;
+        mockGitHubService.Setup(s => s.PostPullRequestCommentAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, string, int, string, CancellationToken>((_, _, _, comment, _) => {
+                capturedComment = comment;
+            })
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await reporter.ReportCommitSummaryAsync(
+            task,
+            commitSha: "abc123def456",
+            commitMessage: "Empty commit",
+            changes: [],
+            prNumber: 456);
+
+        // Assert
+        capturedComment.ShouldNotBeNull();
+        capturedComment.ShouldContain("No file changes in this commit");
+    }
+
+    [Fact]
+    public async Task ReportStepProgressAsync_WithTimingInfo_IncludesElapsedAndEstimatedTime() {
+        // Arrange
+        var mockGitHubService = new Mock<IGitHubService>();
+        var logger = new TestLogger<ProgressReporter>();
+        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+
+        var task = new AgentTask {
+            Id = "task-1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 123,
+            StartedAt = DateTime.UtcNow.AddMinutes(-10),
+            Plan = new AgentPlan {
+                Steps = [
+                    new PlanStep { Id = "1", Title = "Step 1", Done = true },
+                    new PlanStep { Id = "2", Title = "Step 2", Done = true },
+                    new PlanStep { Id = "3", Title = "Step 3", Done = false },
+                    new PlanStep { Id = "4", Title = "Step 4", Done = false }
+                ]
+            }
+        };
+
+        var step = new PlanStep {
+            Id = "step-2",
+            Title = "Step 2"
+        };
+
+        var result = StepExecutionResult.CreateSuccess(
+            changes: [],
+            buildOutput: new BuildResult { Success = true, Attempts = 1, Duration = TimeSpan.FromSeconds(5) },
+            testResults: new TestValidationResult { AllPassed = true, TotalTests = 0, PassedTests = 0, Duration = TimeSpan.Zero },
+            actionPlan: new StepActionPlan(),
+            duration: TimeSpan.FromMinutes(2),
+            metrics: new ExecutionMetrics());
+
+        string? capturedComment = null;
+        mockGitHubService.Setup(s => s.PostPullRequestCommentAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, string, int, string, CancellationToken>((_, _, _, comment, _) => {
+                capturedComment = comment;
+            })
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await reporter.ReportStepProgressAsync(task, step, result, prNumber: 456);
+
+        // Assert
+        capturedComment.ShouldNotBeNull();
+        capturedComment.ShouldContain("Elapsed Time:");
+        capturedComment.ShouldContain("Estimated Completion:");
+        capturedComment.ShouldContain("Progress:** 2/4 steps completed");
+    }
+
     private class TestLogger<T> : ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => false;

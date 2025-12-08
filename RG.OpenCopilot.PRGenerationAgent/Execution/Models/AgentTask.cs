@@ -8,4 +8,7 @@ public sealed class AgentTask {
     public int IssueNumber { get; init; }
     public AgentPlan? Plan { get; set; }
     public AgentTaskStatus Status { get; set; } = AgentTaskStatus.PendingPlanning;
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+    public DateTime? StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
 }

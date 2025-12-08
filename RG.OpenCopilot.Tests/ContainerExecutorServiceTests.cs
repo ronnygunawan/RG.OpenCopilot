@@ -12,11 +12,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManager();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -40,11 +42,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManager();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -76,11 +80,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManager();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -117,11 +123,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManager();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -155,11 +163,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManager();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -193,11 +203,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManagerThatFailsCreation();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -231,11 +243,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManager();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -266,11 +280,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManager();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -304,11 +320,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManagerThatFailsExecution();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -342,11 +360,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManagerThatFailsCommitAndPush();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -381,11 +401,13 @@ public class ContainerExecutorServiceTests {
         var containerManager = new TestContainerManager();
         var gitHubService = new TestGitHubService();
         var taskStore = new InMemoryAgentTaskStore();
+        var progressReporter = new TestProgressReporter();
         var service = new ContainerExecutorService(
             tokenProvider,
             containerManager,
             gitHubService,
             taskStore,
+            progressReporter,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -524,6 +546,15 @@ public class ContainerExecutorServiceTests {
         public Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default) {
             CommentPosted = true;
             return Task.CompletedTask;
+        }
+
+        public Task<PullRequestInfo> GetPullRequestAsync(string owner, string repo, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new PullRequestInfo {
+                Number = prNumber,
+                HeadRef = "test-branch",
+                Title = "Test PR",
+                Body = "Test body"
+            });
         }
     }
 
@@ -739,6 +770,37 @@ public class ContainerExecutorServiceTests {
                 CargoAvailable = true,
                 MissingTools = []
             });
+        }
+    }
+
+    private class TestProgressReporter : IProgressReporter {
+        public bool ProgressUpdated { get; private set; }
+        public bool CommitSummaryReported { get; private set; }
+
+        public Task ReportStepProgressAsync(AgentTask task, PlanStep step, StepExecutionResult result, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task ReportExecutionSummaryAsync(AgentTask task, List<StepExecutionResult> results, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task ReportIntermediateProgressAsync(AgentTask task, string stage, string message, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateProgressAsync(AgentTask task, int commentId, string updatedContent, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task UpdatePullRequestProgressAsync(AgentTask task, int prNumber, CancellationToken cancellationToken = default) {
+            ProgressUpdated = true;
+            return Task.CompletedTask;
+        }
+
+        public Task ReportCommitSummaryAsync(AgentTask task, string commitSha, string commitMessage, List<FileChange> changes, int prNumber, CancellationToken cancellationToken = default) {
+            CommitSummaryReported = true;
+            return Task.CompletedTask;
         }
     }
 }

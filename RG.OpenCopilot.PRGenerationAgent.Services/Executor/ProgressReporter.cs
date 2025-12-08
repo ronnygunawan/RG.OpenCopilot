@@ -110,8 +110,29 @@ internal sealed class ProgressReporter : IProgressReporter {
         sb.AppendLine($"### {statusIcon} Status: {statusText}");
         sb.AppendLine();
         
-        // Duration
+        // Duration and timing info
         sb.AppendLine($"**Duration:** {FormatDuration(result.Duration)}");
+        
+        if (task.StartedAt.HasValue) {
+            var elapsed = DateTime.UtcNow - task.StartedAt.Value;
+            sb.AppendLine($"**Elapsed Time:** {FormatDuration(elapsed)}");
+            
+            // Calculate estimated completion
+            if (task.Plan != null) {
+                var totalSteps = task.Plan.Steps.Count;
+                var completedSteps = task.Plan.Steps.Count(s => s.Done);
+                
+                if (completedSteps > 0 && completedSteps < totalSteps) {
+                    var avgTimePerStep = elapsed.TotalSeconds / completedSteps;
+                    var remainingSteps = totalSteps - completedSteps;
+                    var estimatedRemaining = TimeSpan.FromSeconds(avgTimePerStep * remainingSteps);
+                    
+                    sb.AppendLine($"**Estimated Completion:** {FormatDuration(estimatedRemaining)} remaining");
+                    sb.AppendLine($"**Progress:** {completedSteps}/{totalSteps} steps completed");
+                }
+            }
+        }
+        
         sb.AppendLine();
         
         // Error details if failed
@@ -302,5 +323,212 @@ internal sealed class ProgressReporter : IProgressReporter {
         }
         
         return $"{duration.Hours}h {duration.Minutes}m {duration.Seconds}s";
+    }
+
+    public async Task UpdatePullRequestProgressAsync(
+        AgentTask task,
+        int prNumber,
+        CancellationToken cancellationToken = default) {
+        
+        if (task.Plan == null) {
+            _logger.LogWarning("Cannot update PR progress for task {TaskId} - no plan available", task.Id);
+            return;
+        }
+
+        // Get current PR to preserve its content
+        var pr = await _gitHubService.GetPullRequestAsync(
+            task.RepositoryOwner,
+            task.RepositoryName,
+            prNumber,
+            cancellationToken);
+
+        // Update the PR body with checked-off steps
+        var updatedBody = UpdatePrBodyWithProgress(pr.Body, task.Plan);
+
+        await _gitHubService.UpdatePullRequestDescriptionAsync(
+            owner: task.RepositoryOwner,
+            repo: task.RepositoryName,
+            prNumber: prNumber,
+            title: pr.Title,
+            body: updatedBody,
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation(
+            "Updated PR #{PrNumber} description with progress for task {TaskId}",
+            prNumber,
+            task.Id);
+    }
+
+    public async Task ReportCommitSummaryAsync(
+        AgentTask task,
+        string commitSha,
+        string commitMessage,
+        List<FileChange> changes,
+        int prNumber,
+        CancellationToken cancellationToken = default) {
+        
+        var comment = FormatCommitSummary(commitSha, commitMessage, changes);
+        
+        await _gitHubService.PostPullRequestCommentAsync(
+            owner: task.RepositoryOwner,
+            repo: task.RepositoryName,
+            prNumber: prNumber,
+            comment: comment,
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation(
+            "Posted commit summary comment for {CommitSha} to PR #{PrNumber}",
+            TruncateCommitSha(commitSha),
+            prNumber);
+    }
+
+    /// <summary>
+    /// Truncates commit SHA to specified length for display
+    /// </summary>
+    private static string TruncateCommitSha(string commitSha, int length = 7) {
+        return commitSha.Length <= length ? commitSha : commitSha[..length];
+    }
+
+    /// <summary>
+    /// Updates PR body to check off completed steps
+    /// </summary>
+    private string UpdatePrBodyWithProgress(string currentBody, AgentPlan plan) {
+        var lines = currentBody.Split('\n');
+        var updatedLines = new List<string>();
+        var inStepsSection = false;
+
+        foreach (var line in lines) {
+            // Detect steps section
+            if (line.TrimStart().StartsWith("### Steps")) {
+                inStepsSection = true;
+                updatedLines.Add(line);
+                continue;
+            }
+
+            // Detect end of steps section
+            if (inStepsSection && (line.TrimStart().StartsWith("### ") || line.TrimStart().StartsWith("## "))) {
+                inStepsSection = false;
+            }
+
+            // Update checkboxes in steps section
+            if (inStepsSection && line.TrimStart().StartsWith("- [ ] ")) {
+                var stepTitle = ExtractStepTitle(line);
+                var isDone = plan.Steps.Any(s => s.Title == stepTitle && s.Done);
+                
+                if (isDone) {
+                    // Check off the box
+                    var updatedLine = line.Replace("- [ ] ", "- [x] ");
+                    updatedLines.Add(updatedLine);
+                } else {
+                    updatedLines.Add(line);
+                }
+            } else {
+                updatedLines.Add(line);
+            }
+        }
+
+        return string.Join('\n', updatedLines);
+    }
+
+    /// <summary>
+    /// Extracts the step title from a checklist line
+    /// </summary>
+    private string ExtractStepTitle(string checklistLine) {
+        // Remove checkbox and extract title (between ** markers)
+        var cleaned = checklistLine.Replace("- [ ] ", "").Replace("- [x] ", "").Trim();
+        
+        // Extract text between ** markers
+        var startIdx = cleaned.IndexOf("**");
+        if (startIdx == -1) return cleaned;
+        
+        var endIdx = cleaned.IndexOf("**", startIdx + 2);
+        if (endIdx == -1) return cleaned;
+        
+        var title = cleaned.Substring(startIdx + 2, endIdx - startIdx - 2);
+        
+        // Unescape markdown
+        return UnescapeMarkdown(title);
+    }
+
+    /// <summary>
+    /// Unescapes markdown characters
+    /// </summary>
+    private string UnescapeMarkdown(string text) {
+        if (string.IsNullOrEmpty(text)) {
+            return text;
+        }
+
+        return text
+            .Replace("\\\\", "\\")
+            .Replace("\\`", "`")
+            .Replace("\\*", "*")
+            .Replace("\\_", "_")
+            .Replace("\\{", "{")
+            .Replace("\\}", "}")
+            .Replace("\\[", "[")
+            .Replace("\\]", "]")
+            .Replace("\\(", "(")
+            .Replace("\\)", ")")
+            .Replace("\\#", "#")
+            .Replace("\\+", "+")
+            .Replace("\\-", "-")
+            .Replace("\\.", ".")
+            .Replace("\\!", "!");
+    }
+
+    /// <summary>
+    /// Formats a commit summary comment
+    /// </summary>
+    private string FormatCommitSummary(string commitSha, string commitMessage, List<FileChange> changes) {
+        var sb = new StringBuilder();
+        
+        sb.AppendLine($"## 📦 Commit Summary");
+        sb.AppendLine();
+        sb.AppendLine($"**Commit:** `{TruncateCommitSha(commitSha)}`");
+        sb.AppendLine($"**Message:** {commitMessage}");
+        sb.AppendLine();
+        
+        if (changes.Count > 0) {
+            sb.AppendLine("### 📂 Files Changed");
+            
+            var created = changes.Where(c => c.Type == ChangeType.Created).ToList();
+            var modified = changes.Where(c => c.Type == ChangeType.Modified).ToList();
+            var deleted = changes.Where(c => c.Type == ChangeType.Deleted).ToList();
+            
+            if (created.Count > 0) {
+                sb.AppendLine();
+                sb.AppendLine($"**Created ({created.Count}):**");
+                foreach (var change in created) {
+                    sb.AppendLine($"- ✨ `{change.Path}`");
+                }
+            }
+            
+            if (modified.Count > 0) {
+                sb.AppendLine();
+                sb.AppendLine($"**Modified ({modified.Count}):**");
+                foreach (var change in modified) {
+                    sb.AppendLine($"- ✏️ `{change.Path}`");
+                }
+            }
+            
+            if (deleted.Count > 0) {
+                sb.AppendLine();
+                sb.AppendLine($"**Deleted ({deleted.Count}):**");
+                foreach (var change in deleted) {
+                    sb.AppendLine($"- 🗑️ `{change.Path}`");
+                }
+            }
+            
+            sb.AppendLine();
+            sb.AppendLine($"**Total:** {changes.Count} file(s) changed");
+        } else {
+            sb.AppendLine("_No file changes in this commit_");
+        }
+        
+        sb.AppendLine();
+        sb.AppendLine("---");
+        sb.AppendLine("_Automated commit summary by RG.OpenCopilot_");
+        
+        return sb.ToString();
     }
 }

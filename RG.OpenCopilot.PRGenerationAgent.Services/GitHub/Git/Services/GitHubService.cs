@@ -9,6 +9,7 @@ public interface IGitHubService {
     Task UpdatePullRequestDescriptionAsync(string owner, string repo, int prNumber, string title, string body, CancellationToken cancellationToken = default);
     Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default);
     Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default);
+    Task<PullRequestInfo> GetPullRequestAsync(string owner, string repo, int prNumber, CancellationToken cancellationToken = default);
 }
 
 public sealed class GitHubService : IGitHubService {
@@ -107,5 +108,11 @@ _The plan and progress will be updated here as the agent works on this issue._";
     public async Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default) {
         await _issueAdapter.CreateCommentAsync(owner, repo, prNumber, comment, cancellationToken);
         _logger.LogInformation("Posted comment to PR #{PrNumber}", prNumber);
+    }
+
+    public async Task<PullRequestInfo> GetPullRequestAsync(string owner, string repo, int prNumber, CancellationToken cancellationToken = default) {
+        var pr = await _pullRequestAdapter.GetAsync(owner, repo, prNumber, cancellationToken);
+        _logger.LogInformation("Retrieved PR #{PrNumber}", prNumber);
+        return pr;
     }
 }
