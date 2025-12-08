@@ -1,6 +1,6 @@
 # RG.OpenCopilot
 
-> **⚠️ WARNING: This project is under active development and is NOT ready for production use. Use at your own risk.**
+> **⚠️ WARNING: This project is under active development, 100% written by LLM, and is NOT ready for production use. Use at your own risk.**
 
 **A GitHub-hosted AI coding agent for automating code changes, test generation, and pull request management.**
 
@@ -70,11 +70,11 @@ This project is actively under development and should **NOT** be used in product
 ┌──────────────────────────────────────────────────────────────┐
 │                 RG.OpenCopilot.GitHubApp                     │
 │                  (ASP.NET Core Minimal API)                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Webhook    │  │   Planner    │  │   Executor   │      │
-│  │   Handler    │─▶│   Service    │─▶│   Service    │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└───────────┬──────────────────────────────────┬──────────────┘
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
+│  │   Webhook    │  │   Planner    │  │   Executor   │        │
+│  │   Handler    │─>│   Service    │─>│   Service    │        │
+│  └──────────────┘  └──────────────┘  └──────────────┘        │
+└───────────┬───────────────────────────────────┬──────────────┘
             │                                   │
             ▼                                   ▼
 ┌───────────────────────┐       ┌──────────────────────────────┐
