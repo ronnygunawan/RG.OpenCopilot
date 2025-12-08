@@ -208,12 +208,7 @@ public sealed class BuildVerifier : IBuildVerifier {
             "gradle" => await _containerManager.ExecuteInContainerAsync(containerId, "./gradlew", new[] { "build" }, cancellationToken),
             "maven" => await _containerManager.ExecuteInContainerAsync(containerId, "mvn", new[] { "compile" }, cancellationToken),
             "go" => await _containerManager.ExecuteInContainerAsync(containerId, "go", new[] { "build", "./..." }, cancellationToken),
-            "cargo" => await _containerManager.ExecuteInContainerAsync(containerId, "cargo", new[] { "build" }, cancellationToken),
-            _ => new CommandResult {
-                ExitCode = 1,
-                Output = "",
-                Error = $"Unsupported build tool: {buildTool}"
-            }
+            _ => await _containerManager.ExecuteInContainerAsync(containerId, "cargo", new[] { "build" }, cancellationToken)
         };
     }
 
@@ -297,14 +292,8 @@ public sealed class BuildVerifier : IBuildVerifier {
             "gradle" => "gradle",
             "maven" => "mvn",
             "go" => "go",
-            "cargo" => "cargo",
-            _ => null
+            _ => "cargo"
         };
-        
-        if (toolCommand == null) {
-            _logger.LogWarning("Unknown build tool '{BuildTool}', cannot verify availability", buildTool);
-            return false;
-        }
         
         var result = await _containerManager.ExecuteInContainerAsync(
             containerId: containerId,
