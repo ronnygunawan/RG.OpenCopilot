@@ -13,6 +13,7 @@ public sealed class WebhookHandler : IWebhookHandler {
     private readonly IGitHubService _gitHubService;
     private readonly IRepositoryAnalyzer _repositoryAnalyzer;
     private readonly IInstructionsLoader _instructionsLoader;
+    private readonly IJobDispatcher _jobDispatcher;
     private readonly ILogger<WebhookHandler> _logger;
 
     public WebhookHandler(
@@ -21,12 +22,14 @@ public sealed class WebhookHandler : IWebhookHandler {
         IGitHubService gitHubService,
         IRepositoryAnalyzer repositoryAnalyzer,
         IInstructionsLoader instructionsLoader,
+        IJobDispatcher jobDispatcher,
         ILogger<WebhookHandler> logger) {
         _taskStore = taskStore;
         _plannerService = plannerService;
         _gitHubService = gitHubService;
         _repositoryAnalyzer = repositoryAnalyzer;
         _instructionsLoader = instructionsLoader;
+        _jobDispatcher = jobDispatcher;
         _logger = logger;
     }
 
@@ -138,6 +141,28 @@ public sealed class WebhookHandler : IWebhookHandler {
                 cancellationToken);
 
             _logger.LogInformation("Updated PR #{PrNumber} with plan for task {TaskId}", prNumber, taskId);
+
+            // Dispatch job to execute the plan in the background
+            var jobPayload = new ExecutePlanJobPayload { TaskId = taskId };
+            var job = new BackgroundJob {
+                Type = ExecutePlanJobHandler.JobTypeName,
+                Payload = JsonSerializer.Serialize(jobPayload),
+                Priority = 0,
+                Metadata = new Dictionary<string, string> {
+                    ["TaskId"] = taskId,
+                    ["RepositoryOwner"] = task.RepositoryOwner,
+                    ["RepositoryName"] = task.RepositoryName,
+                    ["IssueNumber"] = task.IssueNumber.ToString()
+                }
+            };
+
+            var dispatched = await _jobDispatcher.DispatchAsync(job, cancellationToken);
+            if (dispatched) {
+                _logger.LogInformation("Dispatched execution job {JobId} for task {TaskId}", job.Id, taskId);
+            }
+            else {
+                _logger.LogWarning("Failed to dispatch execution job for task {TaskId}", taskId);
+            }
         }
         catch (Exception ex) {
             _logger.LogError(ex, "Error handling issues event for issue #{IssueNumber}", payload.Issue.Number);

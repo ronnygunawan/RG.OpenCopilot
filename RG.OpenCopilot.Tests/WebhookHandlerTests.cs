@@ -13,12 +13,14 @@ public class WebhookHandlerTests {
         var gitHubService = new TestGitHubService();
         var repositoryAnalyzer = new TestRepositoryAnalyzer();
         var instructionsLoader = new TestInstructionsLoader();
+        var jobDispatcher = new TestJobDispatcher();
         var handler = new WebhookHandler(
             taskStore,
             planner,
             gitHubService,
             repositoryAnalyzer,
             instructionsLoader,
+            jobDispatcher,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -44,12 +46,14 @@ public class WebhookHandlerTests {
         var gitHubService = new TestGitHubService();
         var repositoryAnalyzer = new TestRepositoryAnalyzer();
         var instructionsLoader = new TestInstructionsLoader();
+        var jobDispatcher = new TestJobDispatcher();
         var handler = new WebhookHandler(
             taskStore,
             planner,
             gitHubService,
             repositoryAnalyzer,
             instructionsLoader,
+            jobDispatcher,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -77,12 +81,14 @@ public class WebhookHandlerTests {
         var gitHubService = new TestGitHubService();
         var repositoryAnalyzer = new TestRepositoryAnalyzer();
         var instructionsLoader = new TestInstructionsLoader();
+        var jobDispatcher = new TestJobDispatcher();
         var handler = new WebhookHandler(
             taskStore,
             planner,
             gitHubService,
             repositoryAnalyzer,
             instructionsLoader,
+            jobDispatcher,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -115,12 +121,14 @@ public class WebhookHandlerTests {
         var gitHubService = new TestGitHubService();
         var repositoryAnalyzer = new TestRepositoryAnalyzer();
         var instructionsLoader = new TestInstructionsLoader();
+        var jobDispatcher = new TestJobDispatcher();
         var handler = new WebhookHandler(
             taskStore,
             planner,
             gitHubService,
             repositoryAnalyzer,
             instructionsLoader,
+            jobDispatcher,
             new TestLogger<WebhookHandler>());
 
         // Create an existing task
@@ -159,12 +167,14 @@ public class WebhookHandlerTests {
         var gitHubService = new TestGitHubService();
         var repositoryAnalyzer = new TestRepositoryAnalyzer();
         var instructionsLoader = new TestInstructionsLoader();
+        var jobDispatcher = new TestJobDispatcher();
         var handler = new WebhookHandler(
             taskStore,
             planner,
             gitHubService,
             repositoryAnalyzer,
             instructionsLoader,
+            jobDispatcher,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -191,12 +201,14 @@ public class WebhookHandlerTests {
         var gitHubService = new TestGitHubService();
         var repositoryAnalyzer = new TestRepositoryAnalyzer();
         var instructionsLoader = new TestInstructionsLoader();
+        var jobDispatcher = new TestJobDispatcher();
         var handler = new WebhookHandler(
             taskStore,
             planner,
             gitHubService,
             repositoryAnalyzer,
             instructionsLoader,
+            jobDispatcher,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -274,6 +286,24 @@ public class WebhookHandlerTests {
     private class TestInstructionsLoader : IInstructionsLoader {
         public Task<string?> LoadInstructionsAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default) {
             return Task.FromResult<string?>(null);
+        }
+    }
+
+    private class TestJobDispatcher : IJobDispatcher {
+        public bool JobDispatched { get; private set; }
+        public BackgroundJob? LastDispatchedJob { get; private set; }
+
+        public Task<bool> DispatchAsync(BackgroundJob job, CancellationToken cancellationToken = default) {
+            JobDispatched = true;
+            LastDispatchedJob = job;
+            return Task.FromResult(true);
+        }
+
+        public bool CancelJob(string jobId) {
+            return true;
+        }
+
+        public void RegisterHandler(IJobHandler handler) {
         }
     }
 }
