@@ -197,9 +197,13 @@ internal sealed class DependencyManager : IDependencyManager {
             // Multiple versions of the same package - need to resolve
             var versions = packages.Where(p => p.Version != null).Select(p => p.Version!).Distinct().ToList();
             
-            if (versions.Count <= 1) {
-                // All have same version or no version specified
+            if (versions.Count == 0) {
+                // All have null version
                 resolved.Add(packages[0]);
+            }
+            else if (versions.Count == 1) {
+                // All non-null packages have same version
+                resolved.Add(packages.First(p => p.Version != null));
             }
             else {
                 // Version conflict detected

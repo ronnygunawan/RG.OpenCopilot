@@ -661,7 +661,7 @@ public class DependencyManagerTests {
             
             // Determine pattern from args for find commands
             string? pattern = null;
-            if (command == "sh" && args.Length > 1 && args[1].Contains("sh")) {
+            if (command == "sh" && args.Length > 1 && args[1].Contains("find")) {
                 var findCmd = args[1];
                 var nameIndex = findCmd.IndexOf("-name");
                 if (nameIndex >= 0) {
