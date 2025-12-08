@@ -525,6 +525,15 @@ public class ContainerExecutorServiceTests {
             CommentPosted = true;
             return Task.CompletedTask;
         }
+
+        public Task<PullRequestInfo> GetPullRequestAsync(string owner, string repo, int prNumber, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new PullRequestInfo {
+                Number = prNumber,
+                HeadRef = "test-branch",
+                Title = "Test PR",
+                Body = "Test body"
+            });
+        }
     }
 
     private class TestTokenProviderReturningEmpty : IGitHubAppTokenProvider {

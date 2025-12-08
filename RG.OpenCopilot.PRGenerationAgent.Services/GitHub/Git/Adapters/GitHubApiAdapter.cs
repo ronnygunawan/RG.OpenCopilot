@@ -14,6 +14,8 @@ public sealed class ReferenceInfo {
 public sealed class PullRequestInfo {
     public int Number { get; init; }
     public string HeadRef { get; init; } = "";
+    public string Title { get; init; } = "";
+    public string Body { get; init; } = "";
 }
 
 public sealed class LanguageInfo {
@@ -43,6 +45,7 @@ public interface IGitHubPullRequestAdapter {
     Task<PullRequestInfo> CreateAsync(string owner, string repo, string title, string head, string baseRef, string body, CancellationToken cancellationToken = default);
     Task UpdateAsync(string owner, string repo, int number, string title, string body, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PullRequestInfo>> GetAllForRepositoryAsync(string owner, string repo, CancellationToken cancellationToken = default);
+    Task<PullRequestInfo> GetAsync(string owner, string repo, int number, CancellationToken cancellationToken = default);
 }
 
 public interface IGitHubIssueAdapter {
@@ -106,7 +109,7 @@ public sealed class GitHubPullRequestAdapter : IGitHubPullRequestAdapter {
     public async Task<PullRequestInfo> CreateAsync(string owner, string repo, string title, string head, string baseRef, string body, CancellationToken cancellationToken = default) {
         var newPr = new NewPullRequest(title, head, baseRef) { Body = body };
         var pr = await _client.PullRequest.Create(owner, repo, newPr);
-        return new PullRequestInfo { Number = pr.Number, HeadRef = pr.Head.Ref };
+        return new PullRequestInfo { Number = pr.Number, HeadRef = pr.Head.Ref, Title = pr.Title, Body = pr.Body ?? "" };
     }
 
     public async Task UpdateAsync(string owner, string repo, int number, string title, string body, CancellationToken cancellationToken = default) {
@@ -117,7 +120,12 @@ public sealed class GitHubPullRequestAdapter : IGitHubPullRequestAdapter {
     public async Task<IReadOnlyList<PullRequestInfo>> GetAllForRepositoryAsync(string owner, string repo, CancellationToken cancellationToken = default) {
         var request = new PullRequestRequest { State = ItemStateFilter.All };
         var prs = await _client.PullRequest.GetAllForRepository(owner, repo, request);
-        return prs.Select(pr => new PullRequestInfo { Number = pr.Number, HeadRef = pr.Head.Ref }).ToList();
+        return prs.Select(pr => new PullRequestInfo { Number = pr.Number, HeadRef = pr.Head.Ref, Title = pr.Title, Body = pr.Body ?? "" }).ToList();
+    }
+
+    public async Task<PullRequestInfo> GetAsync(string owner, string repo, int number, CancellationToken cancellationToken = default) {
+        var pr = await _client.PullRequest.Get(owner, repo, number);
+        return new PullRequestInfo { Number = pr.Number, HeadRef = pr.Head.Ref, Title = pr.Title, Body = pr.Body ?? "" };
     }
 }
 

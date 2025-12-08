@@ -34,6 +34,7 @@ public sealed class ContainerExecutorService : IExecutorService {
 
         _logger.LogInformation("Starting container-based execution of task {TaskId}", task.Id);
         task.Status = AgentTaskStatus.Executing;
+        task.StartedAt = DateTime.UtcNow;
         await _taskStore.UpdateTaskAsync(task, cancellationToken);
 
         string? containerId = null;
@@ -123,10 +124,12 @@ public sealed class ContainerExecutorService : IExecutorService {
             // Update task status
             if (task.Plan.Steps.All(s => s.Done)) {
                 task.Status = AgentTaskStatus.Completed;
+                task.CompletedAt = DateTime.UtcNow;
                 _logger.LogInformation("Task {TaskId} completed successfully", task.Id);
             }
             else if (failedSteps.Any()) {
                 task.Status = AgentTaskStatus.Failed;
+                task.CompletedAt = DateTime.UtcNow;
                 _logger.LogWarning("Task {TaskId} failed with {FailedCount} failed steps", task.Id, failedSteps.Count);
             }
 
@@ -135,6 +138,7 @@ public sealed class ContainerExecutorService : IExecutorService {
         catch (Exception ex) {
             _logger.LogError(ex, "Error executing task {TaskId}", task.Id);
             task.Status = AgentTaskStatus.Failed;
+            task.CompletedAt = DateTime.UtcNow;
             await _taskStore.UpdateTaskAsync(task, cancellationToken);
             throw;
         }
