@@ -128,8 +128,13 @@ public static class ServiceCollectionExtensions {
 
         // Register job infrastructure
         services.AddSingleton<IJobQueue>(sp => new ChannelJobQueue(jobOptions));
-        services.AddSingleton<IJobDispatcher, JobDispatcher>();
         services.AddSingleton<IJobStatusStore, InMemoryJobStatusStore>();
+        services.AddSingleton<IJobDispatcher>(sp => {
+            var queue = sp.GetRequiredService<IJobQueue>();
+            var statusStore = sp.GetRequiredService<IJobStatusStore>();
+            var logger = sp.GetRequiredService<ILogger<JobDispatcher>>();
+            return new JobDispatcher(queue, statusStore, logger);
+        });
         
         // Register job handlers - they will be auto-registered when dispatcher is first resolved
         services.AddSingleton<IJobHandler, GeneratePlanJobHandler>();
@@ -146,8 +151,9 @@ public static class ServiceCollectionExtensions {
             }
             
             var queue = sp.GetRequiredService<IJobQueue>();
+            var jobStatusStore = sp.GetRequiredService<IJobStatusStore>();
             var logger = sp.GetRequiredService<ILogger<BackgroundJobProcessor>>();
-            return new BackgroundJobProcessor(queue, dispatcher, jobOptions, logger);
+            return new BackgroundJobProcessor(queue, dispatcher, jobStatusStore, jobOptions, logger);
         });
 
         return services;

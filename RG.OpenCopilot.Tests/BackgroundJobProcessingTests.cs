@@ -105,7 +105,8 @@ public class BackgroundJobProcessingTests {
         var options = new BackgroundJobOptions();
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, logger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, logger);
 
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("TestJob");
@@ -130,7 +131,8 @@ public class BackgroundJobProcessingTests {
         var options = new BackgroundJobOptions();
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, logger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, logger);
 
         var job = new BackgroundJob {
             Type = "UnregisteredJob",
@@ -151,7 +153,8 @@ public class BackgroundJobProcessingTests {
         var options = new BackgroundJobOptions();
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, logger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, logger);
 
         // Act
         var cancelled = dispatcher.CancelJob("non-existent-job");
@@ -508,7 +511,8 @@ public class BackgroundJobProcessingTests {
         var options = new BackgroundJobOptions();
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, logger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, logger);
 
         var handler1 = new Mock<IJobHandler>();
         handler1.Setup(h => h.JobType).Returns("TestJob");
@@ -532,7 +536,8 @@ public class BackgroundJobProcessingTests {
         var options = new BackgroundJobOptions();
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, logger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, logger);
 
         // Act
         var handler = dispatcher.GetHandler("NonExistent");
@@ -547,7 +552,8 @@ public class BackgroundJobProcessingTests {
         var options = new BackgroundJobOptions();
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, logger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, logger);
 
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("TestJob");
@@ -657,7 +663,8 @@ public class BackgroundJobProcessingTests {
         queue.Complete(); // Close the queue
 
         var logger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, logger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, logger);
 
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("TestJob");
@@ -686,7 +693,8 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
@@ -701,7 +709,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -734,10 +742,11 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -772,7 +781,8 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -786,7 +796,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -820,7 +830,8 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -834,7 +845,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -869,7 +880,8 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -883,7 +895,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -918,7 +930,8 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -930,7 +943,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -964,7 +977,8 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -979,7 +993,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1014,10 +1028,11 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1042,7 +1057,8 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var jobCompleted = false;
@@ -1057,7 +1073,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1090,10 +1106,11 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act & Assert - should not throw
         processor.Dispose();
@@ -1112,7 +1129,8 @@ public class BackgroundJobProcessingTests {
         };
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var statusStore = new TestJobStatusStore();
+        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var handler = new Mock<IJobHandler>();
@@ -1122,7 +1140,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1232,6 +1250,44 @@ public class BackgroundJobProcessingTests {
 
         public Task DeleteStatusAsync(string jobId, CancellationToken cancellationToken = default) {
             return Task.CompletedTask;
+        }
+
+        public Task<List<BackgroundJobStatusInfo>> GetJobsByStatusAsync(
+            BackgroundJobStatus status,
+            int skip = 0,
+            int take = 100,
+            CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<BackgroundJobStatusInfo>());
+        }
+
+        public Task<List<BackgroundJobStatusInfo>> GetJobsByTypeAsync(
+            string jobType,
+            int skip = 0,
+            int take = 100,
+            CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<BackgroundJobStatusInfo>());
+        }
+
+        public Task<List<BackgroundJobStatusInfo>> GetJobsBySourceAsync(
+            string source,
+            int skip = 0,
+            int take = 100,
+            CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<BackgroundJobStatusInfo>());
+        }
+
+        public Task<List<BackgroundJobStatusInfo>> GetJobsAsync(
+            BackgroundJobStatus? status = null,
+            string? jobType = null,
+            string? source = null,
+            int skip = 0,
+            int take = 100,
+            CancellationToken cancellationToken = default) {
+            return Task.FromResult(new List<BackgroundJobStatusInfo>());
+        }
+
+        public Task<JobMetrics> GetMetricsAsync(CancellationToken cancellationToken = default) {
+            return Task.FromResult(new JobMetrics());
         }
     }
 

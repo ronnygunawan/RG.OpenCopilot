@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Models;
 using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Webhook.Models;
@@ -88,6 +89,75 @@ public partial class Program {
             }
         });
 
+        app.MapGet("/jobs", async (
+            IJobStatusStore statusStore,
+            ILogger<JobsEndpoint> logger,
+            string? status = null,
+            string? type = null,
+            string? source = null,
+            int skip = 0,
+            int take = 100) => {
+            try {
+                BackgroundJobStatus? statusFilter = null;
+                if (!string.IsNullOrEmpty(status) && Enum.TryParse<BackgroundJobStatus>(status, ignoreCase: true, out var parsedStatus)) {
+                    statusFilter = parsedStatus;
+                }
+
+                var jobs = await statusStore.GetJobsAsync(
+                    status: statusFilter,
+                    jobType: type,
+                    source: source,
+                    skip: skip,
+                    take: take);
+
+                return Results.Ok(new {
+                    jobs,
+                    count = jobs.Count,
+                    skip,
+                    take
+                });
+            }
+            catch (Exception ex) {
+                logger.LogError(ex, "Error retrieving jobs");
+                return Results.StatusCode(500);
+            }
+        });
+
+        app.MapGet("/jobs/metrics", async (IJobStatusStore statusStore, ILogger<JobMetricsEndpoint> logger) => {
+            try {
+                var metrics = await statusStore.GetMetricsAsync();
+                return Results.Ok(metrics);
+            }
+            catch (Exception ex) {
+                logger.LogError(ex, "Error retrieving job metrics");
+                return Results.StatusCode(500);
+            }
+        });
+
+        app.MapGet("/jobs/dead-letter", async (
+            IJobStatusStore statusStore,
+            ILogger<DeadLetterEndpoint> logger,
+            int skip = 0,
+            int take = 100) => {
+            try {
+                var deadLetterJobs = await statusStore.GetJobsByStatusAsync(
+                    BackgroundJobStatus.DeadLetter,
+                    skip: skip,
+                    take: take);
+
+                return Results.Ok(new {
+                    jobs = deadLetterJobs,
+                    count = deadLetterJobs.Count,
+                    skip,
+                    take
+                });
+            }
+            catch (Exception ex) {
+                logger.LogError(ex, "Error retrieving dead-letter jobs");
+                return Results.StatusCode(500);
+            }
+        });
+
         app.Run();
     }
 }
@@ -97,4 +167,13 @@ internal sealed class WebhookEndpoint { }
 
 // Marker class for logging in job status endpoint
 internal sealed class JobStatusEndpoint { }
+
+// Marker class for logging in jobs list endpoint
+internal sealed class JobsEndpoint { }
+
+// Marker class for logging in metrics endpoint
+internal sealed class JobMetricsEndpoint { }
+
+// Marker class for logging in dead-letter endpoint
+internal sealed class DeadLetterEndpoint { }
 
