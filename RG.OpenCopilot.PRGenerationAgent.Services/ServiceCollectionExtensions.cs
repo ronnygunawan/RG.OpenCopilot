@@ -93,6 +93,7 @@ public static class ServiceCollectionExtensions {
         services.AddSingleton<ITestGenerator, TestGenerator>();
         services.AddSingleton<IProgressReporter, ProgressReporter>();
         services.AddSingleton<IDependencyManager, DependencyManager>();
+        services.AddSingleton<IDocumentationGenerator, DocumentationGenerator>();
 
         // Configure GitHub client
         services.AddSingleton<IGitHubClient>(sp => {
