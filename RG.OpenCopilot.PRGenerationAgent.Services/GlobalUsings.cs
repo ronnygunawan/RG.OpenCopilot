@@ -10,6 +10,8 @@ global using RG.OpenCopilot.PRGenerationAgent.FileOperations.Services;
 global using RG.OpenCopilot.PRGenerationAgent.CodeGeneration.Models;
 global using RG.OpenCopilot.PRGenerationAgent.CodeGeneration.Services;
 global using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Models;
+global using RG.OpenCopilot.PRGenerationAgent.DependencyManagement.Models;
+global using RG.OpenCopilot.PRGenerationAgent.DependencyManagement.Services;
 global using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
 global using RG.OpenCopilot.PRGenerationAgent.Services.Executor;
 global using RG.OpenCopilot.PRGenerationAgent.Services.FileOperations;
