@@ -123,8 +123,10 @@ public sealed class ContainerExecutorService : IExecutorService {
 
                 // TODO: Get actual file changes from container and post commit summary
                 // For now, we'll skip the commit summary until we have proper change tracking
-                // If prNumber.HasValue Then
+                // When ready:
+                // if (prNumber.HasValue) {
                 //     await _progressReporter.ReportCommitSummaryAsync(...)
+                // }
             }
 
             // Post progress comment to PR
