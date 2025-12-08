@@ -120,6 +120,31 @@ public static class ServiceCollectionExtensions {
 
         services.AddSingleton<IGitHubService, GitHubService>();
 
+        // Configure background job processing
+        var jobOptions = new BackgroundJobOptions();
+        configuration.GetSection("BackgroundJobs").Bind(jobOptions);
+        services.AddSingleton(jobOptions);
+
+        // Register job infrastructure
+        services.AddSingleton<IJobQueue>(sp => new ChannelJobQueue(jobOptions));
+        services.AddSingleton<IJobDispatcher, JobDispatcher>();
+        
+        // Register job handlers
+        services.AddSingleton<IJobHandler, ExecutePlanJobHandler>();
+
+        // Register and configure the dispatcher with handlers
+        services.AddSingleton(sp => {
+            var dispatcher = sp.GetRequiredService<IJobDispatcher>();
+            var handlers = sp.GetServices<IJobHandler>();
+            foreach (var handler in handlers) {
+                dispatcher.RegisterHandler(handler);
+            }
+            return dispatcher;
+        });
+
+        // Register background job processor
+        services.AddHostedService<BackgroundJobProcessor>();
+
         return services;
     }
 }
