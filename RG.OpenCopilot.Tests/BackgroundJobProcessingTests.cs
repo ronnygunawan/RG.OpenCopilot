@@ -228,7 +228,7 @@ public class BackgroundJobProcessingTests {
             .Returns(Task.CompletedTask);
 
         var job = new BackgroundJob {
-            Type = "ExecutePlan",
+            Type = ExecutePlanJobHandler.JobTypeName,
             Payload = """{"TaskId":"test/repo/issues/1"}"""
         };
 
@@ -257,7 +257,7 @@ public class BackgroundJobProcessingTests {
             logger);
 
         var job = new BackgroundJob {
-            Type = "ExecutePlan",
+            Type = ExecutePlanJobHandler.JobTypeName,
             Payload = """{"TaskId":"nonexistent/task"}"""
         };
 
@@ -293,7 +293,7 @@ public class BackgroundJobProcessingTests {
         await taskStore.CreateTaskAsync(task);
 
         var job = new BackgroundJob {
-            Type = "ExecutePlan",
+            Type = ExecutePlanJobHandler.JobTypeName,
             Payload = """{"TaskId":"test/repo/issues/1"}"""
         };
 
@@ -336,7 +336,7 @@ public class BackgroundJobProcessingTests {
             .ThrowsAsync(new Exception("Execution failed"));
 
         var job = new BackgroundJob {
-            Type = "ExecutePlan",
+            Type = ExecutePlanJobHandler.JobTypeName,
             Payload = """{"TaskId":"test/repo/issues/1"}"""
         };
 
@@ -383,7 +383,7 @@ public class BackgroundJobProcessingTests {
             .ThrowsAsync(new OperationCanceledException());
 
         var job = new BackgroundJob {
-            Type = "ExecutePlan",
+            Type = ExecutePlanJobHandler.JobTypeName,
             Payload = """{"TaskId":"test/repo/issues/1"}"""
         };
 
@@ -426,7 +426,7 @@ public class BackgroundJobProcessingTests {
         // Assert
         jobDispatcher.JobDispatched.ShouldBeTrue();
         jobDispatcher.LastDispatchedJob.ShouldNotBeNull();
-        jobDispatcher.LastDispatchedJob.Type.ShouldBe("ExecutePlan");
+        jobDispatcher.LastDispatchedJob.Type.ShouldBe(ExecutePlanJobHandler.JobTypeName);
         jobDispatcher.LastDispatchedJob.Metadata["TaskId"].ShouldBe("owner/test/issues/1");
     }
 

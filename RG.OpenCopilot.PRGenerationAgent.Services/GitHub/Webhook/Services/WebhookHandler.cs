@@ -145,7 +145,7 @@ public sealed class WebhookHandler : IWebhookHandler {
             // Dispatch job to execute the plan in the background
             var jobPayload = new ExecutePlanJobPayload { TaskId = taskId };
             var job = new BackgroundJob {
-                Type = "ExecutePlan",
+                Type = ExecutePlanJobHandler.JobTypeName,
                 Payload = JsonSerializer.Serialize(jobPayload),
                 Priority = 0,
                 Metadata = new Dictionary<string, string> {

@@ -13,11 +13,13 @@ public sealed class ExecutePlanJobPayload {
 /// Job handler for executing agent plans
 /// </summary>
 internal sealed class ExecutePlanJobHandler : IJobHandler {
+    public const string JobTypeName = "ExecutePlan";
+    
     private readonly IAgentTaskStore _taskStore;
     private readonly IExecutorService _executorService;
     private readonly ILogger<ExecutePlanJobHandler> _logger;
 
-    public string JobType => "ExecutePlan";
+    public string JobType => JobTypeName;
 
     public ExecutePlanJobHandler(
         IAgentTaskStore taskStore,

@@ -117,18 +117,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
                     await Task.Delay(_options.RetryDelayMilliseconds, stoppingToken);
 
                     // Re-enqueue with incremented retry count
-                    var retryJob = new BackgroundJob {
-                        Id = job.Id,
-                        Type = job.Type,
-                        Payload = job.Payload,
-                        Priority = job.Priority,
-                        CreatedAt = job.CreatedAt,
-                        ScheduledFor = job.ScheduledFor,
-                        MaxRetries = job.MaxRetries,
-                        RetryCount = job.RetryCount + 1,
-                        Metadata = job.Metadata
-                    };
-
+                    var retryJob = job.CreateRetryJob();
                     await _jobQueue.EnqueueAsync(retryJob, stoppingToken);
                 }
             }

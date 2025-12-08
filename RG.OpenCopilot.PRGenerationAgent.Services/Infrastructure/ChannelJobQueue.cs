@@ -6,6 +6,8 @@ namespace RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 /// Channel-based implementation of the job queue with priority support
 /// </summary>
 internal sealed class ChannelJobQueue : IJobQueue {
+    private const int DefaultPriorityPeekLimit = 10;
+    
     private readonly Channel<BackgroundJob> _channel;
     private readonly BackgroundJobOptions _options;
     private readonly SemaphoreSlim _semaphore;
@@ -62,7 +64,7 @@ internal sealed class ChannelJobQueue : IJobQueue {
                 jobs.Add(job);
                 
                 // Limit how many we peek at to avoid blocking too long
-                if (jobs.Count >= 10) {
+                if (jobs.Count >= DefaultPriorityPeekLimit) {
                     break;
                 }
             }

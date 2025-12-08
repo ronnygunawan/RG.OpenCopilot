@@ -53,4 +53,19 @@ public sealed class BackgroundJob {
     /// Job metadata (e.g., task ID, repository info)
     /// </summary>
     public Dictionary<string, string> Metadata { get; init; } = [];
+
+    /// <summary>
+    /// Creates a new job for retry with incremented retry count
+    /// </summary>
+    public BackgroundJob CreateRetryJob() => new() {
+        Id = Id,
+        Type = Type,
+        Payload = Payload,
+        Priority = Priority,
+        CreatedAt = CreatedAt,
+        ScheduledFor = ScheduledFor,
+        MaxRetries = MaxRetries,
+        RetryCount = RetryCount + 1,
+        Metadata = Metadata
+    };
 }
