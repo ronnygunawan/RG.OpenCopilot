@@ -681,6 +681,475 @@ public class BackgroundJobProcessingTests {
         result.ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task BackgroundJobProcessor_ProcessesJobsSuccessfully() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false,
+            EnableRetry = false
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var handlerExecuted = false;
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => {
+                handlerExecuted = true;
+                return JobResult.CreateSuccess();
+            });
+        
+        dispatcher.RegisterHandler(handler.Object);
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        var job = new BackgroundJob {
+            Type = "TestJob",
+            Payload = "test"
+        };
+        await dispatcher.DispatchAsync(job);
+        
+        // Give processor time to process the job
+        await Task.Delay(500);
+        
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert
+        handlerExecuted.ShouldBeTrue();
+        handler.Verify(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_HandlesJobWithNoHandler() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        // Enqueue a job without registering a handler
+        var job = new BackgroundJob {
+            Type = "UnknownJob",
+            Payload = "test"
+        };
+        await queue.EnqueueAsync(job);
+        
+        // Give processor time to try processing
+        await Task.Delay(500);
+        
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert - should not throw, just log error
+        // Test passes if no exception is thrown
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_RetriesFailedJobs() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false,
+            EnableRetry = true,
+            RetryDelayMilliseconds = 100
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var executionCount = 0;
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => {
+                executionCount++;
+                return JobResult.CreateFailure("Test failure", shouldRetry: true);
+            });
+        
+        dispatcher.RegisterHandler(handler.Object);
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        var job = new BackgroundJob {
+            Type = "TestJob",
+            Payload = "test",
+            MaxRetries = 2
+        };
+        await dispatcher.DispatchAsync(job);
+        
+        // Give processor time to process and retry
+        await Task.Delay(1500);
+        
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert - should have executed 3 times (initial + 2 retries)
+        executionCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_DoesNotRetryWhenRetryDisabled() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false,
+            EnableRetry = false
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var executionCount = 0;
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => {
+                executionCount++;
+                return JobResult.CreateFailure("Test failure", shouldRetry: true);
+            });
+        
+        dispatcher.RegisterHandler(handler.Object);
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        var job = new BackgroundJob {
+            Type = "TestJob",
+            Payload = "test",
+            MaxRetries = 3
+        };
+        await dispatcher.DispatchAsync(job);
+        
+        // Give processor time to process
+        await Task.Delay(500);
+        
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert - should only execute once (no retries)
+        executionCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_DoesNotRetryWhenShouldRetryIsFalse() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false,
+            EnableRetry = true,
+            RetryDelayMilliseconds = 100
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var executionCount = 0;
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => {
+                executionCount++;
+                return JobResult.CreateFailure("Test failure", shouldRetry: false);
+            });
+        
+        dispatcher.RegisterHandler(handler.Object);
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        var job = new BackgroundJob {
+            Type = "TestJob",
+            Payload = "test",
+            MaxRetries = 3
+        };
+        await dispatcher.DispatchAsync(job);
+        
+        // Give processor time to process
+        await Task.Delay(500);
+        
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert - should only execute once (no retries when shouldRetry is false)
+        executionCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_HandlesExceptionInHandler() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false,
+            EnableRetry = true,
+            RetryDelayMilliseconds = 100
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var executionCount = 0;
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .Callback(() => executionCount++)
+            .ThrowsAsync(new InvalidOperationException("Test exception"));
+        
+        dispatcher.RegisterHandler(handler.Object);
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        var job = new BackgroundJob {
+            Type = "TestJob",
+            Payload = "test",
+            MaxRetries = 1
+        };
+        await dispatcher.DispatchAsync(job);
+        
+        // Give processor time to process and retry
+        await Task.Delay(800);
+        
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert - should have executed twice (initial + 1 retry) due to exception
+        executionCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_ProcessesMultipleJobsConcurrently() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 2,
+            MaxQueueSize = 10,
+            EnablePrioritization = false,
+            EnableRetry = false
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var executionCount = 0;
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .Returns(async () => {
+                Interlocked.Increment(ref executionCount);
+                await Task.Delay(200);
+                return JobResult.CreateSuccess();
+            });
+        
+        dispatcher.RegisterHandler(handler.Object);
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        // Enqueue multiple jobs
+        for (int i = 0; i < 4; i++) {
+            var job = new BackgroundJob {
+                Type = "TestJob",
+                Payload = $"test{i}"
+            };
+            await dispatcher.DispatchAsync(job);
+        }
+        
+        // Give processor time to process jobs
+        await Task.Delay(1500);
+        
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert - all jobs should be executed
+        executionCount.ShouldBe(4);
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_HandlesOperationCanceledExceptionInMainLoop() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        // Cancel immediately
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert - should complete without throwing
+        processorTask.IsCompleted.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_WaitsForJobsToCompleteOnShutdown() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false,
+            ShutdownTimeoutSeconds = 2
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var jobCompleted = false;
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .Returns(async () => {
+                await Task.Delay(500);
+                jobCompleted = true;
+                return JobResult.CreateSuccess();
+            });
+        
+        dispatcher.RegisterHandler(handler.Object);
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        var job = new BackgroundJob {
+            Type = "TestJob",
+            Payload = "test"
+        };
+        await dispatcher.DispatchAsync(job);
+        
+        // Give job time to start
+        await Task.Delay(100);
+        
+        // Stop processor
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert - job should have completed before shutdown
+        jobCompleted.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_Dispose_DisposesResources() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act & Assert - should not throw
+        processor.Dispose();
+        
+        await Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task BackgroundJobProcessor_HandlesJobCancellationDuringExecution() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxConcurrency = 1,
+            MaxQueueSize = 10,
+            EnablePrioritization = false,
+            EnableRetry = false
+        };
+        var queue = new ChannelJobQueue(options);
+        var dispatcherLogger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, dispatcherLogger);
+        var processorLogger = new TestLogger<BackgroundJobProcessor>();
+        
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+        
+        dispatcher.RegisterHandler(handler.Object);
+        
+        var processor = new BackgroundJobProcessor(queue, dispatcher, options, processorLogger);
+        
+        // Act
+        var cts = new CancellationTokenSource();
+        var processorTask = processor.StartAsync(cts.Token);
+        
+        var job = new BackgroundJob {
+            Type = "TestJob",
+            Payload = "test"
+        };
+        await dispatcher.DispatchAsync(job);
+        
+        // Give processor time to process
+        await Task.Delay(300);
+        
+        cts.Cancel();
+        await processor.StopAsync(CancellationToken.None);
+        
+        // Assert - should complete without throwing
+        handler.Verify(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     // Test helper classes
     private class TestGitHubService : IGitHubService {
         public bool BranchCreated { get; private set; }
