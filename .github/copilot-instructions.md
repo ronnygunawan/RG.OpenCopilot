@@ -163,9 +163,14 @@ public class FeatureTests {
   - **Happy path tests**: Test all operations with valid inputs and expected success scenarios
   - **Negative case handling**: Test all error paths, validation failures, null inputs, and exceptional conditions
   - **NEVER use "edge case" terminology** - Every code path is either a happy path or negative case that must be tested
-  - Achieve 90%+ code coverage on all new code
+  - **CRITICAL**: Achieve **100% code coverage** on all new code - codecov requires complete coverage
   - Test every branch, including all if/else statements, early returns, and exception throws
+  - Test all switch/case statements including default cases
+  - Test all file extension handlers (e.g., .cs, .java, .ts, .py, .go) when dealing with multi-language support
+  - Test exception handling paths (both when exceptions are thrown and caught)
+  - Test null/empty input scenarios
   - Example: If a method can throw 3 different exceptions, write 3 tests for those paths
+  - Example: If a switch statement has 6 cases, write 6 tests to cover all cases
 
 ### Anti-Pattern: Never Normalize Bugs in Tests
 - **CRITICAL RULE**: When you discover a bug in the code, **FIX THE BUG** - do NOT write tests that accept the buggy behavior

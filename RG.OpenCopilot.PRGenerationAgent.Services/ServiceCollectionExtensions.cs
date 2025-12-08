@@ -5,6 +5,7 @@ using Octokit;
 using RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
 using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
 using RG.OpenCopilot.PRGenerationAgent.Services.Executor;
+using RG.OpenCopilot.PRGenerationAgent.Services.FileOperations;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Authentication;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Git.Adapters;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Git.Services;
@@ -82,6 +83,7 @@ public static class ServiceCollectionExtensions {
         services.AddSingleton<IInstructionsLoader, InstructionsLoader>();
         services.AddSingleton<IFileAnalyzer, FileAnalyzer>();
         services.AddSingleton<IFileEditor, FileEditor>();
+        services.AddSingleton<IMultiFileRefactoringCoordinator, MultiFileRefactoringCoordinator>();
         services.AddSingleton<IStepAnalyzer, StepAnalyzer>();
         services.AddSingleton<IBuildVerifier, BuildVerifier>();
         services.AddSingleton<ITestValidator, TestValidator>();
