@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -12,7 +13,15 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
     private readonly IBuildVerifier _buildVerifier;
     private readonly IContainerManager _containerManager;
     private readonly ILogger<MultiFileRefactoringCoordinator> _logger;
-    private readonly List<string> _transactionLog = [];
+    private readonly ConcurrentBag<string> _transactionLog = [];
+
+    // Compiled regex patterns for better performance
+    private static readonly Regex CSharpUsingPattern = new(@"using\s+(?:static\s+)?([A-Za-z0-9_.]+);", RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Regex JavaImportPattern = new(@"import\s+(?:static\s+)?([A-Za-z0-9_.]+);", RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Regex TypeScriptImportPattern = new(@"import\s+.*?\s+from\s+['""]([^'""]+)['""];?", RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Regex PythonImportPattern = new(@"(?:from\s+([A-Za-z0-9_.]+)\s+)?import\s+([A-Za-z0-9_., ]+)", RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Regex GoImportBlockPattern = new(@"import\s+(?:\(\s*([^)]+)\s*\)|""([^""]+)"")", RegexOptions.Compiled | RegexOptions.Multiline);
+    private static readonly Regex GoImportPattern = new(@"""([^""]+)""", RegexOptions.Compiled);
 
     public MultiFileRefactoringCoordinator(
         IFileAnalyzer fileAnalyzer,
@@ -118,7 +127,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
         };
     }
 
-    public async Task<List<FileChange>> PlanChangeOrderAsync(List<FileChange> changes, DependencyGraph graph, CancellationToken cancellationToken = default) {
+    public Task<List<FileChange>> PlanChangeOrderAsync(List<FileChange> changes, DependencyGraph graph, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Planning change order for {ChangeCount} changes", changes.Count);
 
         // Create a mapping from file path to change
@@ -144,7 +153,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
         }
 
         _logger.LogInformation("Ordered {ChangeCount} changes", orderedChanges.Count);
-        return await Task.FromResult(orderedChanges);
+        return Task.FromResult(orderedChanges);
     }
 
     public async Task ApplyAtomicChangesAsync(string containerId, List<FileChange> orderedChanges, CancellationToken cancellationToken = default) {
@@ -326,15 +335,14 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
             _logger.LogWarning(ex, "Error extracting dependencies from {FilePath}", filePath);
         }
 
-        return await Task.FromResult(dependencies);
+        return dependencies;
     }
 
     private static List<string> ExtractCSharpDependencies(string content) {
         var dependencies = new List<string>();
         
         // Match using statements
-        var usingPattern = new Regex(@"using\s+(?:static\s+)?([A-Za-z0-9_.]+);", RegexOptions.Multiline);
-        var matches = usingPattern.Matches(content);
+        var matches = CSharpUsingPattern.Matches(content);
         
         foreach (Match match in matches) {
             dependencies.Add(match.Groups[1].Value);
@@ -347,8 +355,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
         var dependencies = new List<string>();
         
         // Match import statements
-        var importPattern = new Regex(@"import\s+(?:static\s+)?([A-Za-z0-9_.]+);", RegexOptions.Multiline);
-        var matches = importPattern.Matches(content);
+        var matches = JavaImportPattern.Matches(content);
         
         foreach (Match match in matches) {
             dependencies.Add(match.Groups[1].Value);
@@ -361,8 +368,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
         var dependencies = new List<string>();
         
         // Match import statements
-        var importPattern = new Regex(@"import\s+.*?\s+from\s+['""]([^'""]+)['""];?", RegexOptions.Multiline);
-        var matches = importPattern.Matches(content);
+        var matches = TypeScriptImportPattern.Matches(content);
         
         foreach (Match match in matches) {
             var importPath = match.Groups[1].Value;
@@ -379,8 +385,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
         var dependencies = new List<string>();
         
         // Match import statements
-        var importPattern = new Regex(@"(?:from\s+([A-Za-z0-9_.]+)\s+)?import\s+([A-Za-z0-9_., ]+)", RegexOptions.Multiline);
-        var matches = importPattern.Matches(content);
+        var matches = PythonImportPattern.Matches(content);
         
         foreach (Match match in matches) {
             if (!string.IsNullOrEmpty(match.Groups[1].Value)) {
@@ -395,13 +400,12 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
         var dependencies = new List<string>();
         
         // Match import statements
-        var importPattern = new Regex(@"import\s+(?:\(\s*([^)]+)\s*\)|""([^""]+)"")", RegexOptions.Multiline);
-        var matches = importPattern.Matches(content);
+        var matches = GoImportBlockPattern.Matches(content);
         
         foreach (Match match in matches) {
             var importBlock = match.Groups[1].Value;
             if (!string.IsNullOrEmpty(importBlock)) {
-                var imports = Regex.Matches(importBlock, @"""([^""]+)""");
+                var imports = GoImportPattern.Matches(importBlock);
                 foreach (Match imp in imports) {
                     dependencies.Add(imp.Groups[1].Value);
                 }
@@ -480,7 +484,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
     }
 
     /// <summary>
-    /// Get transaction log for debugging
+    /// Get transaction log for debugging (internal use only)
     /// </summary>
-    public IReadOnlyList<string> GetTransactionLog() => _transactionLog.AsReadOnly();
+    internal IReadOnlyList<string> GetTransactionLog() => _transactionLog.ToList().AsReadOnly();
 }

@@ -79,14 +79,17 @@ public class MultiFileRefactoringCoordinatorTests {
         var containerId = "test-container";
         var filePaths = new List<string> { "/workspace/File1.cs", "/workspace/File2.cs" };
 
-        // Simulate circular dependencies by returning file paths in dependency extraction
+        // Note: The current implementation extracts dependencies based on namespace/package imports,
+        // not file paths. To detect circular dependencies, files would need to import each other's
+        // namespaces in a way that creates a cycle. This test verifies the basic structure is created
+        // even when circular references exist in the source code.
         _containerManager
             .Setup(c => c.ReadFileInContainerAsync(containerId, "/workspace/File1.cs", It.IsAny<CancellationToken>()))
-            .ReturnsAsync("using System;\nusing /workspace/File2;\n\nclass File1 {}");
+            .ReturnsAsync("using System;\nusing MyApp.Models.File2;\n\nnamespace MyApp.Models.File1 { class File1 {} }");
 
         _containerManager
             .Setup(c => c.ReadFileInContainerAsync(containerId, "/workspace/File2.cs", It.IsAny<CancellationToken>()))
-            .ReturnsAsync("using System;\nusing /workspace/File1;\n\nclass File2 {}");
+            .ReturnsAsync("using System;\nusing MyApp.Models.File1;\n\nnamespace MyApp.Models.File2 { class File2 {} }");
 
         // Act
         var graph = await _coordinator.AnalyzeDependenciesAsync(containerId, filePaths);
@@ -94,6 +97,8 @@ public class MultiFileRefactoringCoordinatorTests {
         // Assert
         graph.Nodes.ShouldNotBeNull();
         graph.Nodes.Count.ShouldBe(2);
+        // The implementation extracts namespace dependencies, not file-level circular dependencies
+        // So this test verifies the graph is built without errors
     }
 
     [Fact]
