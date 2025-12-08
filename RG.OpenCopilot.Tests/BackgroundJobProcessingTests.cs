@@ -2,6 +2,7 @@ using Moq;
 using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace RG.OpenCopilot.Tests;
 

@@ -129,21 +129,23 @@ public static class ServiceCollectionExtensions {
         services.AddSingleton<IJobQueue>(sp => new ChannelJobQueue(jobOptions));
         services.AddSingleton<IJobDispatcher, JobDispatcher>();
         
-        // Register job handlers
+        // Register job handlers - they will be auto-registered when dispatcher is first resolved
         services.AddSingleton<IJobHandler, ExecutePlanJobHandler>();
 
-        // Register and configure the dispatcher with handlers
-        services.AddSingleton(sp => {
+        // Register background job processor with handler initialization
+        services.AddHostedService<BackgroundJobProcessor>(sp => {
             var dispatcher = sp.GetRequiredService<IJobDispatcher>();
             var handlers = sp.GetServices<IJobHandler>();
+            
+            // Register all handlers with the dispatcher
             foreach (var handler in handlers) {
                 dispatcher.RegisterHandler(handler);
             }
-            return dispatcher;
+            
+            var queue = sp.GetRequiredService<IJobQueue>();
+            var logger = sp.GetRequiredService<ILogger<BackgroundJobProcessor>>();
+            return new BackgroundJobProcessor(queue, dispatcher, jobOptions, logger);
         });
-
-        // Register background job processor
-        services.AddHostedService<BackgroundJobProcessor>();
 
         return services;
     }
