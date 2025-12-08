@@ -1,8 +1,12 @@
 # RG.OpenCopilot
 
+> **⚠️ WARNING: This project is under active development and is NOT ready for production use. Use at your own risk.**
+
 **A GitHub-hosted AI coding agent for automating code changes, test generation, and pull request management.**
 
-RG.OpenCopilot is a C#/.NET 10 solution that provides an intelligent coding agent similar to GitHub Copilot Coding Agent. It automatically analyzes GitHub issues, creates implementation plans using LLM models, generates code and tests, and manages the complete pull request lifecycle - all within isolated Docker containers for security.
+RG.OpenCopilot is a C#/.NET 10 solution that aims to provide an intelligent coding agent similar to GitHub Copilot Coding Agent. It is designed to automatically analyze GitHub issues, create implementation plans using LLM models, generate code and tests, and manage the complete pull request lifecycle - all within isolated Docker containers for security.
+
+**This is an experimental project under construction. Many features are incomplete or subject to breaking changes.**
 
 ## 🚀 Key Features
 
@@ -15,9 +19,13 @@ RG.OpenCopilot is a C#/.NET 10 solution that provides an intelligent coding agen
 - **📊 Repository Analysis**: Automatically detects languages, build tools, test frameworks, and project structure
 - **🎨 Style Preservation**: Maintains your project's coding conventions and patterns
 
-## Current Status
+## ⚠️ Project Status
 
-✅ **Production Ready** - Core features implemented and tested:
+**🚧 UNDER CONSTRUCTION - NOT READY FOR PRODUCTION USE 🚧**
+
+This project is actively under development and should **NOT** be used in production environments. Many features are incomplete, untested in real-world scenarios, or subject to significant changes.
+
+### Implemented Features (In Development)
 - ✅ GitHub webhook integration with signature validation
 - ✅ LLM-powered planning with Semantic Kernel (OpenAI, Azure OpenAI)
 - ✅ Docker-based code execution environment
@@ -29,6 +37,13 @@ RG.OpenCopilot is a C#/.NET 10 solution that provides an intelligent coding agen
 - ✅ PR lifecycle management (create, update, finalize)
 - ✅ Repository analysis and custom instructions support
 - ✅ 112 comprehensive unit and integration tests (~64% coverage)
+
+### Known Limitations
+- No background job processing - long-running tasks may timeout
+- In-memory task storage only - tasks lost on restart
+- Limited error recovery and retry logic
+- Not tested at scale or in production environments
+- API and architecture may change significantly
 
 ## How It Works
 
@@ -46,31 +61,31 @@ RG.OpenCopilot is a C#/.NET 10 solution that provides an intelligent coding agen
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      GitHub Enterprise                       │
-│  (Issues, PRs, Webhooks, Repository)                        │
-└────────────────┬────────────────────────────────────────────┘
-                 │ Webhook Event (issue labeled)
-                 ▼
-┌─────────────────────────────────────────────────────────────┐
-│               RG.OpenCopilot.GitHubApp                      │
-│  (ASP.NET Core Minimal API)                                 │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │ Webhook      │  │ Planner      │  │ Executor     │     │
-│  │ Handler      │─▶│ Service      │─▶│ Service      │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
-└────────────┬────────────────────────────────┬──────────────┘
-             │                                 │
-             ▼                                 ▼
-┌────────────────────────┐       ┌────────────────────────────┐
-│   LLM Provider         │       │   Docker Container         │
-│  (OpenAI/Azure)        │       │  ┌──────────────────────┐  │
-│  • Plan Generation     │       │  │ Cloned Repository    │  │
-│  • Code Generation     │       │  │ • Build & Test       │  │
-│  • Test Generation     │       │  │ • File Operations    │  │
-│                        │       │  │ • Git Commands       │  │
-└────────────────────────┘       │  └──────────────────────┘  │
-                                 └────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    GitHub Enterprise                         │
+│              (Issues, PRs, Webhooks, Repository)             │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ Webhook Event (issue labeled)
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│                 RG.OpenCopilot.GitHubApp                     │
+│                  (ASP.NET Core Minimal API)                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   Webhook    │  │   Planner    │  │   Executor   │      │
+│  │   Handler    │─▶│   Service    │─▶│   Service    │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└───────────┬──────────────────────────────────┬──────────────┘
+            │                                   │
+            ▼                                   ▼
+┌───────────────────────┐       ┌──────────────────────────────┐
+│    LLM Provider       │       │      Docker Container        │
+│   (OpenAI/Azure)      │       │  ┌────────────────────────┐  │
+│  • Plan Generation    │       │  │  Cloned Repository     │  │
+│  • Code Generation    │       │  │  • Build & Test        │  │
+│  • Test Generation    │       │  │  • File Operations     │  │
+│                       │       │  │  • Git Commands        │  │
+└───────────────────────┘       │  └────────────────────────┘  │
+                                └──────────────────────────────┘
 ```
 
 ### Solution Structure
@@ -510,7 +525,9 @@ dotnet clean && dotnet build
 
 ## Roadmap
 
-### Completed ✅
+**⚠️ This project is in early development. The roadmap below represents planned features, many of which are incomplete or experimental.**
+
+### Implemented (Experimental) ✅
 - ✅ Core agent architecture and domain models
 - ✅ GitHub webhook integration with signature validation
 - ✅ LLM-powered planning (OpenAI, Azure OpenAI)
@@ -527,10 +544,17 @@ dotnet clean && dotnet build
 - 🚧 Enhanced code generation with iterative refinement
 - 🚧 Advanced error recovery and retry logic
 - 🚧 Performance optimizations for large repositories
+- 🚧 Production readiness and stability improvements
 
-### Planned 📋
+### Critical Missing Features 📋
 - 📋 Background job processing for long-running tasks
 - 📋 Persistent storage (SQLite/PostgreSQL) for agent tasks
+- 📋 Comprehensive error handling and recovery
+- 📋 Production deployment documentation and tooling
+- 📋 Security audit and hardening
+- 📋 Performance testing and optimization
+
+### Future Enhancements 📋
 - 📋 Multi-step execution with intermediate PR updates
 - 📋 Support for additional LLM providers (Claude, Gemini)
 - 📋 Code review integration
@@ -551,7 +575,9 @@ dotnet clean && dotnet build
 
 ## Contributing
 
-Contributions are welcome! Please:
+**⚠️ Important**: This project is in early development and not ready for production use. Contributions are welcome, but be aware that significant architectural changes may occur.
+
+Please:
 
 1. Fork the repository
 2. Create a feature branch
@@ -575,4 +601,10 @@ For issues or questions:
 
 ---
 
-**Note**: This project is under active development. Features and APIs may change.
+## ⚠️ Disclaimer
+
+**THIS SOFTWARE IS PROVIDED "AS IS" AND IS NOT READY FOR PRODUCTION USE.**
+
+This is an experimental project under active development. It is **NOT** suitable for production environments and should only be used for development, testing, and evaluation purposes. The authors make no warranties about the stability, security, or fitness for any particular purpose.
+
+Use at your own risk. The API, architecture, and features are subject to significant changes without notice.
