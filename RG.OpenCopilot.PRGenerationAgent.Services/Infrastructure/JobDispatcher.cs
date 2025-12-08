@@ -9,6 +9,7 @@ namespace RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 internal sealed class JobDispatcher : IJobDispatcher {
     private readonly IJobQueue _jobQueue;
     private readonly IJobStatusStore _jobStatusStore;
+    private readonly IJobDeduplicationService _deduplicationService;
     private readonly ConcurrentDictionary<string, IJobHandler> _handlers;
     private readonly ConcurrentDictionary<string, BackgroundJob> _activeJobs;
     private readonly ILogger<JobDispatcher> _logger;
@@ -16,9 +17,11 @@ internal sealed class JobDispatcher : IJobDispatcher {
     public JobDispatcher(
         IJobQueue jobQueue,
         IJobStatusStore jobStatusStore,
+        IJobDeduplicationService deduplicationService,
         ILogger<JobDispatcher> logger) {
         _jobQueue = jobQueue;
         _jobStatusStore = jobStatusStore;
+        _deduplicationService = deduplicationService;
         _logger = logger;
         _handlers = new ConcurrentDictionary<string, IJobHandler>();
         _activeJobs = new ConcurrentDictionary<string, BackgroundJob>();
@@ -39,6 +42,19 @@ internal sealed class JobDispatcher : IJobDispatcher {
             return false;
         }
 
+        // Check for duplicate if idempotency key is provided
+        if (!string.IsNullOrEmpty(job.IdempotencyKey)) {
+            var existingJobId = await _deduplicationService.GetInFlightJobAsync(job.IdempotencyKey, cancellationToken);
+            if (existingJobId != null) {
+                _logger.LogWarning("Job with idempotency key {IdempotencyKey} is already in-flight (job {ExistingJobId}), skipping dispatch",
+                    job.IdempotencyKey, existingJobId);
+                return false;
+            }
+
+            // Register this job with the idempotency key
+            await _deduplicationService.RegisterJobAsync(job.Id, job.IdempotencyKey, cancellationToken);
+        }
+
         _activeJobs.TryAdd(job.Id, job);
         var enqueued = await _jobQueue.EnqueueAsync(job, cancellationToken);
 
@@ -56,13 +72,20 @@ internal sealed class JobDispatcher : IJobDispatcher {
                 MaxRetries = job.MaxRetries,
                 Source = job.Metadata.GetValueOrDefault("Source", ""),
                 ParentJobId = job.Metadata.GetValueOrDefault("ParentJobId"),
-                CorrelationId = job.Metadata.GetValueOrDefault("CorrelationId")
+                CorrelationId = job.Metadata.GetValueOrDefault("CorrelationId"),
+                IdempotencyKey = job.IdempotencyKey
             };
 
             await _jobStatusStore.SetStatusAsync(statusInfo, cancellationToken);
         }
         else {
             _activeJobs.TryRemove(job.Id, out _);
+            
+            // Unregister from deduplication if enqueue failed
+            if (!string.IsNullOrEmpty(job.IdempotencyKey)) {
+                await _deduplicationService.UnregisterJobAsync(job.Id, cancellationToken);
+            }
+            
             _logger.LogWarning("Failed to dispatch job {JobId} of type {JobType}", job.Id, job.Type);
         }
 

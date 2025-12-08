@@ -128,4 +128,14 @@ public sealed class BackgroundJobStatusInfo {
     /// Queue wait time in milliseconds (time between created and started)
     /// </summary>
     public long? QueueWaitTimeMs { get; init; }
+    
+    /// <summary>
+    /// Idempotency key for duplicate detection
+    /// </summary>
+    public string? IdempotencyKey { get; init; }
+    
+    /// <summary>
+    /// All execution attempts for this job (including retries)
+    /// </summary>
+    public List<JobAttempt> Attempts { get; init; } = [];
 }

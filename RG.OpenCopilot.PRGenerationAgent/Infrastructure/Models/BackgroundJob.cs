@@ -55,6 +55,13 @@ public sealed class BackgroundJob {
     public Dictionary<string, string> Metadata { get; init; } = [];
 
     /// <summary>
+    /// Idempotency key for duplicate detection (optional)
+    /// If not provided, jobs can be dispatched multiple times
+    /// If provided, only one job with this key can be in-flight at a time
+    /// </summary>
+    public string? IdempotencyKey { get; init; }
+
+    /// <summary>
     /// Creates a new job for retry with incremented retry count
     /// </summary>
     public BackgroundJob CreateRetryJob() => new() {
@@ -66,6 +73,7 @@ public sealed class BackgroundJob {
         ScheduledFor = ScheduledFor,
         MaxRetries = MaxRetries,
         RetryCount = RetryCount + 1,
-        Metadata = Metadata
+        Metadata = Metadata,
+        IdempotencyKey = IdempotencyKey
     };
 }

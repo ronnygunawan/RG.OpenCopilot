@@ -10,6 +10,8 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
     private readonly IJobQueue _jobQueue;
     private readonly JobDispatcher _jobDispatcher;
     private readonly IJobStatusStore _jobStatusStore;
+    private readonly IRetryPolicyCalculator _retryPolicyCalculator;
+    private readonly IJobDeduplicationService _deduplicationService;
     private readonly BackgroundJobOptions _options;
     private readonly ILogger<BackgroundJobProcessor> _logger;
     private readonly SemaphoreSlim _concurrencySemaphore;
@@ -19,11 +21,15 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
         IJobQueue jobQueue,
         IJobDispatcher jobDispatcher,
         IJobStatusStore jobStatusStore,
+        IRetryPolicyCalculator retryPolicyCalculator,
+        IJobDeduplicationService deduplicationService,
         BackgroundJobOptions options,
         ILogger<BackgroundJobProcessor> logger) {
         _jobQueue = jobQueue;
         _jobDispatcher = (JobDispatcher)jobDispatcher;
         _jobStatusStore = jobStatusStore;
+        _retryPolicyCalculator = retryPolicyCalculator;
+        _deduplicationService = deduplicationService;
         _options = options;
         _logger = logger;
         _concurrencySemaphore = new SemaphoreSlim(_options.MaxConcurrency, _options.MaxConcurrency);
@@ -122,6 +128,19 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
             var completedAt = DateTime.UtcNow;
             var processingDurationMs = (completedAt - startedAt).TotalMilliseconds;
 
+            // Create attempt record
+            var attempt = new JobAttempt {
+                AttemptNumber = job.RetryCount + 1,
+                StartedAt = startedAt,
+                CompletedAt = completedAt,
+                Succeeded = result.Success,
+                ErrorMessage = result.ErrorMessage,
+                ExceptionType = result.Exception?.GetType().Name,
+                DurationMs = (long)processingDurationMs,
+                DelayBeforeAttemptMs = 0, // Will be set for retries
+                BackoffStrategy = _options.RetryPolicy.BackoffStrategy
+            };
+
             // Handle result
             if (result.Success) {
                 _logger.LogInformation("Job {JobId} completed successfully (processing took {DurationMs}ms)", job.Id, (long)processingDurationMs);
@@ -131,15 +150,22 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
                     completedAt: completedAt,
                     startedAt: startedAt,
                     processingDurationMs: (long)processingDurationMs,
-                    queueWaitTimeMs: (long)queueWaitTimeMs);
+                    queueWaitTimeMs: (long)queueWaitTimeMs,
+                    attempt: attempt);
             }
             else {
                 _logger.LogWarning("Job {JobId} failed: {ErrorMessage}", job.Id, result.ErrorMessage);
 
-                // Retry if enabled and job should be retried
-                if (_options.EnableRetry && result.ShouldRetry && job.RetryCount < job.MaxRetries) {
-                    _logger.LogInformation("Job {JobId} transitioned to Retried (attempt {RetryCount}/{MaxRetries})",
-                        job.Id, job.RetryCount + 1, job.MaxRetries);
+                // Use retry policy to determine if job should be retried
+                var retryPolicy = _options.RetryPolicy;
+                var shouldRetry = _retryPolicyCalculator.ShouldRetry(retryPolicy, job.RetryCount, result.ShouldRetry);
+
+                if (shouldRetry) {
+                    // Calculate retry delay using policy calculator
+                    var retryDelayMs = _retryPolicyCalculator.CalculateRetryDelay(retryPolicy, job.RetryCount);
+                    
+                    _logger.LogInformation("Job {JobId} transitioned to Retried (attempt {RetryCount}/{MaxRetries}), delay: {DelayMs}ms",
+                        job.Id, job.RetryCount + 1, job.MaxRetries, retryDelayMs);
 
                     await UpdateJobStatusAsync(
                         job,
@@ -148,10 +174,11 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
                         lastRetryAt: DateTime.UtcNow,
                         startedAt: startedAt,
                         processingDurationMs: (long)processingDurationMs,
-                        queueWaitTimeMs: (long)queueWaitTimeMs);
+                        queueWaitTimeMs: (long)queueWaitTimeMs,
+                        attempt: attempt);
 
                     // Wait before retry
-                    await Task.Delay(_options.RetryDelayMilliseconds, stoppingToken);
+                    await Task.Delay(retryDelayMs, stoppingToken);
 
                     // Re-enqueue with incremented retry count
                     var retryJob = job.CreateRetryJob();
@@ -164,7 +191,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
                         : BackgroundJobStatus.Failed;
 
                     if (status == BackgroundJobStatus.DeadLetter) {
-                        _logger.LogWarning("Job {JobId} moved to DeadLetter queue after {RetryCount} retries", job.Id, job.RetryCount);
+                        _logger.LogError("Job {JobId} moved to DeadLetter queue after {RetryCount} retries", job.Id, job.RetryCount);
                     }
 
                     await UpdateJobStatusAsync(
@@ -174,25 +201,46 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
                         errorMessage: result.ErrorMessage,
                         startedAt: startedAt,
                         processingDurationMs: (long)processingDurationMs,
-                        queueWaitTimeMs: (long)queueWaitTimeMs);
+                        queueWaitTimeMs: (long)queueWaitTimeMs,
+                        attempt: attempt);
                 }
             }
         }
         catch (Exception ex) {
             _logger.LogError(ex, "Unexpected error processing job {JobId}", job.Id);
+            
+            // Create failed attempt record
+            var failedAttempt = new JobAttempt {
+                AttemptNumber = job.RetryCount + 1,
+                StartedAt = startedAt,
+                CompletedAt = DateTime.UtcNow,
+                Succeeded = false,
+                ErrorMessage = ex.Message,
+                ExceptionType = ex.GetType().Name,
+                DurationMs = (long)(DateTime.UtcNow - startedAt).TotalMilliseconds,
+                DelayBeforeAttemptMs = 0,
+                BackoffStrategy = _options.RetryPolicy.BackoffStrategy
+            };
+            
             await UpdateJobStatusAsync(
                 job,
                 BackgroundJobStatus.Failed,
                 completedAt: DateTime.UtcNow,
                 errorMessage: ex.Message,
                 startedAt: startedAt,
-                queueWaitTimeMs: (long)queueWaitTimeMs);
+                queueWaitTimeMs: (long)queueWaitTimeMs,
+                attempt: failedAttempt);
         }
         finally {
             // Release semaphore and cleanup
             _concurrencySemaphore.Release();
             _jobDispatcher.RemoveActiveJob(job.Id);
             job.CancellationTokenSource?.Dispose();
+            
+            // Unregister from deduplication if job is complete
+            if (!string.IsNullOrEmpty(job.IdempotencyKey)) {
+                await _deduplicationService.UnregisterJobAsync(job.Id);
+            }
         }
     }
 
@@ -204,9 +252,16 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
         string? errorMessage = null,
         DateTime? lastRetryAt = null,
         long? processingDurationMs = null,
-        long? queueWaitTimeMs = null) {
+        long? queueWaitTimeMs = null,
+        JobAttempt? attempt = null) {
         try {
             var existingStatus = await _jobStatusStore.GetStatusAsync(job.Id);
+
+            // Merge attempts - keep existing attempts and add new one
+            var attempts = existingStatus?.Attempts ?? [];
+            if (attempt != null) {
+                attempts = [..attempts, attempt];
+            }
 
             var statusInfo = new BackgroundJobStatusInfo {
                 JobId = job.Id,
@@ -224,7 +279,9 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
                 ParentJobId = job.Metadata.GetValueOrDefault("ParentJobId"),
                 CorrelationId = job.Metadata.GetValueOrDefault("CorrelationId"),
                 ProcessingDurationMs = processingDurationMs,
-                QueueWaitTimeMs = queueWaitTimeMs
+                QueueWaitTimeMs = queueWaitTimeMs,
+                IdempotencyKey = job.IdempotencyKey,
+                Attempts = attempts
             };
 
             await _jobStatusStore.SetStatusAsync(statusInfo);

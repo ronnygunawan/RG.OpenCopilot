@@ -25,12 +25,17 @@ public sealed class BackgroundJobOptions {
     public int ShutdownTimeoutSeconds { get; init; } = 30;
 
     /// <summary>
-    /// Whether to retry failed jobs
+    /// Whether to retry failed jobs (deprecated, use RetryPolicy.Enabled)
     /// </summary>
     public bool EnableRetry { get; init; } = true;
 
     /// <summary>
-    /// Delay in milliseconds between retry attempts
+    /// Delay in milliseconds between retry attempts (deprecated, use RetryPolicy.BaseDelayMilliseconds)
     /// </summary>
     public int RetryDelayMilliseconds { get; init; } = 5000;
+
+    /// <summary>
+    /// Retry policy configuration for failed jobs
+    /// </summary>
+    public RetryPolicy RetryPolicy { get; init; } = RetryPolicy.Default;
 }

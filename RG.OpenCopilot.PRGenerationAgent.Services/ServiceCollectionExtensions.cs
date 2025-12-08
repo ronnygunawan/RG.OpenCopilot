@@ -129,11 +129,14 @@ public static class ServiceCollectionExtensions {
         // Register job infrastructure
         services.AddSingleton<IJobQueue>(sp => new ChannelJobQueue(jobOptions));
         services.AddSingleton<IJobStatusStore, InMemoryJobStatusStore>();
+        services.AddSingleton<IRetryPolicyCalculator, RetryPolicyCalculator>();
+        services.AddSingleton<IJobDeduplicationService, InMemoryJobDeduplicationService>();
         services.AddSingleton<IJobDispatcher>(sp => {
             var queue = sp.GetRequiredService<IJobQueue>();
             var statusStore = sp.GetRequiredService<IJobStatusStore>();
+            var deduplicationService = sp.GetRequiredService<IJobDeduplicationService>();
             var logger = sp.GetRequiredService<ILogger<JobDispatcher>>();
-            return new JobDispatcher(queue, statusStore, logger);
+            return new JobDispatcher(queue, statusStore, deduplicationService, logger);
         });
         
         // Register job handlers - they will be auto-registered when dispatcher is first resolved
@@ -152,8 +155,10 @@ public static class ServiceCollectionExtensions {
             
             var queue = sp.GetRequiredService<IJobQueue>();
             var jobStatusStore = sp.GetRequiredService<IJobStatusStore>();
+            var retryPolicyCalculator = sp.GetRequiredService<IRetryPolicyCalculator>();
+            var deduplicationService = sp.GetRequiredService<IJobDeduplicationService>();
             var logger = sp.GetRequiredService<ILogger<BackgroundJobProcessor>>();
-            return new BackgroundJobProcessor(queue, dispatcher, jobStatusStore, jobOptions, logger);
+            return new BackgroundJobProcessor(queue, dispatcher, jobStatusStore, retryPolicyCalculator, deduplicationService, jobOptions, logger);
         });
 
         return services;
