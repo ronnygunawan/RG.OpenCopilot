@@ -963,6 +963,272 @@ public class DependencyManagerTests {
     }
 
     [Fact]
+    public async Task ListInstalledPackagesAsync_NpmPackages_ReturnsPackageList() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = ""
+        }, pattern: "*.csproj");
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = ""
+        }, pattern: "packages.config");
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/package.json"
+        }, pattern: "package.json");
+        containerManager.SetExecuteResult("npm", new CommandResult {
+            ExitCode = 0,
+            Output = """
+                express 4.18.2
+                lodash  4.17.21
+                """
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.ListInstalledPackagesAsync("test-container");
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result[0].Manager.ShouldBe(PackageManager.Npm);
+        result[1].Manager.ShouldBe(PackageManager.Npm);
+    }
+
+    [Fact]
+    public async Task ListInstalledPackagesAsync_PipPackages_ReturnsPackageList() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = ""
+        }, pattern: "*.csproj");
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = ""
+        }, pattern: "packages.config");
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = ""
+        }, pattern: "package.json");
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/requirements.txt"
+        }, pattern: "requirements.txt");
+        containerManager.SetExecuteResult("pip", new CommandResult {
+            ExitCode = 0,
+            Output = """
+                requests 2.31.0
+                django   4.2.0
+                """
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.ListInstalledPackagesAsync("test-container");
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result[0].Manager.ShouldBe(PackageManager.Pip);
+    }
+
+    [Fact]
+    public async Task ListInstalledPackagesAsync_MavenPackages_ReturnsPackageList() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/pom.xml"
+        }, pattern: "pom.xml");
+        containerManager.SetExecuteResult("mvn", new CommandResult {
+            ExitCode = 0,
+            Output = """
+                gson    2.10.1
+                junit   4.13.2
+                """
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.ListInstalledPackagesAsync("test-container");
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result[0].Manager.ShouldBe(PackageManager.Maven);
+    }
+
+    [Fact]
+    public async Task ListInstalledPackagesAsync_GradlePackages_ReturnsPackageList() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/build.gradle"
+        }, pattern: "build.gradle");
+        containerManager.SetExecuteResult("gradle", new CommandResult {
+            ExitCode = 0,
+            Output = """
+                gson    2.10.1
+                junit   4.13.2
+                """
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.ListInstalledPackagesAsync("test-container");
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result[0].Manager.ShouldBe(PackageManager.Gradle);
+    }
+
+    [Fact]
+    public async Task ListInstalledPackagesAsync_CargoPackages_ReturnsPackageList() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/Cargo.toml"
+        }, pattern: "Cargo.toml");
+        containerManager.SetExecuteResult("cargo", new CommandResult {
+            ExitCode = 0,
+            Output = """
+                serde 1.0.0
+                tokio 1.28.0
+                """
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.ListInstalledPackagesAsync("test-container");
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result[0].Manager.ShouldBe(PackageManager.Cargo);
+    }
+
+    [Fact]
+    public async Task ListInstalledPackagesAsync_GoPackages_ReturnsPackageList() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/go.mod"
+        }, pattern: "go.mod");
+        containerManager.SetExecuteResult("go", new CommandResult {
+            ExitCode = 0,
+            Output = """
+                gin     v1.9.0
+                gorm    v1.25.0
+                """
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.ListInstalledPackagesAsync("test-container");
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result[0].Manager.ShouldBe(PackageManager.GoModules);
+    }
+
+    [Fact]
+    public async Task ListInstalledPackagesAsync_ComposerPackages_ReturnsPackageList() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/composer.json"
+        }, pattern: "composer.json");
+        containerManager.SetExecuteResult("composer", new CommandResult {
+            ExitCode = 0,
+            Output = """
+                monolog 2.9.0
+                symfony 6.2.0
+                """
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.ListInstalledPackagesAsync("test-container");
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result[0].Manager.ShouldBe(PackageManager.Composer);
+    }
+
+    [Fact]
+    public async Task ListInstalledPackagesAsync_RubyGemsPackages_ReturnsPackageList() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/Gemfile"
+        }, pattern: "Gemfile");
+        containerManager.SetExecuteResult("bundle", new CommandResult {
+            ExitCode = 0,
+            Output = """
+                rails   7.0.0
+                rspec   3.12.0
+                """
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.ListInstalledPackagesAsync("test-container");
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result[0].Manager.ShouldBe(PackageManager.RubyGems);
+    }
+
+    [Fact]
+    public async Task ListInstalledPackagesAsync_CommandFails_ReturnsEmptyList() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/package.json"
+        }, pattern: "package.json");
+        containerManager.SetExecuteResult("npm", new CommandResult {
+            ExitCode = 1,
+            Error = "npm command failed"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.ListInstalledPackagesAsync("test-container");
+
+        // Assert
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task UpdateDependencyFileAsync_PipPackageWithVersion_UpdatesFile() {
         // Arrange
         var containerManager = new TestContainerManagerForDependencyManager();
