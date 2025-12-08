@@ -642,6 +642,219 @@ public class DependencyManagerTests {
     }
 
     [Fact]
+    public async Task AddDependencyAsync_NuGetWithoutVersion_InstallsLatest() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/MyApp.csproj"
+        }, pattern: "*.csproj");
+        containerManager.SetExecuteResult("dotnet", new CommandResult {
+            ExitCode = 0,
+            Output = "Package installed"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "Newtonsoft.Json");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("Newtonsoft.Json");
+        result.InstalledPackage.Version.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AddDependencyAsync_CargoWithoutVersion_InstallsLatest() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/Cargo.toml"
+        }, pattern: "Cargo.toml");
+        containerManager.SetExecuteResult("cargo", new CommandResult {
+            ExitCode = 0,
+            Output = "Adding serde to dependencies"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "serde");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("serde");
+        result.InstalledPackage.Version.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AddDependencyAsync_RubyGemsWithoutVersion_InstallsLatest() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/Gemfile"
+        }, pattern: "Gemfile");
+        containerManager.SetExecuteResult("bundle", new CommandResult {
+            ExitCode = 0,
+            Output = "Fetching gem metadata"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "rails");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("rails");
+        result.InstalledPackage.Version.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AddDependencyAsync_PipWithoutVersion_InstallsLatest() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = ""
+        }, pattern: "*.csproj");
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = ""
+        }, pattern: "packages.config");
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/requirements.txt"
+        }, pattern: "requirements.txt");
+        containerManager.SetExecuteResult("pip", new CommandResult {
+            ExitCode = 0,
+            Output = "Successfully installed requests"
+        });
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = ""
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "requests");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("requests");
+        result.InstalledPackage.Version.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AddDependencyAsync_GoWithoutVersion_InstallsLatest() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/go.mod"
+        }, pattern: "go.mod");
+        containerManager.SetExecuteResult("go", new CommandResult {
+            ExitCode = 0,
+            Output = "go: added package"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "github.com/gin-gonic/gin");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("github.com/gin-gonic/gin");
+        result.InstalledPackage.Version.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AddDependencyAsync_ComposerWithoutVersion_InstallsLatest() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/composer.json"
+        }, pattern: "composer.json");
+        containerManager.SetExecuteResult("composer", new CommandResult {
+            ExitCode = 0,
+            Output = "Package installed successfully"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "monolog/monolog");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("monolog/monolog");
+        result.InstalledPackage.Version.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AddDependencyAsync_MavenWithoutVersion_InstallsLatest() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/pom.xml"
+        }, pattern: "pom.xml");
+        containerManager.SetExecuteResult("mvn", new CommandResult {
+            ExitCode = 0,
+            Output = "Downloaded: com.google.code.gson:gson:LATEST"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "com.google.code.gson:gson");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("com.google.code.gson:gson");
+        result.InstalledPackage.Version.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task ResolveVersionConflictsAsync_SingleVersion_ReturnsResolved() {
         // Arrange
         var dependencies = new List<Package> {
