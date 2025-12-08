@@ -451,8 +451,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
             }
         }
 
-        // Reverse to get dependencies before dependents
-        sorted.Reverse();
+        // No reverse needed - dependencies are already added before dependents
         return sorted;
     }
 
