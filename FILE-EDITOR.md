@@ -16,8 +16,8 @@ The `FileEditor` service provides file creation, modification, and deletion capa
 
 The FileEditor is part of the container-based executor architecture:
 
-1. **IFileEditor Interface**: Defined in `RG.OpenCopilot.Agent/AgentModels.cs`
-2. **FileEditor Implementation**: In `RG.OpenCopilot.App/FileEditor.cs`
+1. **IFileEditor Interface**: Defined in `RG.OpenCopilot.PRGenerationAgent/FileOperations/Services/IFileEditor.cs`
+2. **FileEditor Implementation**: In `RG.OpenCopilot.PRGenerationAgent.Services/Docker/FileEditor.cs`
 3. **Change Tracking**: Uses `FileChange` and `ChangeType` models
 4. **Container Integration**: Works with `IContainerManager` for file operations
 
