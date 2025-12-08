@@ -280,6 +280,40 @@ public class GitHubServiceTests {
         mockIssueAdapter.Verify(i => i.CreateCommentAsync("owner", "repo", 42, "comment", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task GetPullRequestAsync_CallsAdapterAndReturnsPrInfo() {
+        // Arrange
+        var mockRepositoryAdapter = new Mock<IGitHubRepositoryAdapter>();
+        var mockGitAdapter = new Mock<IGitHubGitAdapter>();
+        var mockPullRequestAdapter = new Mock<IGitHubPullRequestAdapter>();
+        mockPullRequestAdapter.Setup(p => p.GetAsync("owner", "repo", 42, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PullRequestInfo {
+                Number = 42,
+                HeadRef = "feature-branch",
+                Title = "Test PR",
+                Body = "Test body content"
+            });
+        var mockIssueAdapter = new Mock<IGitHubIssueAdapter>();
+        var logger = new TestLogger<GitHubService>();
+        
+        var service = new GitHubService(
+            mockRepositoryAdapter.Object,
+            mockGitAdapter.Object,
+            mockPullRequestAdapter.Object,
+            mockIssueAdapter.Object,
+            logger);
+
+        // Act
+        var result = await service.GetPullRequestAsync("owner", "repo", 42);
+
+        // Assert
+        mockPullRequestAdapter.Verify(p => p.GetAsync("owner", "repo", 42, It.IsAny<CancellationToken>()), Times.Once);
+        result.Number.ShouldBe(42);
+        result.HeadRef.ShouldBe("feature-branch");
+        result.Title.ShouldBe("Test PR");
+        result.Body.ShouldBe("Test body content");
+    }
+
     private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
