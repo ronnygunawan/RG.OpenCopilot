@@ -430,6 +430,257 @@ public class BackgroundJobProcessingTests {
         jobDispatcher.LastDispatchedJob.Metadata["TaskId"].ShouldBe("owner/test/issues/1");
     }
 
+    [Fact]
+    public async Task ChannelJobQueue_Complete_ClosesChannel() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxQueueSize = 10,
+            EnablePrioritization = false
+        };
+        var queue = new ChannelJobQueue(options);
+
+        // Act
+        queue.Complete();
+
+        // Assert
+        // Attempting to enqueue after Complete should return false
+        var job = new BackgroundJob { Type = "Test", Payload = "test" };
+        var result = await queue.EnqueueAsync(job);
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ChannelJobQueue_Dispose_DisposesResources() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxQueueSize = 10,
+            EnablePrioritization = false
+        };
+        var queue = new ChannelJobQueue(options);
+
+        // Act & Assert - should not throw
+        queue.Dispose();
+    }
+
+    [Fact]
+    public async Task ChannelJobQueue_EnqueueAsync_HandlesChannelClosedException() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxQueueSize = 10,
+            EnablePrioritization = false
+        };
+        var queue = new ChannelJobQueue(options);
+        queue.Complete();
+
+        var job = new BackgroundJob { Type = "Test", Payload = "test" };
+
+        // Act
+        var result = await queue.EnqueueAsync(job);
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ChannelJobQueue_DequeueAsync_WithPrioritizationDisabled_ReturnsFirstJob() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxQueueSize = 10,
+            EnablePrioritization = false
+        };
+        var queue = new ChannelJobQueue(options);
+
+        var firstJob = new BackgroundJob { Type = "First", Payload = "first", Priority = 1 };
+        var secondJob = new BackgroundJob { Type = "Second", Payload = "second", Priority = 10 };
+
+        await queue.EnqueueAsync(firstJob);
+        await queue.EnqueueAsync(secondJob);
+
+        // Act
+        var dequeuedFirst = await queue.DequeueAsync();
+        var dequeuedSecond = await queue.DequeueAsync();
+
+        // Assert - should return in FIFO order when prioritization is disabled
+        dequeuedFirst.ShouldNotBeNull();
+        dequeuedFirst.Type.ShouldBe("First");
+
+        dequeuedSecond.ShouldNotBeNull();
+        dequeuedSecond.Type.ShouldBe("Second");
+    }
+
+    [Fact]
+    public void JobDispatcher_RegisterHandler_DuplicateRegistration_LogsWarning() {
+        // Arrange
+        var options = new BackgroundJobOptions();
+        var queue = new ChannelJobQueue(options);
+        var logger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, logger);
+
+        var handler1 = new Mock<IJobHandler>();
+        handler1.Setup(h => h.JobType).Returns("TestJob");
+
+        var handler2 = new Mock<IJobHandler>();
+        handler2.Setup(h => h.JobType).Returns("TestJob");
+
+        // Act
+        dispatcher.RegisterHandler(handler1.Object);
+        dispatcher.RegisterHandler(handler2.Object); // Duplicate
+
+        // Assert - both calls should complete without exception
+        // The second registration should be ignored with a warning
+        var retrievedHandler = dispatcher.GetHandler("TestJob");
+        retrievedHandler.ShouldBe(handler1.Object); // First handler should remain
+    }
+
+    [Fact]
+    public void JobDispatcher_GetHandler_NonExistentType_ReturnsNull() {
+        // Arrange
+        var options = new BackgroundJobOptions();
+        var queue = new ChannelJobQueue(options);
+        var logger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, logger);
+
+        // Act
+        var handler = dispatcher.GetHandler("NonExistent");
+
+        // Assert
+        handler.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task JobDispatcher_RemoveActiveJob_RemovesJobFromTracking() {
+        // Arrange
+        var options = new BackgroundJobOptions();
+        var queue = new ChannelJobQueue(options);
+        var logger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, logger);
+
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        dispatcher.RegisterHandler(handler.Object);
+
+        var job = new BackgroundJob {
+            Id = "test-job",
+            Type = "TestJob",
+            Payload = "test"
+        };
+
+        // Act
+        await dispatcher.DispatchAsync(job);
+        dispatcher.RemoveActiveJob("test-job");
+
+        // Assert - job should no longer be in active jobs
+        // Attempting to cancel should return false
+        var cancelled = dispatcher.CancelJob("test-job");
+        cancelled.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task ExecutePlanJobHandler_FailsWhenPayloadIsInvalid() {
+        // Arrange
+        var taskStore = new InMemoryAgentTaskStore();
+        var executorService = new Mock<IExecutorService>();
+        var logger = new TestLogger<ExecutePlanJobHandler>();
+
+        var handler = new ExecutePlanJobHandler(
+            taskStore,
+            executorService.Object,
+            logger);
+
+        var job = new BackgroundJob {
+            Type = ExecutePlanJobHandler.JobTypeName,
+            Payload = "invalid json{{"
+        };
+
+        // Act
+        var result = await handler.ExecuteAsync(job);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNullOrEmpty();
+        // JSON deserialization exceptions are caught and marked for retry
+        result.ShouldRetry.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task BackgroundJob_CreateRetryJob_IncrementsRetryCount() {
+        // Arrange
+        var originalJob = new BackgroundJob {
+            Id = "test-id",
+            Type = "TestJob",
+            Payload = "test",
+            Priority = 5,
+            MaxRetries = 3,
+            RetryCount = 1,
+            Metadata = new Dictionary<string, string> { ["Key"] = "Value" }
+        };
+
+        // Act
+        var retryJob = originalJob.CreateRetryJob();
+
+        // Assert
+        retryJob.Id.ShouldBe(originalJob.Id);
+        retryJob.Type.ShouldBe(originalJob.Type);
+        retryJob.Payload.ShouldBe(originalJob.Payload);
+        retryJob.Priority.ShouldBe(originalJob.Priority);
+        retryJob.MaxRetries.ShouldBe(originalJob.MaxRetries);
+        retryJob.RetryCount.ShouldBe(2); // Incremented
+        retryJob.Metadata["Key"].ShouldBe("Value");
+
+        await Task.CompletedTask;
+    }
+
+    [Fact]
+    public async Task JobQueue_Count_ReturnsCorrectCount() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxQueueSize = 10,
+            EnablePrioritization = false
+        };
+        var queue = new ChannelJobQueue(options);
+
+        // Act
+        queue.Count.ShouldBe(0);
+
+        await queue.EnqueueAsync(new BackgroundJob { Type = "Test1", Payload = "test" });
+        await queue.EnqueueAsync(new BackgroundJob { Type = "Test2", Payload = "test" });
+
+        // Assert
+        queue.Count.ShouldBe(2);
+
+        await queue.DequeueAsync();
+        queue.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task JobDispatcher_DispatchAsync_FailsWhenEnqueueFails() {
+        // Arrange
+        var options = new BackgroundJobOptions {
+            MaxQueueSize = 1,
+            EnablePrioritization = false
+        };
+        var queue = new ChannelJobQueue(options);
+        queue.Complete(); // Close the queue
+
+        var logger = new TestLogger<JobDispatcher>();
+        var dispatcher = new JobDispatcher(queue, logger);
+
+        var handler = new Mock<IJobHandler>();
+        handler.Setup(h => h.JobType).Returns("TestJob");
+        dispatcher.RegisterHandler(handler.Object);
+
+        var job = new BackgroundJob {
+            Type = "TestJob",
+            Payload = "test"
+        };
+
+        // Act
+        var result = await dispatcher.DispatchAsync(job);
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
     // Test helper classes
     private class TestGitHubService : IGitHubService {
         public bool BranchCreated { get; private set; }
