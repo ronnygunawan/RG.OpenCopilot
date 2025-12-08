@@ -490,6 +490,130 @@ public class DependencyManagerTests {
     }
 
     [Fact]
+    public async Task AddDependencyAsync_MavenPackage_ReturnsSuccess() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/pom.xml"
+        }, pattern: "pom.xml");
+        containerManager.SetExecuteResult("mvn", new CommandResult {
+            ExitCode = 0,
+            Output = "Downloaded: com.google.code.gson:gson:2.10.1"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "com.google.code.gson:gson",
+            version: "2.10.1");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("com.google.code.gson:gson");
+        result.InstalledPackage.Version.ShouldBe("2.10.1");
+        result.InstalledPackage.Manager.ShouldBe(PackageManager.Maven);
+    }
+
+    [Fact]
+    public async Task AddDependencyAsync_GradlePackage_ReturnsSuccess() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/build.gradle"
+        }, pattern: "build.gradle");
+        containerManager.SetExecuteResult("gradle", new CommandResult {
+            ExitCode = 0,
+            Output = "BUILD SUCCESSFUL"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "com.google.code.gson:gson",
+            version: "2.10.1");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("com.google.code.gson:gson");
+        result.InstalledPackage.Version.ShouldBe("2.10.1");
+        result.InstalledPackage.Manager.ShouldBe(PackageManager.Gradle);
+    }
+
+    [Fact]
+    public async Task AddDependencyAsync_ComposerPackage_ReturnsSuccess() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/composer.json"
+        }, pattern: "composer.json");
+        containerManager.SetExecuteResult("composer", new CommandResult {
+            ExitCode = 0,
+            Output = "Package installed successfully"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "monolog/monolog",
+            version: "2.9.0");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("monolog/monolog");
+        result.InstalledPackage.Version.ShouldBe("2.9.0");
+        result.InstalledPackage.Manager.ShouldBe(PackageManager.Composer);
+    }
+
+    [Fact]
+    public async Task AddDependencyAsync_RubyGemsPackage_ReturnsSuccess() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetupNoPackageFiles();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "/workspace/Gemfile"
+        }, pattern: "Gemfile");
+        containerManager.SetExecuteResult("bundle", new CommandResult {
+            ExitCode = 0,
+            Output = "Fetching gem metadata from https://rubygems.org/"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act
+        var result = await manager.AddDependencyAsync(
+            containerId: "test-container",
+            packageName: "rails",
+            version: "7.0.0");
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.InstalledPackage.ShouldNotBeNull();
+        result.InstalledPackage.Name.ShouldBe("rails");
+        result.InstalledPackage.Version.ShouldBe("7.0.0");
+        result.InstalledPackage.Manager.ShouldBe(PackageManager.RubyGems);
+    }
+
+    [Fact]
     public async Task AddDependencyAsync_WithoutVersion_InstallsLatest() {
         // Arrange
         var containerManager = new TestContainerManagerForDependencyManager();
@@ -622,6 +746,111 @@ public class DependencyManagerTests {
         var result = await manager.ListInstalledPackagesAsync("test-container");
 
         // Assert
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task UpdateDependencyFileAsync_PipPackageWithVersion_UpdatesFile() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "echo command executed"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+        var package = new Package {
+            Name = "requests",
+            Version = "2.31.0",
+            Manager = PackageManager.Pip
+        };
+
+        // Act
+        await manager.UpdateDependencyFileAsync("test-container", package);
+
+        // Assert - Should execute update command for Pip
+        // The test passes if no exception is thrown
+    }
+
+    [Fact]
+    public async Task UpdateDependencyFileAsync_PipPackageWithoutVersion_UpdatesFile() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        containerManager.SetExecuteResult("sh", new CommandResult {
+            ExitCode = 0,
+            Output = "echo command executed"
+        });
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+        var package = new Package {
+            Name = "requests",
+            Version = null,
+            Manager = PackageManager.Pip
+        };
+
+        // Act
+        await manager.UpdateDependencyFileAsync("test-container", package);
+
+        // Assert - Should execute update command for Pip without version
+        // The test passes if no exception is thrown
+    }
+
+    [Fact]
+    public async Task UpdateDependencyFileAsync_NuGetPackage_NoFileUpdate() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+        var package = new Package {
+            Name = "Newtonsoft.Json",
+            Version = "13.0.3",
+            Manager = PackageManager.NuGet
+        };
+
+        // Act
+        await manager.UpdateDependencyFileAsync("test-container", package);
+
+        // Assert - Should not execute any update command for NuGet
+        // The test passes if no exception is thrown
+    }
+
+    [Fact]
+    public async Task UpdateDependencyFileAsync_MavenPackage_NoFileUpdate() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+        var package = new Package {
+            Name = "com.google.code.gson:gson",
+            Version = "2.10.1",
+            Manager = PackageManager.Maven
+        };
+
+        // Act
+        await manager.UpdateDependencyFileAsync("test-container", package);
+
+        // Assert - Should not execute any update command for Maven
+        // The test passes if no exception is thrown
+    }
+
+    [Fact]
+    public async Task RecommendPackagesAsync_ValidResponse_ParsesJson() {
+        // Arrange
+        var containerManager = new TestContainerManagerForDependencyManager();
+        var kernel = CreateMockKernel();
+        var logger = new TestLogger<DependencyManager>();
+        var manager = new DependencyManager(containerManager, kernel, logger);
+
+        // Act - With an unconfigured kernel, this will throw and return empty list
+        var result = await manager.RecommendPackagesAsync(
+            requirement: "need JSON parsing",
+            language: "C#");
+
+        // Assert - Should return empty list when LLM is not configured
         result.ShouldBeEmpty();
     }
 

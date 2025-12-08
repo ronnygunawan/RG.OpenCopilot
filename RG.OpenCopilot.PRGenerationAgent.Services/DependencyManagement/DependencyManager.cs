@@ -272,8 +272,6 @@ internal sealed class DependencyManager : IDependencyManager {
         PackageManager manager,
         string packageName,
         string? version) {
-        var packageSpec = version != null ? $"{packageName}@{version}" : packageName;
-        
         return manager switch {
             PackageManager.NuGet => ("dotnet", new[] { "add", "package", packageName, version != null ? "--version" : "", version ?? "" }.Where(s => !string.IsNullOrEmpty(s)).ToArray()),
             PackageManager.Npm => ("npm", new[] { "install", version != null ? $"{packageName}@{version}" : packageName }),
