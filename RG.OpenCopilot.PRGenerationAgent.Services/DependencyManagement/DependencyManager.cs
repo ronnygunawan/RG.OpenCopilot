@@ -374,8 +374,8 @@ internal sealed class DependencyManager : IDependencyManager {
             var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2) {
                 packages.Add(new Package {
-                    Name = parts[0],
-                    Version = parts[1],
+                    Name = parts[0].Trim(),
+                    Version = parts[1].Trim(),
                     Manager = manager,
                     Source = GetDefaultSource(manager)
                 });
