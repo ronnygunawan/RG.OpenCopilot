@@ -145,6 +145,11 @@ public sealed class ContainerExecutorService : IExecutorService {
                 task.Status = AgentTaskStatus.Completed;
                 task.CompletedAt = DateTime.UtcNow;
                 _logger.LogInformation("Task {TaskId} completed successfully", task.Id);
+                
+                // Finalize the PR: remove [WIP], rewrite description, archive WIP details
+                if (prNumber.HasValue) {
+                    await _progressReporter.FinalizePullRequestAsync(task, prNumber.Value, cancellationToken);
+                }
             }
             else if (failedSteps.Any()) {
                 task.Status = AgentTaskStatus.Failed;

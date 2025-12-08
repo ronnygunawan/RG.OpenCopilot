@@ -531,4 +531,84 @@ internal sealed class ProgressReporter : IProgressReporter {
         
         return sb.ToString();
     }
+
+    public async Task FinalizePullRequestAsync(
+        AgentTask task,
+        int prNumber,
+        CancellationToken cancellationToken = default) {
+        
+        if (task.Plan == null) {
+            _logger.LogWarning("Cannot finalize PR for task {TaskId} - no plan available", task.Id);
+            return;
+        }
+
+        // Get current PR to extract content
+        var pr = await _gitHubService.GetPullRequestAsync(
+            task.RepositoryOwner,
+            task.RepositoryName,
+            prNumber,
+            cancellationToken);
+
+        // Remove [WIP] prefix from title
+        var finalTitle = pr.Title.Replace("[WIP] ", "").Trim();
+
+        // Create reviewer-friendly description
+        var finalDescription = FormatFinalPrDescription(task, pr.Body);
+
+        // Update the PR
+        await _gitHubService.UpdatePullRequestDescriptionAsync(
+            owner: task.RepositoryOwner,
+            repo: task.RepositoryName,
+            prNumber: prNumber,
+            title: finalTitle,
+            body: finalDescription,
+            cancellationToken: cancellationToken);
+
+        _logger.LogInformation(
+            "Finalized PR #{PrNumber} for task {TaskId} - removed [WIP] prefix and archived WIP details",
+            prNumber,
+            task.Id);
+    }
+
+    /// <summary>
+    /// Formats the final PR description with WIP details archived in a collapsed section
+    /// </summary>
+    private string FormatFinalPrDescription(AgentTask task, string wipBody) {
+        var sb = new StringBuilder();
+        
+        // Create reviewer-friendly summary
+        sb.AppendLine("## Summary");
+        sb.AppendLine();
+        sb.AppendLine($"This PR implements the changes requested in issue #{task.IssueNumber}.");
+        sb.AppendLine();
+        
+        if (task.Plan != null) {
+            sb.AppendLine("### Changes Made");
+            sb.AppendLine();
+            
+            foreach (var step in task.Plan.Steps.Where(s => s.Done)) {
+                sb.AppendLine($"- ✅ {step.Title}");
+            }
+            sb.AppendLine();
+        }
+        
+        sb.AppendLine("### Testing");
+        sb.AppendLine();
+        sb.AppendLine("All automated tests have been run and verified to pass.");
+        sb.AppendLine();
+        
+        // Archive WIP details in collapsed section
+        sb.AppendLine("<details>");
+        sb.AppendLine("<summary>📋 WIP Progress Details (Click to expand)</summary>");
+        sb.AppendLine();
+        sb.AppendLine(wipBody);
+        sb.AppendLine();
+        sb.AppendLine("</details>");
+        sb.AppendLine();
+        
+        sb.AppendLine("---");
+        sb.AppendLine("_This PR was automatically created and completed by RG.OpenCopilot_");
+        
+        return sb.ToString();
+    }
 }

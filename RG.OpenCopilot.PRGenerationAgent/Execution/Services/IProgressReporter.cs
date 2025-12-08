@@ -60,4 +60,12 @@ public interface IProgressReporter {
         List<FileChange> changes,
         int prNumber,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finalizes the PR by removing [WIP] prefix, rewriting description, and archiving WIP details
+    /// </summary>
+    Task FinalizePullRequestAsync(
+        AgentTask task,
+        int prNumber,
+        CancellationToken cancellationToken = default);
 }
