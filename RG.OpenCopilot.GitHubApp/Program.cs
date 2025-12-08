@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Webhook.Models;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Webhook.Services;
@@ -53,13 +54,36 @@ public partial class Program {
                     return Results.BadRequest("Invalid payload");
                 }
 
-                // Handle the event
-                await handler.HandleIssuesEventAsync(payload);
+                // Handle the event and get job ID
+                var jobId = await handler.HandleIssuesEventAsync(payload);
+
+                // Return 202 Accepted if a job was enqueued
+                if (!string.IsNullOrEmpty(jobId)) {
+                    var statusUrl = $"{context.Request.Scheme}://{context.Request.Host}/jobs/{jobId}/status";
+                    return Results.Accepted(statusUrl, new { jobId, statusUrl });
+                }
 
                 return Results.Ok();
             }
             catch (Exception ex) {
                 logger.LogError(ex, "Error processing webhook");
+                return Results.StatusCode(500);
+            }
+        });
+
+        app.MapGet("/jobs/{jobId}/status", async (string jobId, IJobStatusStore statusStore, ILogger<JobStatusEndpoint> logger) => {
+            try {
+                var status = await statusStore.GetStatusAsync(jobId);
+                if (status == null) {
+                    return Results.NotFound(new { error = "Job not found" });
+                }
+
+                return Results.Ok(status);
+            }
+            catch (Exception ex) {
+                // Sanitize jobId before logging to prevent log forging
+                var jobIdSanitized = jobId.Replace("\r", "").Replace("\n", "");
+                logger.LogError(ex, "Error retrieving job status for {JobId}", jobIdSanitized);
                 return Results.StatusCode(500);
             }
         });
@@ -70,4 +94,7 @@ public partial class Program {
 
 // Marker class for logging in webhook endpoint
 internal sealed class WebhookEndpoint { }
+
+// Marker class for logging in job status endpoint
+internal sealed class JobStatusEndpoint { }
 

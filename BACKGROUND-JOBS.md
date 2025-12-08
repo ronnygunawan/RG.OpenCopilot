@@ -253,7 +253,85 @@ public async Task MyCustomJobHandler_ExecutesSuccessfully() {
 7. **Use dependency injection**: Inject services into handlers rather than creating them directly
 8. **Test thoroughly**: Test happy path, failure cases, and cancellation scenarios
 
-## Example: ExecutePlan Job Handler
+## Built-in Job Handlers
+
+### GeneratePlan Job Handler
+
+The `GeneratePlanJobHandler` handles webhook-triggered plan generation asynchronously. When a GitHub issue is labeled with `copilot-assisted`, a webhook enqueues a `GeneratePlan` job instead of blocking the webhook response.
+
+**Workflow:**
+1. Webhook validates event and enqueues `GeneratePlanJob`
+2. Webhook returns 202 Accepted with job ID and status URL
+3. `GeneratePlanJobHandler` executes in background:
+   - Creates working branch
+   - Creates WIP pull request
+   - Analyzes repository (optional, continues on failure)
+   - Loads custom instructions (optional, continues on failure)
+   - Generates plan using LLM
+   - Updates task and PR with plan
+   - Dispatches `ExecutePlanJob` for code execution
+
+**Job Status Tracking:**
+- Updates `IJobStatusStore` through lifecycle: Queued → Processing → Completed/Failed/Cancelled
+- Stores result data (PR number, branch name) on success
+- Stores error message on failure
+
+**Payload:**
+```csharp
+public sealed class GeneratePlanJobPayload {
+    public string TaskId { get; init; } = "";
+    public long InstallationId { get; init; }
+    public string RepositoryOwner { get; init; } = "";
+    public string RepositoryName { get; init; } = "";
+    public int IssueNumber { get; init; }
+    public string IssueTitle { get; init; } = "";
+    public string IssueBody { get; init; } = "";
+    public string WebhookId { get; init; } = "";
+}
+```
+
+**Example Dispatch:**
+```csharp
+var payload = new GeneratePlanJobPayload {
+    TaskId = "owner/repo/issues/1",
+    InstallationId = 123,
+    RepositoryOwner = "owner",
+    RepositoryName = "repo",
+    IssueNumber = 1,
+    IssueTitle = "Add new feature",
+    IssueBody = "Description of feature",
+    WebhookId = Guid.NewGuid().ToString()
+};
+
+var job = new BackgroundJob {
+    Type = "GeneratePlan",
+    Payload = JsonSerializer.Serialize(payload),
+    Priority = 5, // Higher priority for user-triggered events
+    Metadata = new Dictionary<string, string> {
+        ["TaskId"] = payload.TaskId,
+        ["WebhookId"] = payload.WebhookId
+    }
+};
+
+var dispatched = await _jobDispatcher.DispatchAsync(job);
+if (dispatched) {
+    // Return 202 Accepted with job.Id for status tracking
+    return Results.Accepted($"/jobs/{job.Id}/status", new { jobId = job.Id });
+}
+```
+
+**Status Endpoint:**
+```csharp
+app.MapGet("/jobs/{jobId}/status", async (string jobId, IJobStatusStore statusStore) => {
+    var status = await statusStore.GetStatusAsync(jobId);
+    if (status == null) {
+        return Results.NotFound();
+    }
+    return Results.Ok(status);
+});
+```
+
+### ExecutePlan Job Handler
 
 The built-in `ExecutePlanJobHandler` demonstrates these patterns:
 

@@ -394,22 +394,16 @@ public class BackgroundJobProcessingTests {
     }
 
     [Fact]
-    public async Task WebhookHandler_DispatchesExecutePlanJob() {
+    public async Task WebhookHandler_DispatchesGeneratePlanJob() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
-        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
-        var gitHubService = new TestGitHubService();
-        var repositoryAnalyzer = new TestRepositoryAnalyzer();
-        var instructionsLoader = new TestInstructionsLoader();
         var jobDispatcher = new TestJobDispatcher();
+        var jobStatusStore = new TestJobStatusStore();
 
         var handler = new WebhookHandler(
             taskStore,
-            planner,
-            gitHubService,
-            repositoryAnalyzer,
-            instructionsLoader,
             jobDispatcher,
+            jobStatusStore,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -426,7 +420,7 @@ public class BackgroundJobProcessingTests {
         // Assert
         jobDispatcher.JobDispatched.ShouldBeTrue();
         jobDispatcher.LastDispatchedJob.ShouldNotBeNull();
-        jobDispatcher.LastDispatchedJob.Type.ShouldBe(ExecutePlanJobHandler.JobTypeName);
+        jobDispatcher.LastDispatchedJob.Type.ShouldBe(GeneratePlanJobHandler.JobTypeName);
         jobDispatcher.LastDispatchedJob.Metadata["TaskId"].ShouldBe("owner/test/issues/1");
     }
 
@@ -1224,6 +1218,20 @@ public class BackgroundJobProcessingTests {
         }
 
         public void RegisterHandler(IJobHandler handler) {
+        }
+    }
+
+    private class TestJobStatusStore : IJobStatusStore {
+        public Task SetStatusAsync(BackgroundJobStatusInfo statusInfo, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<BackgroundJobStatusInfo?> GetStatusAsync(string jobId, CancellationToken cancellationToken = default) {
+            return Task.FromResult<BackgroundJobStatusInfo?>(null);
+        }
+
+        public Task DeleteStatusAsync(string jobId, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
         }
     }
 

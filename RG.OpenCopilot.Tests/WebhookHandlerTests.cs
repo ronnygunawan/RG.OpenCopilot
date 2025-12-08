@@ -9,18 +9,12 @@ public class WebhookHandlerTests {
     public async Task HandleIssuesEventAsync_IgnoresNonLabeledActions() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
-        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
-        var gitHubService = new TestGitHubService();
-        var repositoryAnalyzer = new TestRepositoryAnalyzer();
-        var instructionsLoader = new TestInstructionsLoader();
         var jobDispatcher = new TestJobDispatcher();
+        var jobStatusStore = new TestJobStatusStore();
         var handler = new WebhookHandler(
             taskStore,
-            planner,
-            gitHubService,
-            repositoryAnalyzer,
-            instructionsLoader,
             jobDispatcher,
+            jobStatusStore,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -34,26 +28,19 @@ public class WebhookHandlerTests {
         await handler.HandleIssuesEventAsync(payload);
 
         // Assert
-        gitHubService.BranchCreated.ShouldBeFalse();
-        gitHubService.PrCreated.ShouldBeFalse();
+        jobDispatcher.JobDispatched.ShouldBeFalse();
     }
 
     [Fact]
-    public async Task HandleIssuesEventAsync_CreatesBranchAndPrForCopilotAssistedLabel() {
+    public async Task HandleIssuesEventAsync_EnqueuesJobForCopilotAssistedLabel() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
-        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
-        var gitHubService = new TestGitHubService();
-        var repositoryAnalyzer = new TestRepositoryAnalyzer();
-        var instructionsLoader = new TestInstructionsLoader();
         var jobDispatcher = new TestJobDispatcher();
+        var jobStatusStore = new TestJobStatusStore();
         var handler = new WebhookHandler(
             taskStore,
-            planner,
-            gitHubService,
-            repositoryAnalyzer,
-            instructionsLoader,
             jobDispatcher,
+            jobStatusStore,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -65,30 +52,25 @@ public class WebhookHandlerTests {
         };
 
         // Act
-        await handler.HandleIssuesEventAsync(payload);
+        var jobId = await handler.HandleIssuesEventAsync(payload);
 
         // Assert
-        gitHubService.BranchCreated.ShouldBeTrue();
-        gitHubService.PrCreated.ShouldBeTrue();
-        gitHubService.PrUpdated.ShouldBeTrue();
+        jobId.ShouldNotBeNullOrEmpty();
+        jobDispatcher.JobDispatched.ShouldBeTrue();
+        jobDispatcher.LastDispatchedJob.ShouldNotBeNull();
+        jobDispatcher.LastDispatchedJob.Type.ShouldBe("GeneratePlan");
     }
 
     [Fact]
     public async Task HandleIssuesEventAsync_CreatesTaskWithCorrectDetails() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
-        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
-        var gitHubService = new TestGitHubService();
-        var repositoryAnalyzer = new TestRepositoryAnalyzer();
-        var instructionsLoader = new TestInstructionsLoader();
         var jobDispatcher = new TestJobDispatcher();
+        var jobStatusStore = new TestJobStatusStore();
         var handler = new WebhookHandler(
             taskStore,
-            planner,
-            gitHubService,
-            repositoryAnalyzer,
-            instructionsLoader,
             jobDispatcher,
+            jobStatusStore,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -109,26 +91,19 @@ public class WebhookHandlerTests {
         task.RepositoryName.ShouldBe("test");
         task.IssueNumber.ShouldBe(42);
         task.InstallationId.ShouldBe(123);
-        task.Status.ShouldBe(AgentTaskStatus.Planned);
-        task.Plan.ShouldNotBeNull();
+        task.Status.ShouldBe(AgentTaskStatus.PendingPlanning);
     }
 
     [Fact]
     public async Task HandleIssuesEventAsync_SkipsWhenTaskAlreadyExists() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
-        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
-        var gitHubService = new TestGitHubService();
-        var repositoryAnalyzer = new TestRepositoryAnalyzer();
-        var instructionsLoader = new TestInstructionsLoader();
         var jobDispatcher = new TestJobDispatcher();
+        var jobStatusStore = new TestJobStatusStore();
         var handler = new WebhookHandler(
             taskStore,
-            planner,
-            gitHubService,
-            repositoryAnalyzer,
-            instructionsLoader,
             jobDispatcher,
+            jobStatusStore,
             new TestLogger<WebhookHandler>());
 
         // Create an existing task
@@ -154,27 +129,20 @@ public class WebhookHandlerTests {
         await handler.HandleIssuesEventAsync(payload: payload);
 
         // Assert
-        // Should not create a new branch or PR since task already exists
-        gitHubService.BranchCreated.ShouldBeFalse();
-        gitHubService.PrCreated.ShouldBeFalse();
+        // Should not dispatch a new job since task already exists
+        jobDispatcher.JobDispatched.ShouldBeFalse();
     }
 
     [Fact]
     public async Task HandleIssuesEventAsync_IgnoresUnlabeledAction() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
-        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
-        var gitHubService = new TestGitHubService();
-        var repositoryAnalyzer = new TestRepositoryAnalyzer();
-        var instructionsLoader = new TestInstructionsLoader();
         var jobDispatcher = new TestJobDispatcher();
+        var jobStatusStore = new TestJobStatusStore();
         var handler = new WebhookHandler(
             taskStore,
-            planner,
-            gitHubService,
-            repositoryAnalyzer,
-            instructionsLoader,
             jobDispatcher,
+            jobStatusStore,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -189,26 +157,19 @@ public class WebhookHandlerTests {
         await handler.HandleIssuesEventAsync(payload: payload);
 
         // Assert
-        gitHubService.BranchCreated.ShouldBeFalse();
-        gitHubService.PrCreated.ShouldBeFalse();
+        jobDispatcher.JobDispatched.ShouldBeFalse();
     }
 
     [Fact]
     public async Task HandleIssuesEventAsync_IgnoresNonCopilotAssistedLabel() {
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
-        var planner = new SimplePlannerService(new TestLogger<SimplePlannerService>());
-        var gitHubService = new TestGitHubService();
-        var repositoryAnalyzer = new TestRepositoryAnalyzer();
-        var instructionsLoader = new TestInstructionsLoader();
         var jobDispatcher = new TestJobDispatcher();
+        var jobStatusStore = new TestJobStatusStore();
         var handler = new WebhookHandler(
             taskStore,
-            planner,
-            gitHubService,
-            repositoryAnalyzer,
-            instructionsLoader,
             jobDispatcher,
+            jobStatusStore,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -223,8 +184,7 @@ public class WebhookHandlerTests {
         await handler.HandleIssuesEventAsync(payload: payload);
 
         // Assert
-        gitHubService.BranchCreated.ShouldBeFalse();
-        gitHubService.PrCreated.ShouldBeFalse();
+        jobDispatcher.JobDispatched.ShouldBeFalse();
     }
 
     private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
@@ -271,24 +231,6 @@ public class WebhookHandlerTests {
         }
     }
 
-    private class TestRepositoryAnalyzer : IRepositoryAnalyzer {
-        public Task<RepositoryAnalysis> AnalyzeAsync(string owner, string repo, CancellationToken cancellationToken = default) {
-            return Task.FromResult(new RepositoryAnalysis {
-                Languages = new Dictionary<string, long> { { "C#", 1000 } },
-                KeyFiles = new List<string> { "README.md" },
-                DetectedTestFramework = "xUnit",
-                DetectedBuildTool = "dotnet",
-                Summary = "C# project with dotnet and xUnit"
-            });
-        }
-    }
-
-    private class TestInstructionsLoader : IInstructionsLoader {
-        public Task<string?> LoadInstructionsAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default) {
-            return Task.FromResult<string?>(null);
-        }
-    }
-
     private class TestJobDispatcher : IJobDispatcher {
         public bool JobDispatched { get; private set; }
         public BackgroundJob? LastDispatchedJob { get; private set; }
@@ -304,6 +246,20 @@ public class WebhookHandlerTests {
         }
 
         public void RegisterHandler(IJobHandler handler) {
+        }
+    }
+
+    private class TestJobStatusStore : IJobStatusStore {
+        public Task SetStatusAsync(BackgroundJobStatusInfo statusInfo, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task<BackgroundJobStatusInfo?> GetStatusAsync(string jobId, CancellationToken cancellationToken = default) {
+            return Task.FromResult<BackgroundJobStatusInfo?>(null);
+        }
+
+        public Task DeleteStatusAsync(string jobId, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
         }
     }
 }

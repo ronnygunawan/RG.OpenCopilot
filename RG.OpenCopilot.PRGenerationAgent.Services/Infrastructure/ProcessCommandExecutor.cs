@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using RG.OpenCopilot.PRGenerationAgent.Execution.Models;
+using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 

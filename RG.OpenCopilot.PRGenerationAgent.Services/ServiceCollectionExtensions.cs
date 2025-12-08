@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Octokit;
+using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
 using RG.OpenCopilot.PRGenerationAgent.Services.DependencyManagement;
 using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
@@ -128,8 +129,10 @@ public static class ServiceCollectionExtensions {
         // Register job infrastructure
         services.AddSingleton<IJobQueue>(sp => new ChannelJobQueue(jobOptions));
         services.AddSingleton<IJobDispatcher, JobDispatcher>();
+        services.AddSingleton<IJobStatusStore, InMemoryJobStatusStore>();
         
         // Register job handlers - they will be auto-registered when dispatcher is first resolved
+        services.AddSingleton<IJobHandler, GeneratePlanJobHandler>();
         services.AddSingleton<IJobHandler, ExecutePlanJobHandler>();
 
         // Register background job processor with handler initialization

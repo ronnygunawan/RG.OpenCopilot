@@ -1,5 +1,6 @@
 using System.Text;
 using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.Docker;
 
