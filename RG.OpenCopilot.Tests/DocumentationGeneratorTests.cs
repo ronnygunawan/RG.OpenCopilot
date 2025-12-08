@@ -1037,4 +1037,603 @@ public class DocumentationGeneratorTests {
 
         exception.Message.ShouldContain("API file path cannot be null or empty");
     }
+
+    [Fact]
+    public async Task GenerateApiDocsAsync_WithXmlFormat_ReturnsXmlDocumentation() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var containerId = "test-container";
+        var apiDoc = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <api>
+              <class name="Calculator">
+                <method name="Add">
+                  <parameter name="a" type="int" />
+                  <parameter name="b" type="int" />
+                  <returns type="int" />
+                </method>
+              </class>
+            </api>
+            """;
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(containerId, "*.cs", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string> { "/workspace/Calculator.cs" });
+
+        mockFileAnalyzer
+            .Setup(f => f.ListFilesAsync(containerId, It.Is<string>(s => s != "*.cs"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<string>());
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(containerId, "/workspace/Calculator.cs", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("public class Calculator { }");
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, apiDoc);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateApiDocsAsync(containerId, ApiDocFormat.Xml);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Format.ShouldBe(ApiDocFormat.Xml);
+        result.Content.ShouldContain("<?xml");
+        result.FilePath.ShouldBe("/workspace/API.xml");
+    }
+
+    [Fact]
+    public async Task GenerateInlineDocsAsync_WithJavaCode_ReturnsDocumentedCode() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var code = """
+            public class Calculator {
+                public int add(int a, int b) {
+                    return a + b;
+                }
+            }
+            """;
+
+        var documentedCode = """
+            /**
+             * A simple calculator class.
+             */
+            public class Calculator {
+                /**
+                 * Adds two integers.
+                 *
+                 * @param a the first number
+                 * @param b the second number
+                 * @return the sum of a and b
+                 */
+                public int add(int a, int b) {
+                    return a + b;
+                }
+            }
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, documentedCode);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateInlineDocsAsync(code, "Java");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Language.ShouldBe("Java");
+        result.DocumentedCodeContent.ShouldContain("/**");
+        result.DocumentedCodeContent.ShouldContain("@param");
+        result.DocumentedCodeContent.ShouldContain("@return");
+        result.DocumentationCount.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task GenerateInlineDocsAsync_WithGoCode_ReturnsDocumentedCode() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var code = """
+            package main
+            
+            func Add(a, b int) int {
+                return a + b
+            }
+            """;
+
+        var documentedCode = """
+            package main
+            
+            // Add calculates the sum of two integers.
+            // It returns the result of adding a and b.
+            func Add(a, b int) int {
+                return a + b
+            }
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, documentedCode);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateInlineDocsAsync(code, "Go");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Language.ShouldBe("Go");
+        result.DocumentedCodeContent.ShouldContain("// Add");
+        result.DocumentationCount.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task GenerateUsageExamplesAsync_WithJavaFile_ReturnsJavaExamples() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var containerId = "test-container";
+        var apiFilePath = "/workspace/Calculator.java";
+        var apiCode = "public class Calculator { public int add(int a, int b) { return a + b; } }";
+
+        var examples = """
+            # Usage Examples
+            
+            ## Basic Addition
+            ```java
+            Calculator calculator = new Calculator();
+            int result = calculator.add(5, 3);
+            System.out.println("5 + 3 = " + result); // Output: 5 + 3 = 8
+            ```
+            """;
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(containerId, apiFilePath, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(apiCode);
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, examples);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateUsageExamplesAsync(containerId, apiFilePath);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContain("Usage Examples");
+        result.ShouldContain("```java");
+    }
+
+    [Fact]
+    public async Task GenerateUsageExamplesAsync_WithTypeScriptFile_ReturnsTypeScriptExamples() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var containerId = "test-container";
+        var apiFilePath = "/workspace/calculator.ts";
+        var apiCode = "export class Calculator { add(a: number, b: number): number { return a + b; } }";
+
+        var examples = """
+            # Usage Examples
+            
+            ```typescript
+            const calculator = new Calculator();
+            const result = calculator.add(5, 3);
+            console.log(`5 + 3 = ${result}`);
+            ```
+            """;
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(containerId, apiFilePath, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(apiCode);
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, examples);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateUsageExamplesAsync(containerId, apiFilePath);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContain("```typescript");
+    }
+
+    [Fact]
+    public async Task GenerateUsageExamplesAsync_WithPythonFile_ReturnsPythonExamples() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var containerId = "test-container";
+        var apiFilePath = "/workspace/calculator.py";
+        var apiCode = "class Calculator:\n    def add(self, a, b):\n        return a + b";
+
+        var examples = """
+            # Usage Examples
+            
+            ```python
+            calculator = Calculator()
+            result = calculator.add(5, 3)
+            print(f"5 + 3 = {result}")
+            ```
+            """;
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(containerId, apiFilePath, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(apiCode);
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, examples);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateUsageExamplesAsync(containerId, apiFilePath);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContain("```python");
+    }
+
+    [Fact]
+    public async Task GenerateUsageExamplesAsync_WithGoFile_ReturnsGoExamples() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var containerId = "test-container";
+        var apiFilePath = "/workspace/calculator.go";
+        var apiCode = "package main\n\nfunc Add(a, b int) int { return a + b }";
+
+        var examples = """
+            # Usage Examples
+            
+            ```go
+            result := Add(5, 3)
+            fmt.Printf("5 + 3 = %d\n", result)
+            ```
+            """;
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(containerId, apiFilePath, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(apiCode);
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, examples);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateUsageExamplesAsync(containerId, apiFilePath);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContain("```go");
+    }
+
+    [Fact]
+    public async Task GenerateInlineDocsAsync_WithEmptyLlmResponse_ReturnsEmptyString() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var code = "public class Test { }";
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, "");
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateInlineDocsAsync(code, "C#");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.DocumentedCodeContent.ShouldBe("");
+        result.DocumentationCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task GenerateInlineDocsAsync_WithCodeBlockInResponse_ExtractsCodeCorrectly() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var code = "def add(a, b): return a + b";
+
+        // Response with markdown code block
+        var llmResponseWithCodeBlock = """
+            ```python
+            def add(a, b):
+                \"\"\"Add two numbers.\"\"\"
+                return a + b
+            ```
+            """;
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, llmResponseWithCodeBlock);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateInlineDocsAsync(code, "Python");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.DocumentedCodeContent.ShouldNotContain("```");
+        result.DocumentedCodeContent.ShouldContain("def add");
+    }
+
+    [Fact]
+    public async Task GenerateInlineDocsAsync_WithUnknownLanguage_HandlesGracefully() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var code = "some code in unknown language";
+
+        var documentedCode = "// Documented code in unknown language";
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, documentedCode);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateInlineDocsAsync(code, "UnknownLang");
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Language.ShouldBe("UnknownLang");
+        result.DocumentationCount.ShouldBe(0); // Unknown language returns 0 count
+    }
+
+    [Fact]
+    public async Task GenerateUsageExamplesAsync_WithUnknownFileExtension_ReturnsExamples() {
+        // Arrange
+        var mockLogger = new Mock<ILogger<DocumentationGenerator>>();
+        var mockChatService = new Mock<IChatCompletionService>();
+        var mockFileAnalyzer = new Mock<IFileAnalyzer>();
+        var mockFileEditor = new Mock<IFileEditor>();
+        var mockContainerManager = new Mock<IContainerManager>();
+
+        var containerId = "test-container";
+        var apiFilePath = "/workspace/config.txt";
+        var apiCode = "some configuration file";
+
+        var examples = "# Usage Examples\n\nSome examples for unknown file type";
+
+        mockContainerManager
+            .Setup(c => c.ReadFileInContainerAsync(containerId, apiFilePath, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(apiCode);
+
+        var chatContent = new ChatMessageContent(AuthorRole.Assistant, examples);
+
+        mockChatService
+            .Setup(s => s.GetChatMessageContentsAsync(
+                It.IsAny<ChatHistory>(),
+                It.IsAny<PromptExecutionSettings>(),
+                It.IsAny<Kernel>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatMessageContent> { chatContent });
+
+        var kernelBuilder = Kernel.CreateBuilder();
+        kernelBuilder.Services.AddSingleton(mockChatService.Object);
+        var kernel = kernelBuilder.Build();
+
+        var generator = new DocumentationGenerator(
+            kernel,
+            mockLogger.Object,
+            mockFileAnalyzer.Object,
+            mockFileEditor.Object,
+            mockContainerManager.Object);
+
+        // Act
+        var result = await generator.GenerateUsageExamplesAsync(containerId, apiFilePath);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ShouldContain("examples");
+    }
 }
