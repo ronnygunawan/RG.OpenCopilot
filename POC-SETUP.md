@@ -99,7 +99,7 @@ This is optional but recommended for production. Generate a random secret and co
 ```bash
 cd /path/to/RG.OpenCopilot
 dotnet build
-dotnet run --project RG.OpenCopilot.App
+dotnet run --project RG.OpenCopilot.GitHubApp
 ```
 
 The app will start on `http://localhost:5272` (or the port shown in console).

@@ -27,9 +27,9 @@ Build a GitHub Enterprise–hosted coding agent similar to GitHub Copilot Coding
    - Webhooks:
      - `issues` – detect `copilot-assisted` label.
      - (Later) `issue_comment`, `pull_request` as needed.
-   - Webhook endpoint is implemented in `RG.OpenCopilot.App`.
+   - Webhook endpoint is implemented in `RG.OpenCopilot.GitHubApp`.
 
-3. **RG.OpenCopilot.App (ASP.NET Core minimal API)**
+3. **RG.OpenCopilot.GitHubApp (ASP.NET Core minimal API)**
    - Receives GitHub webhooks at `/github/webhook`.
    - Validates signatures.
    - On `issues` labeled `copilot-assisted`:
@@ -133,7 +133,7 @@ Build a GitHub Enterprise–hosted coding agent similar to GitHub Copilot Coding
     - Provide file and command tools to the cheaper model.
     - Commit, push, and open/update PR.
 
-### 4.4 GitHub Integration (`RG.OpenCopilot.App`)
+### 4.4 GitHub Integration (`RG.OpenCopilot.GitHubApp`)
 
 - Webhook handler:
   - Validates signature.
@@ -160,14 +160,14 @@ Build a GitHub Enterprise–hosted coding agent similar to GitHub Copilot Coding
 ## 5. Incremental Implementation Steps
 
 1. **Webhook wiring & WIP PR creation**
-  - Replace stub `/github/webhook` in `RG.OpenCopilot.App` with real handler:
+  - Replace stub `/github/webhook` in `RG.OpenCopilot.GitHubApp` with real handler:
     - Verify GitHub signature.
     - Parse `issues` events.
     - On `copilot-assisted` label, create `AgentTask`.
     - Create a new branch and a WIP PR with a `[WIP]` prefix in the title, using the original issue prompt as the initial PR description.
 
 2. **Planner implementation & PR description update**
-  - Add a real `PlannerService` in `RG.OpenCopilot.Agent` or `RG.OpenCopilot.App`:
+  - Add a real `PlannerService` in `RG.OpenCopilot.Agent` or `RG.OpenCopilot.GitHubApp`:
     - Integrate with chosen premium LLM provider.
     - Define planner prompt and JSON schema.
     - Map response → `AgentPlan`.
@@ -204,5 +204,5 @@ Build a GitHub Enterprise–hosted coding agent similar to GitHub Copilot Coding
 
 - .NET 8 solution and projects created and building successfully.
 - Core domain models and planner/executor interfaces defined in `RG.OpenCopilot.Agent`.
-- Minimal stubs in `RG.OpenCopilot.App` and `RG.OpenCopilot.Runner` to verify wiring.
+- Minimal stubs in `RG.OpenCopilot.GitHubApp` and `RG.OpenCopilot.Runner` to verify wiring.
 - Next major work: replace stubs with real planner/executor implementations and wire up the GitHub App webhook logic.

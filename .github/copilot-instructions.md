@@ -28,7 +28,7 @@ RG.OpenCopilot is a C#/.NET 10 solution that provides a GitHub Enterprise–host
   - `GitHub/Webhook/` – Webhook handling (WebhookHandler, WebhookValidator, webhook models)
   - `Infrastructure/` – Infrastructure implementations (AgentTaskStore, CommandExecutor, RepositoryCloner)
   - Exposes `ServiceCollectionExtensions` class with `AddPRGenerationAgentServices()` method
-- **RG.OpenCopilot.PRGenerationAgent.App** – ASP.NET Core minimal API (presentation layer)
+- **RG.OpenCopilot.GitHubApp** – ASP.NET Core minimal API (presentation layer)
   - Contains `Program.cs` with webhook endpoints and service registration
   - Minimal presentation logic, delegates to Services project
 - **RG.OpenCopilot.Tests** – xUnit tests using Shouldly assertions
@@ -49,7 +49,7 @@ dotnet test RG.OpenCopilot.slnx --configuration Release --no-build --verbosity n
 
 ### Run Web App
 ```bash
-dotnet run --project RG.OpenCopilot.PRGenerationAgent.App
+dotnet run --project RG.OpenCopilot.GitHubApp
 ```
 
 ## Coding Conventions

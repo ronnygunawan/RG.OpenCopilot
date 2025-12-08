@@ -101,7 +101,7 @@ if (!isValid) {
 1. **ICodeGenerator Interface** (`RG.OpenCopilot.Agent/CodeGeneration/Services`)
    - Defines the public API for code generation services
 
-2. **CodeGenerator Implementation** (`RG.OpenCopilot.App/CodeGeneration`)
+2. **CodeGenerator Implementation** (`RG.OpenCopilot.PRGenerationAgent.Services/CodeGeneration`)
    - Uses Microsoft Semantic Kernel for LLM integration
    - Implements prompt engineering for effective code generation
    - Handles response extraction and cleanup

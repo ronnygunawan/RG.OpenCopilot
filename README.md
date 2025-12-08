@@ -25,7 +25,7 @@ See **[POC-SETUP.md](POC-SETUP.md)** for setup and testing instructions.
   - **Planning/**: Planning domain (AgentPlan, PlanStep, AgentTaskContext, IPlannerService)
   - **Execution/**: Execution domain (AgentTask, AgentTaskStatus, IExecutorService)
   - **FileOperations/**: File operations domain (FileStructure, FileTree, FileChange, IFileAnalyzer, IFileEditor)
-- `RG.OpenCopilot.App` – ASP.NET Core minimal API organized by feature
+- `RG.OpenCopilot.GitHubApp` – ASP.NET Core minimal API organized by feature
   - **Planner/**: Planning services (LlmPlannerService, SimplePlannerService)
   - **Executor/**: Execution services (ExecutorService, ContainerExecutorService)
   - **Docker/**: Container management (ContainerManager, FileAnalyzer, FileEditor)
@@ -99,7 +99,7 @@ dotnet test --filter "FullyQualifiedName!~IntegrationTests"
 Run the web app:
 
 ```bash
-dotnet run --project RG.OpenCopilot.App
+dotnet run --project RG.OpenCopilot.GitHubApp
 ```
 
 Then open `http://localhost:5272/health` (or the port shown in the console) to verify it responds with `ok`.
@@ -130,4 +130,4 @@ See [LLM-CONFIGURATION.md](LLM-CONFIGURATION.md) for setup instructions.
   - ✅ ~~Posts progress comments to pull requests via the GitHub API.~~
 - Add background job processing for long-running tasks.
 - Add persistent storage for agent tasks.
-- Create and configure a GitHub App on your GitHub Enterprise instance that points its webhook URL to `RG.OpenCopilot.App`.
+- Create and configure a GitHub App on your GitHub Enterprise instance that points its webhook URL to `RG.OpenCopilot.GitHubApp`.

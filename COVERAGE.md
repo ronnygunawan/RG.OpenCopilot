@@ -23,7 +23,7 @@ All agent domain models have complete test coverage:
 - FileTree: 100%
 - FileTreeNode: 100%
 
-### RG.OpenCopilot.App - 55.9%
+### RG.OpenCopilot.GitHubApp - 55.9%
 
 | Component | Line Coverage | Status |
 |:---|---:|:---|
