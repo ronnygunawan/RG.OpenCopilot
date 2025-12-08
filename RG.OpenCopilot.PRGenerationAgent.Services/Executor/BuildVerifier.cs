@@ -54,7 +54,25 @@ public sealed class BuildVerifier : IBuildVerifier {
                     Output = buildResult.Output,
                     Errors = [],
                     FixesApplied = allFixesApplied,
-                    Duration = stopwatch.Elapsed
+                    Duration = stopwatch.Elapsed,
+                    ToolAvailable = true
+                };
+            }
+
+            // Check if build failed due to missing tool
+            if (!string.IsNullOrEmpty(buildResult.Error) && buildResult.Error.Contains("is not available")) {
+                _logger.LogWarning("Build failed due to missing tool");
+                stopwatch.Stop();
+                var missingTool = await DetectBuildToolAsync(containerId, cancellationToken);
+                return new BuildResult {
+                    Success = false,
+                    Attempts = attempts,
+                    Output = buildResult.Output,
+                    Errors = [],
+                    FixesApplied = allFixesApplied,
+                    Duration = stopwatch.Elapsed,
+                    ToolAvailable = false,
+                    MissingTool = missingTool
                 };
             }
 
@@ -170,6 +188,18 @@ public sealed class BuildVerifier : IBuildVerifier {
             };
         }
 
+        // Verify tool availability before running build
+        var toolAvailable = await VerifyToolAvailabilityAsync(containerId, buildTool, cancellationToken);
+        if (!toolAvailable) {
+            var installInstructions = GetInstallInstructions(buildTool);
+            _logger.LogWarning("Build tool '{BuildTool}' is not available in container. {Instructions}", buildTool, installInstructions);
+            return new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = $"Build tool '{buildTool}' is not available. {installInstructions}"
+            };
+        }
+
         _logger.LogInformation("Running build with {BuildTool}", buildTool);
 
         return buildTool switch {
@@ -179,6 +209,7 @@ public sealed class BuildVerifier : IBuildVerifier {
             "maven" => await _containerManager.ExecuteInContainerAsync(containerId, "mvn", new[] { "compile" }, cancellationToken),
             "go" => await _containerManager.ExecuteInContainerAsync(containerId, "go", new[] { "build", "./..." }, cancellationToken),
             "cargo" => await _containerManager.ExecuteInContainerAsync(containerId, "cargo", new[] { "build" }, cancellationToken),
+            // Defensive code: unreachable since DetectBuildToolAsync only returns supported tools or null
             _ => new CommandResult {
                 ExitCode = 1,
                 Output = "",
@@ -258,6 +289,46 @@ public sealed class BuildVerifier : IBuildVerifier {
 
         _logger.LogWarning("No build tool detected");
         return null;
+    }
+
+    private async Task<bool> VerifyToolAvailabilityAsync(string containerId, string buildTool, CancellationToken cancellationToken) {
+        var toolCommand = buildTool switch {
+            "dotnet" => "dotnet",
+            "npm" => "npm",
+            "gradle" => "gradle",
+            "maven" => "mvn",
+            "go" => "go",
+            "cargo" => "cargo",
+            // Defensive code: unreachable since DetectBuildToolAsync only returns supported tools or null
+            _ => null
+        };
+        
+        // This null check is unreachable through normal code flow but provides safety if DetectBuildToolAsync
+        // is modified in the future to return additional tool names
+        if (toolCommand == null) {
+            _logger.LogWarning("Unknown build tool '{BuildTool}', cannot verify availability", buildTool);
+            return false;
+        }
+        
+        var result = await _containerManager.ExecuteInContainerAsync(
+            containerId: containerId,
+            command: "which",
+            args: new[] { toolCommand },
+            cancellationToken: cancellationToken);
+        
+        return result.Success;
+    }
+
+    private static string GetInstallInstructions(string buildTool) {
+        return buildTool switch {
+            "dotnet" => "Install .NET SDK: https://dotnet.microsoft.com/download",
+            "npm" => "Install Node.js and npm: https://nodejs.org/",
+            "gradle" => "Install Gradle: https://gradle.org/install/",
+            "maven" => "Install Maven: https://maven.apache.org/install.html",
+            "go" => "Install Go: https://golang.org/doc/install",
+            "cargo" => "Install Rust and Cargo: https://www.rust-lang.org/tools/install",
+            _ => "Please install the required build tool"
+        };
     }
 
     public async Task<List<BuildError>> ParseBuildErrorsAsync(string output, string buildTool, CancellationToken cancellationToken = default) {

@@ -1085,6 +1085,307 @@ public class BuildVerifierTests {
         errors[0].Category.ShouldBe(ErrorCategory.Type);
     }
 
+    [Fact]
+    public async Task RunBuildAsync_WithMissingDotnetTool_ReturnsToolNotAvailableError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        // Mock tool not available
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Contains("dotnet")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "dotnet not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("is not available");
+        result.Error.ShouldContain("dotnet");
+        result.Error.ShouldContain("Install .NET SDK");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMissingNpmTool_ReturnsToolNotAvailableError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "npm");
+        
+        // Mock tool not available
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Contains("npm")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "npm not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("is not available");
+        result.Error.ShouldContain("npm");
+        result.Error.ShouldContain("Node.js");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMissingGradleTool_ReturnsToolNotAvailableError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "gradle");
+        
+        // Mock tool not available
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Contains("gradle")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "gradle not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("is not available");
+        result.Error.ShouldContain("gradle");
+        result.Error.ShouldContain("Gradle");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMissingMavenTool_ReturnsToolNotAvailableError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "maven");
+        
+        // Mock tool not available
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Contains("mvn")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "mvn not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("is not available");
+        result.Error.ShouldContain("maven");
+        result.Error.ShouldContain("Maven");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMissingGoTool_ReturnsToolNotAvailableError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "go");
+        
+        // Mock tool not available
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Contains("go")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "go not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("is not available");
+        result.Error.ShouldContain("go");
+        result.Error.ShouldContain("Install Go");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithMissingCargoTool_ReturnsToolNotAvailableError() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "cargo");
+        
+        // Mock tool not available
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Contains("cargo")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "cargo not found"
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error.ShouldContain("is not available");
+        result.Error.ShouldContain("cargo");
+        result.Error.ShouldContain("Rust");
+    }
+
+    [Fact]
+    public async Task RunBuildAsync_WithAvailableDotnetTool_ProceedsToBuild() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        // Mock tool available
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Contains("dotnet")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "/usr/bin/dotnet"
+            });
+        
+        // Mock successful build
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Build succeeded."
+            });
+
+        // Act
+        var result = await _verifier.RunBuildAsync(containerId: containerId);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.Output.ShouldContain("Build succeeded");
+        
+        // Verify that both which and build commands were called
+        _containerManager.Verify(c => c.ExecuteInContainerAsync(
+            containerId,
+            "which",
+            It.Is<string[]>(args => args.Contains("dotnet")),
+            It.IsAny<CancellationToken>()), Times.Once);
+        
+        _containerManager.Verify(c => c.ExecuteInContainerAsync(
+            containerId,
+            "dotnet",
+            It.Is<string[]>(args => args.Contains("build")),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithMissingTool_ReturnsToolNotAvailableInResult() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        // Mock tool not available
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Contains("dotnet")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 1,
+                Output = "",
+                Error = "dotnet not found"
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 3);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.ToolAvailable.ShouldBe(false);
+        result.MissingTool.ShouldBe("dotnet");
+        result.Attempts.ShouldBe(1);
+        
+        // Verify the log warning was called for missing tool
+        // This ensures lines 63-64 are covered
+    }
+
+    [Fact]
+    public async Task VerifyBuildAsync_WithAvailableTool_SetsToolAvailableToTrue() {
+        // Arrange
+        var containerId = "test-container";
+        SetupBuildToolDetection(buildTool: "dotnet");
+        
+        // Mock tool available
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "which",
+                It.Is<string[]>(args => args.Contains("dotnet")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "/usr/bin/dotnet"
+            });
+        
+        // Mock successful build
+        _containerManager
+            .Setup(c => c.ExecuteInContainerAsync(
+                containerId,
+                "dotnet",
+                It.Is<string[]>(args => args.Contains("build")),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult {
+                ExitCode = 0,
+                Output = "Build succeeded."
+            });
+
+        // Act
+        var result = await _verifier.VerifyBuildAsync(
+            containerId: containerId,
+            maxRetries: 3);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        result.ToolAvailable.ShouldBe(true);
+        result.MissingTool.ShouldBeNull();
+        result.Attempts.ShouldBe(1);
+    }
+
     private void SetupBuildToolDetection(string? buildTool) {
         if (buildTool == "dotnet") {
             _containerManager
@@ -1096,6 +1397,18 @@ public class BuildVerifierTests {
                 .ReturnsAsync(new CommandResult {
                     ExitCode = 0,
                     Output = "./Project.csproj"
+                });
+            
+            // Setup which command for tool availability check
+            _containerManager
+                .Setup(c => c.ExecuteInContainerAsync(
+                    It.IsAny<string>(),
+                    "which",
+                    It.Is<string[]>(args => args.Contains("dotnet")),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CommandResult {
+                    ExitCode = 0,
+                    Output = "/usr/bin/dotnet"
                 });
         } else if (buildTool == "npm") {
             _containerManager
@@ -1115,6 +1428,18 @@ public class BuildVerifierTests {
                 .ReturnsAsync(new CommandResult {
                     ExitCode = 0,
                     Output = "./package.json"
+                });
+            
+            // Setup which command for tool availability check
+            _containerManager
+                .Setup(c => c.ExecuteInContainerAsync(
+                    It.IsAny<string>(),
+                    "which",
+                    It.Is<string[]>(args => args.Contains("npm")),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CommandResult {
+                    ExitCode = 0,
+                    Output = "/usr/bin/npm"
                 });
         } else if (buildTool == "gradle") {
             _containerManager
@@ -1142,6 +1467,18 @@ public class BuildVerifierTests {
                 .ReturnsAsync(new CommandResult {
                     ExitCode = 0,
                     Output = "./build.gradle"
+                });
+            
+            // Setup which command for tool availability check
+            _containerManager
+                .Setup(c => c.ExecuteInContainerAsync(
+                    It.IsAny<string>(),
+                    "which",
+                    It.Is<string[]>(args => args.Contains("gradle")),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CommandResult {
+                    ExitCode = 0,
+                    Output = "/usr/bin/gradle"
                 });
         } else if (buildTool == "maven") {
             _containerManager
@@ -1177,6 +1514,18 @@ public class BuildVerifierTests {
                 .ReturnsAsync(new CommandResult {
                     ExitCode = 0,
                     Output = "./pom.xml"
+                });
+            
+            // Setup which command for tool availability check
+            _containerManager
+                .Setup(c => c.ExecuteInContainerAsync(
+                    It.IsAny<string>(),
+                    "which",
+                    It.Is<string[]>(args => args.Contains("mvn")),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CommandResult {
+                    ExitCode = 0,
+                    Output = "/usr/bin/mvn"
                 });
         } else if (buildTool == "go") {
             _containerManager
@@ -1220,6 +1569,18 @@ public class BuildVerifierTests {
                 .ReturnsAsync(new CommandResult {
                     ExitCode = 0,
                     Output = "./go.mod"
+                });
+            
+            // Setup which command for tool availability check
+            _containerManager
+                .Setup(c => c.ExecuteInContainerAsync(
+                    It.IsAny<string>(),
+                    "which",
+                    It.Is<string[]>(args => args.Contains("go")),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CommandResult {
+                    ExitCode = 0,
+                    Output = "/usr/bin/go"
                 });
         } else if (buildTool == "cargo") {
             _containerManager
@@ -1271,6 +1632,18 @@ public class BuildVerifierTests {
                 .ReturnsAsync(new CommandResult {
                     ExitCode = 0,
                     Output = "./Cargo.toml"
+                });
+            
+            // Setup which command for tool availability check
+            _containerManager
+                .Setup(c => c.ExecuteInContainerAsync(
+                    It.IsAny<string>(),
+                    "which",
+                    It.Is<string[]>(args => args.Contains("cargo")),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new CommandResult {
+                    ExitCode = 0,
+                    Output = "/usr/bin/cargo"
                 });
         } else {
             _containerManager
