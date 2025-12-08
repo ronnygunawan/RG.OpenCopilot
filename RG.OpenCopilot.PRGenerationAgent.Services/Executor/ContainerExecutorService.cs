@@ -122,11 +122,11 @@ public sealed class ContainerExecutorService : IExecutorService {
                     cancellationToken);
 
                 // TODO: Get actual file changes from container and post commit summary
-                // For now, we'll skip the commit summary until we have proper change tracking
-                // When ready:
-                // if (prNumber.HasValue) {
-                //     await _progressReporter.ReportCommitSummaryAsync(...)
-                // }
+                // This requires:
+                // 1. Track commit SHA returned from CommitAndPushAsync
+                // 2. Extract file changes from git diff or container file tracking
+                // 3. Call: await _progressReporter.ReportCommitSummaryAsync(task, commitSha, commitMessage, changes, prNumber.Value, cancellationToken)
+                // See issue: [Track commit changes for summary reporting]
             }
 
             // Post progress comment to PR

@@ -378,8 +378,15 @@ internal sealed class ProgressReporter : IProgressReporter {
 
         _logger.LogInformation(
             "Posted commit summary comment for {CommitSha} to PR #{PrNumber}",
-            commitSha.Substring(0, Math.Min(7, commitSha.Length)),
+            TruncateCommitSha(commitSha),
             prNumber);
+    }
+
+    /// <summary>
+    /// Truncates commit SHA to specified length for display
+    /// </summary>
+    private static string TruncateCommitSha(string commitSha, int length = 7) {
+        return commitSha.Length <= length ? commitSha : commitSha[..length];
     }
 
     /// <summary>
@@ -477,7 +484,7 @@ internal sealed class ProgressReporter : IProgressReporter {
         
         sb.AppendLine($"## 📦 Commit Summary");
         sb.AppendLine();
-        sb.AppendLine($"**Commit:** `{commitSha.Substring(0, Math.Min(7, commitSha.Length))}`");
+        sb.AppendLine($"**Commit:** `{TruncateCommitSha(commitSha)}`");
         sb.AppendLine($"**Message:** {commitMessage}");
         sb.AppendLine();
         
