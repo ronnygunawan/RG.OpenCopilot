@@ -12,6 +12,7 @@ public sealed class ContainerExecutorService : IExecutorService {
     private readonly IContainerManager _containerManager;
     private readonly IGitHubService _gitHubService;
     private readonly IAgentTaskStore _taskStore;
+    private readonly IProgressReporter _progressReporter;
     private readonly ILogger<ContainerExecutorService> _logger;
 
     public ContainerExecutorService(
@@ -19,11 +20,13 @@ public sealed class ContainerExecutorService : IExecutorService {
         IContainerManager containerManager,
         IGitHubService gitHubService,
         IAgentTaskStore taskStore,
+        IProgressReporter progressReporter,
         ILogger<ContainerExecutorService> logger) {
         _tokenProvider = tokenProvider;
         _containerManager = containerManager;
         _gitHubService = gitHubService;
         _taskStore = taskStore;
+        _progressReporter = progressReporter;
         _logger = logger;
     }
 
@@ -68,6 +71,13 @@ public sealed class ContainerExecutorService : IExecutorService {
             var completedSteps = new List<string>();
             var failedSteps = new List<string>();
 
+            // Get PR number for progress updates
+            var prNumber = await _gitHubService.GetPullRequestNumberForBranchAsync(
+                task.RepositoryOwner,
+                task.RepositoryName,
+                branchName,
+                cancellationToken);
+
             foreach (var step in task.Plan.Steps.Where(s => !s.Done)) {
                 _logger.LogInformation("Executing step: {StepTitle}", step.Title);
 
@@ -79,6 +89,14 @@ public sealed class ContainerExecutorService : IExecutorService {
                     completedSteps.Add(step.Title);
 
                     await _taskStore.UpdateTaskAsync(task, cancellationToken);
+
+                    // Update PR description to check off completed step
+                    if (prNumber.HasValue) {
+                        await _progressReporter.UpdatePullRequestProgressAsync(
+                            task,
+                            prNumber.Value,
+                            cancellationToken);
+                    }
                 }
                 catch (Exception ex) {
                     _logger.LogError(ex, "Failed to execute step: {StepTitle}", step.Title);
@@ -102,15 +120,14 @@ public sealed class ContainerExecutorService : IExecutorService {
                     branchName,
                     token,
                     cancellationToken);
+
+                // TODO: Get actual file changes from container and post commit summary
+                // For now, we'll skip the commit summary until we have proper change tracking
+                // If prNumber.HasValue Then
+                //     await _progressReporter.ReportCommitSummaryAsync(...)
             }
 
             // Post progress comment to PR
-            var prNumber = await _gitHubService.GetPullRequestNumberForBranchAsync(
-                task.RepositoryOwner,
-                task.RepositoryName,
-                branchName,
-                cancellationToken);
-
             if (prNumber.HasValue) {
                 var progressComment = FormatProgressComment(completedSteps, failedSteps);
                 await _gitHubService.PostPullRequestCommentAsync(
