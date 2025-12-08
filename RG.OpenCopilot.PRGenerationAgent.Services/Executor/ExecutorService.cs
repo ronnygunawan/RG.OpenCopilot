@@ -1,4 +1,5 @@
 using System.Text;
+using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Authentication;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Git;
 using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;

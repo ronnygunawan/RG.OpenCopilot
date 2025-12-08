@@ -1,3 +1,5 @@
+using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
+
 namespace RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 /// <summary>

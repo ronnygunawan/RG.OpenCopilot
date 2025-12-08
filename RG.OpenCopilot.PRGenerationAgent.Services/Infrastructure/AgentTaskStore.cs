@@ -1,15 +1,10 @@
 using System.Collections.Concurrent;
 using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
-public interface IAgentTaskStore {
-    Task<AgentTask?> GetTaskAsync(string id, CancellationToken cancellationToken = default);
-    Task<AgentTask> CreateTaskAsync(AgentTask task, CancellationToken cancellationToken = default);
-    Task UpdateTaskAsync(AgentTask task, CancellationToken cancellationToken = default);
-}
-
-public sealed class InMemoryAgentTaskStore : IAgentTaskStore {
+internal sealed class InMemoryAgentTaskStore : IAgentTaskStore {
     private readonly ConcurrentDictionary<string, AgentTask> _tasks = [];
 
     public Task<AgentTask?> GetTaskAsync(string id, CancellationToken cancellationToken = default) {
