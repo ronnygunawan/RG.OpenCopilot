@@ -238,10 +238,10 @@ public class RetryFailureHandlingNegativeTests {
     }
 
     /// <summary>
-    /// Test queue full scenario - enqueue should fail
+    /// Test queue full scenario - enqueue blocks when full
     /// </summary>
     [Fact]
-    public async Task JobQueue_QueueFull_EnqueueFails() {
+    public async Task JobQueue_QueueFull_EnqueueBlocks() {
         // Arrange
         var options = new BackgroundJobOptions {
             MaxQueueSize = 1,
@@ -252,14 +252,19 @@ public class RetryFailureHandlingNegativeTests {
         // Act - fill the queue
         var job1 = new BackgroundJob { Type = "Job1" };
         var enqueued1 = await queue.EnqueueAsync(job1);
-
-        // Try to add one more (should fail as queue is full)
-        var job2 = new BackgroundJob { Type = "Job2" };
-        var enqueued2 = await queue.EnqueueAsync(job2);
-
-        // Assert
         enqueued1.ShouldBeTrue();
-        enqueued2.ShouldBeFalse(); // Queue is full
+
+        // Try to add one more with cancellation token (should block)
+        var job2 = new BackgroundJob { Type = "Job2" };
+        using var cts = new CancellationTokenSource(100); // 100ms timeout
+        
+        // Assert - should throw OperationCanceledException when queue is full and timeout expires
+        await Should.ThrowAsync<OperationCanceledException>(async () => {
+            await queue.EnqueueAsync(job2, cts.Token);
+        });
+        
+        // Queue should still have only the first job
+        queue.Count.ShouldBe(1);
     }
 
     /// <summary>
