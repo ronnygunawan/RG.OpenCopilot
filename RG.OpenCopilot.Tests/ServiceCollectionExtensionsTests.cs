@@ -1,8 +1,10 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
 using Octokit;
 using RG.OpenCopilot.PRGenerationAgent.Services;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure.Persistence;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
@@ -342,5 +344,154 @@ public class ServiceCollectionExtensionsTests {
         var client2 = serviceProvider.GetService<IGitHubClient>();
         
         ReferenceEquals(client1, client2).ShouldBeTrue();
+    }
+
+    [Fact(Skip = "Requires actual PostgreSQL database connection")]
+    public void ApplyDatabaseMigrations_WithPostgreSqlConfigured_DoesNotThrow() {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                ["ConnectionStrings:AgentTaskDatabase"] = "Host=localhost;Database=test",
+                ["LLM:ApiKey"] = "test-key",
+                ["LLM:Provider"] = "OpenAI"
+            })
+            .Build();
+
+        services.AddLogging();
+        services.AddPRGenerationAgentServices(configuration);
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Act & Assert - Should not throw even if database doesn't exist
+        // The method should handle gracefully when database is not available
+        serviceProvider.ApplyDatabaseMigrations();
+    }
+
+    [Fact]
+    public void ApplyDatabaseMigrations_WithNoDbContext_DoesNotThrow() {
+        // Arrange
+        var services = new ServiceCollection();
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Act & Assert - Should not throw
+        serviceProvider.ApplyDatabaseMigrations();
+    }
+
+    [Fact]
+    public void AddPRGenerationAgentServices_WithPostgreSqlConnectionString_RegistersDbContext() {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                ["ConnectionStrings:AgentTaskDatabase"] = "Host=localhost;Database=test",
+                ["LLM:ApiKey"] = "test-key",
+                ["LLM:Provider"] = "OpenAI"
+            })
+            .Build();
+
+        services.AddLogging();
+
+        // Act
+        services.AddPRGenerationAgentServices(configuration);
+
+        // Assert
+        var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+        var context = scope.ServiceProvider.GetService<AgentTaskDbContext>();
+        context.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void AddPRGenerationAgentServices_WithEmptyConnectionString_DoesNotRegisterDbContext() {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                ["ConnectionStrings:AgentTaskDatabase"] = "",
+                ["LLM:ApiKey"] = "test-key",
+                ["LLM:Provider"] = "OpenAI"
+            })
+            .Build();
+
+        services.AddLogging();
+
+        // Act
+        services.AddPRGenerationAgentServices(configuration);
+
+        // Assert
+        var serviceProvider = services.BuildServiceProvider();
+        var context = serviceProvider.GetService<AgentTaskDbContext>();
+        context.ShouldBeNull();
+    }
+
+    [Fact]
+    public void AddPRGenerationAgentServices_WithNoConnectionString_DoesNotRegisterDbContext() {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                ["LLM:ApiKey"] = "test-key",
+                ["LLM:Provider"] = "OpenAI"
+            })
+            .Build();
+
+        services.AddLogging();
+
+        // Act
+        services.AddPRGenerationAgentServices(configuration);
+
+        // Assert
+        var serviceProvider = services.BuildServiceProvider();
+        var context = serviceProvider.GetService<AgentTaskDbContext>();
+        context.ShouldBeNull();
+    }
+
+    [Fact]
+    public void AddPRGenerationAgentServices_WithPostgreSqlConnectionString_RegistersScopedTaskStore() {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                ["ConnectionStrings:AgentTaskDatabase"] = "Host=localhost;Database=test",
+                ["LLM:ApiKey"] = "test-key",
+                ["LLM:Provider"] = "OpenAI"
+            })
+            .Build();
+
+        services.AddLogging();
+
+        // Act
+        services.AddPRGenerationAgentServices(configuration);
+
+        // Assert
+        var serviceProvider = services.BuildServiceProvider();
+        using var scope = serviceProvider.CreateScope();
+        var taskStore = scope.ServiceProvider.GetService<IAgentTaskStore>();
+        taskStore.ShouldNotBeNull();
+        taskStore.GetType().Name.ShouldBe("PostgreSqlAgentTaskStore");
+    }
+
+    [Fact]
+    public void AddPRGenerationAgentServices_WithoutPostgreSqlConnectionString_RegistersSingletonTaskStore() {
+        // Arrange
+        var services = new ServiceCollection();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                ["LLM:ApiKey"] = "test-key",
+                ["LLM:Provider"] = "OpenAI"
+            })
+            .Build();
+
+        services.AddLogging();
+
+        // Act
+        services.AddPRGenerationAgentServices(configuration);
+
+        // Assert
+        var serviceProvider = services.BuildServiceProvider();
+        var taskStore = serviceProvider.GetService<IAgentTaskStore>();
+        taskStore.ShouldNotBeNull();
+        taskStore.GetType().Name.ShouldBe("InMemoryAgentTaskStore");
     }
 }

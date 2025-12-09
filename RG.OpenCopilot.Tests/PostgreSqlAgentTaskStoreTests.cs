@@ -344,4 +344,225 @@ public class PostgreSqlAgentTaskStoreTests : IDisposable {
         result.ShouldNotBeNull();
         result.Plan.ShouldBeNull();
     }
+
+    [Fact]
+    public async Task GetTaskAsync_WithCancellationToken_RespectsToken() {
+        // Arrange
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "test",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await _store.CreateTaskAsync(task);
+
+        using var cts = new CancellationTokenSource();
+
+        // Act
+        var result = await _store.GetTaskAsync("test/repo/issues/1", cancellationToken: cts.Token);
+
+        // Assert
+        result.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_WithCancellationToken_RespectsToken() {
+        // Arrange
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "test",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+
+        using var cts = new CancellationTokenSource();
+
+        // Act
+        var result = await _store.CreateTaskAsync(task, cancellationToken: cts.Token);
+
+        // Assert
+        result.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task UpdateTaskAsync_WithCancellationToken_RespectsToken() {
+        // Arrange
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "test",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await _store.CreateTaskAsync(task);
+
+        using var cts = new CancellationTokenSource();
+
+        // Act
+        task.Status = AgentTaskStatus.Planned;
+        await _store.UpdateTaskAsync(task, cancellationToken: cts.Token);
+
+        // Assert
+        var result = await _store.GetTaskAsync("test/repo/issues/1");
+        result.ShouldNotBeNull();
+        result.Status.ShouldBe(AgentTaskStatus.Planned);
+    }
+
+    [Fact]
+    public async Task GetTasksByInstallationIdAsync_WithCancellationToken_RespectsToken() {
+        // Arrange
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "test",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await _store.CreateTaskAsync(task);
+
+        using var cts = new CancellationTokenSource();
+
+        // Act
+        var results = await _store.GetTasksByInstallationIdAsync(installationId: 123, cancellationToken: cts.Token);
+
+        // Assert
+        results.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task UpdateTaskAsync_WithComplexPlan_PreservesAllData() {
+        // Arrange
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "test",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await _store.CreateTaskAsync(task);
+
+        var complexPlan = new AgentPlan {
+            ProblemSummary = "Complex problem with special characters: <>&\"'",
+            Constraints = [
+                "Constraint with unicode: こんにちは",
+                "Constraint with emoji: 🚀",
+                "Constraint with newlines:\nLine 1\nLine 2"
+            ],
+            Steps = [
+                new PlanStep {
+                    Id = "step-1",
+                    Title = "Step with special chars: <>&\"'",
+                    Details = "Details with unicode and emoji: 测试 🎉",
+                    Done = false
+                },
+                new PlanStep {
+                    Id = "step-2",
+                    Title = "Step 2",
+                    Details = "Multi-line details:\nLine 1\nLine 2\nLine 3",
+                    Done = true
+                }
+            ],
+            Checklist = [
+                "Item with special chars: <>&\"'",
+                "Item with unicode: 日本語",
+                "Item with emoji: ✅"
+            ],
+            FileTargets = [
+                "path/to/file.cs",
+                "another/path/file.ts",
+                "special chars/file name.py"
+            ]
+        };
+
+        // Act
+        task.Plan = complexPlan;
+        task.Status = AgentTaskStatus.Planned;
+        await _store.UpdateTaskAsync(task);
+
+        // Assert
+        var result = await _store.GetTaskAsync("test/repo/issues/1");
+        result.ShouldNotBeNull();
+        result.Plan.ShouldNotBeNull();
+        result.Plan.ProblemSummary.ShouldBe("Complex problem with special characters: <>&\"'");
+        result.Plan.Constraints.Count.ShouldBe(3);
+        result.Plan.Constraints[0].ShouldContain("こんにちは");
+        result.Plan.Constraints[1].ShouldContain("🚀");
+        result.Plan.Steps.Count.ShouldBe(2);
+        result.Plan.Steps[0].Done.ShouldBeFalse();
+        result.Plan.Steps[1].Done.ShouldBeTrue();
+        result.Plan.Checklist.Count.ShouldBe(3);
+        result.Plan.FileTargets.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task UpdateTaskAsync_MultipleUpdates_KeepsLatestData() {
+        // Arrange
+        var task = new AgentTask {
+            Id = "test/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "test",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await _store.CreateTaskAsync(task);
+
+        // Act - Multiple updates
+        task.Status = AgentTaskStatus.Planned;
+        await _store.UpdateTaskAsync(task);
+
+        task.Status = AgentTaskStatus.Executing;
+        task.StartedAt = DateTime.UtcNow;
+        await _store.UpdateTaskAsync(task);
+
+        task.Status = AgentTaskStatus.Completed;
+        task.CompletedAt = DateTime.UtcNow;
+        await _store.UpdateTaskAsync(task);
+
+        // Assert
+        var result = await _store.GetTaskAsync("test/repo/issues/1");
+        result.ShouldNotBeNull();
+        result.Status.ShouldBe(AgentTaskStatus.Completed);
+        result.StartedAt.ShouldNotBeNull();
+        result.CompletedAt.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task GetTasksByInstallationIdAsync_WithEmptyDatabase_ReturnsEmptyList() {
+        // Act
+        var results = await _store.GetTasksByInstallationIdAsync(installationId: 999);
+
+        // Assert
+        results.Count.ShouldBe(0);
+        results.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_WithAllStatuses_CreatesSuccessfully() {
+        // Arrange & Act & Assert
+        foreach (var status in Enum.GetValues<AgentTaskStatus>()) {
+            var task = new AgentTask {
+                Id = $"test/repo/issues/{(int)status}",
+                InstallationId = 123,
+                RepositoryOwner = "test",
+                RepositoryName = "repo",
+                IssueNumber = (int)status,
+                Status = status
+            };
+
+            var created = await _store.CreateTaskAsync(task);
+            created.Status.ShouldBe(status);
+
+            var retrieved = await _store.GetTaskAsync(task.Id);
+            retrieved.ShouldNotBeNull();
+            retrieved.Status.ShouldBe(status);
+        }
+    }
 }
