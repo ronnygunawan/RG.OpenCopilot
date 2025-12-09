@@ -106,7 +106,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, logger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), logger);
 
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("TestJob");
@@ -132,7 +132,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, logger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), logger);
 
         var job = new BackgroundJob {
             Type = "UnregisteredJob",
@@ -154,7 +154,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, logger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), logger);
 
         // Act
         var cancelled = dispatcher.CancelJob("non-existent-job");
@@ -512,7 +512,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, logger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), logger);
 
         var handler1 = new Mock<IJobHandler>();
         handler1.Setup(h => h.JobType).Returns("TestJob");
@@ -537,7 +537,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, logger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), logger);
 
         // Act
         var handler = dispatcher.GetHandler("NonExistent");
@@ -553,7 +553,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var logger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, logger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), logger);
 
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("TestJob");
@@ -664,7 +664,7 @@ public class BackgroundJobProcessingTests {
 
         var logger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, logger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), logger);
 
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("TestJob");
@@ -694,7 +694,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
@@ -709,7 +709,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -743,10 +743,10 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -782,7 +782,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -796,7 +796,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -831,7 +831,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -845,7 +845,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -881,7 +881,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -895,7 +895,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -931,7 +931,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -943,7 +943,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -978,7 +978,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var executionCount = 0;
@@ -993,7 +993,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1029,10 +1029,10 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1058,7 +1058,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var jobCompleted = false;
@@ -1073,7 +1073,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1107,10 +1107,10 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act & Assert - should not throw
         processor.Dispose();
@@ -1130,7 +1130,7 @@ public class BackgroundJobProcessingTests {
         var queue = new ChannelJobQueue(options);
         var dispatcherLogger = new TestLogger<JobDispatcher>();
         var statusStore = new TestJobStatusStore();
-        var dispatcher = new JobDispatcher(queue, statusStore, dispatcherLogger);
+        var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var handler = new Mock<IJobHandler>();
@@ -1140,7 +1140,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1236,6 +1236,34 @@ public class BackgroundJobProcessingTests {
         }
 
         public void RegisterHandler(IJobHandler handler) {
+        }
+    }
+
+    private class TestRetryPolicyCalculator : IRetryPolicyCalculator {
+        public int CalculateRetryDelay(RetryPolicy policy, int retryCount) {
+            return policy.BaseDelayMilliseconds;
+        }
+
+        public bool ShouldRetry(RetryPolicy policy, int retryCount, int maxRetries, bool shouldRetry) {
+            return policy.Enabled && shouldRetry && retryCount < maxRetries;
+        }
+    }
+
+    private class TestJobDeduplicationService : IJobDeduplicationService {
+        public Task<string?> GetInFlightJobAsync(string idempotencyKey, CancellationToken cancellationToken = default) {
+            return Task.FromResult<string?>(null);
+        }
+
+        public Task RegisterJobAsync(string jobId, string idempotencyKey, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task UnregisterJobAsync(string jobId, CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
+        }
+
+        public Task ClearAllAsync(CancellationToken cancellationToken = default) {
+            return Task.CompletedTask;
         }
     }
 
