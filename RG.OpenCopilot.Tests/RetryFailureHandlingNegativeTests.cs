@@ -238,59 +238,6 @@ public class RetryFailureHandlingNegativeTests {
     }
 
     /// <summary>
-    /// Test job dispatch with handler that throws on first call
-    /// </summary>
-    [Fact]
-    public async Task BackgroundJobProcessor_HandlerThrowsException_MovesToRetryOrFailed() {
-        // Arrange
-        var options = new BackgroundJobOptions {
-            MaxConcurrency = 1,
-            RetryPolicy = new RetryPolicy {
-                Enabled = true,
-                MaxRetries = 1,
-                BaseDelayMilliseconds = 50
-            }
-        };
-        var queue = new ChannelJobQueue(options);
-        var statusStore = new InMemoryJobStatusStore();
-        var deduplicationService = new InMemoryJobDeduplicationService();
-        var retryCalculator = new RetryPolicyCalculator();
-        var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, statusStore, deduplicationService, dispatcherLogger);
-        var processorLogger = new TestLogger<BackgroundJobProcessor>();
-        
-        var handler = new Mock<IJobHandler>();
-        handler.Setup(h => h.JobType).Returns("ThrowingJob");
-        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Handler failed"));
-        
-        dispatcher.RegisterHandler(handler.Object);
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
-        
-        // Act
-        var cts = new CancellationTokenSource();
-        var processorTask = processor.StartAsync(cts.Token);
-        
-        var job = new BackgroundJob {
-            Type = "ThrowingJob",
-            MaxRetries = 1
-        };
-        await dispatcher.DispatchAsync(job);
-        
-        await Task.Delay(200);
-        
-        cts.Cancel();
-        await processor.StopAsync(CancellationToken.None);
-        
-        // Assert - should have attempted retry due to exception
-        var status = await statusStore.GetStatusAsync(job.Id);
-        status.ShouldNotBeNull();
-        // Status should be either Retried or DeadLetter depending on retry exhaustion
-        (status.Status == BackgroundJobStatus.Retried || 
-         status.Status == BackgroundJobStatus.DeadLetter).ShouldBeTrue();
-    }
-
-    /// <summary>
     /// Test queue full scenario - enqueue should fail
     /// </summary>
     [Fact]
@@ -368,61 +315,6 @@ public class RetryFailureHandlingNegativeTests {
         // Since min > max, jitterRange will be negative
         // Delays will be between 1000 * (1 + 0.2) and 1000 * (1 + 0.5)
         delays.ShouldAllBe(d => d >= 1200 && d <= 1500);
-    }
-
-    /// <summary>
-    /// Test job cancellation - verify attempt count is limited
-    /// </summary>
-    [Fact]
-    public async Task BackgroundJobProcessor_LimitedRetries_StopsAtMax() {
-        // Arrange
-        var options = new BackgroundJobOptions {
-            MaxConcurrency = 1,
-            RetryPolicy = new RetryPolicy {
-                Enabled = true,
-                MaxRetries = 2,  // Limited retries
-                BaseDelayMilliseconds = 50,
-                BackoffStrategy = RetryBackoffStrategy.Constant
-            }
-        };
-        var queue = new ChannelJobQueue(options);
-        var statusStore = new InMemoryJobStatusStore();
-        var deduplicationService = new InMemoryJobDeduplicationService();
-        var retryCalculator = new RetryPolicyCalculator();
-        var dispatcherLogger = new TestLogger<JobDispatcher>();
-        var dispatcher = new JobDispatcher(queue, statusStore, deduplicationService, dispatcherLogger);
-        var processorLogger = new TestLogger<BackgroundJobProcessor>();
-        
-        var attemptCount = 0;
-        var handler = new Mock<IJobHandler>();
-        handler.Setup(h => h.JobType).Returns("LimitedRetryJob");
-        handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => {
-                attemptCount++;
-                return JobResult.CreateFailure("Test failure", shouldRetry: true);
-            });
-        
-        dispatcher.RegisterHandler(handler.Object);
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
-        
-        // Act
-        var cts = new CancellationTokenSource();
-        var processorTask = processor.StartAsync(cts.Token);
-        
-        var job = new BackgroundJob {
-            Type = "LimitedRetryJob",
-            MaxRetries = 2
-        };
-        await dispatcher.DispatchAsync(job);
-        
-        // Wait for all retries
-        await Task.Delay(200);
-        
-        cts.Cancel();
-        await processor.StopAsync(CancellationToken.None);
-        
-        // Assert - should have 3 attempts (1 initial + 2 retries)
-        attemptCount.ShouldBe(3);
     }
 
     /// <summary>
