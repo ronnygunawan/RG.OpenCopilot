@@ -210,6 +210,7 @@ public class BackgroundJobProcessingTests {
         var handler = new ExecutePlanJobHandler(
             taskStore,
             executorService.Object,
+            new BackgroundJobOptions(),
             logger);
 
         // Create a task with a plan
@@ -257,6 +258,7 @@ public class BackgroundJobProcessingTests {
         var handler = new ExecutePlanJobHandler(
             taskStore,
             executorService.Object,
+            new BackgroundJobOptions(),
             logger);
 
         var job = new BackgroundJob {
@@ -283,6 +285,7 @@ public class BackgroundJobProcessingTests {
         var handler = new ExecutePlanJobHandler(
             taskStore,
             executorService.Object,
+            new BackgroundJobOptions(),
             logger);
 
         // Create a task without a plan
@@ -319,6 +322,7 @@ public class BackgroundJobProcessingTests {
         var handler = new ExecutePlanJobHandler(
             taskStore,
             executorService.Object,
+            new BackgroundJobOptions(),
             logger);
 
         var task = new AgentTask {
@@ -363,6 +367,7 @@ public class BackgroundJobProcessingTests {
         var handler = new ExecutePlanJobHandler(
             taskStore,
             executorService.Object,
+            new BackgroundJobOptions(),
             logger);
 
         var task = new AgentTask {
@@ -585,6 +590,7 @@ public class BackgroundJobProcessingTests {
         var handler = new ExecutePlanJobHandler(
             taskStore,
             executorService.Object,
+            new BackgroundJobOptions(),
             logger);
 
         var job = new BackgroundJob {

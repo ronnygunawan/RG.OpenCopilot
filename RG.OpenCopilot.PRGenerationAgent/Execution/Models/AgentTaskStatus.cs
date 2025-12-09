@@ -6,5 +6,6 @@ public enum AgentTaskStatus {
     Executing,
     Completed,
     Blocked,
-    Failed
+    Failed,
+    Cancelled
 }

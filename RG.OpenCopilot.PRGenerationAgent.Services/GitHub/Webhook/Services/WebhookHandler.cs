@@ -6,6 +6,7 @@ namespace RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Webhook.Services;
 
 public interface IWebhookHandler {
     Task<string> HandleIssuesEventAsync(GitHubIssueEventPayload payload, CancellationToken cancellationToken = default);
+    Task HandleInstallationEventAsync(GitHubInstallationEventPayload payload, CancellationToken cancellationToken = default);
 }
 
 public sealed class WebhookHandler : IWebhookHandler {
@@ -23,6 +24,77 @@ public sealed class WebhookHandler : IWebhookHandler {
         _jobDispatcher = jobDispatcher;
         _jobStatusStore = jobStatusStore;
         _logger = logger;
+    }
+
+    public async Task HandleInstallationEventAsync(GitHubInstallationEventPayload payload, CancellationToken cancellationToken = default) {
+        if (payload.Action != "deleted" || payload.Installation == null) {
+            _logger.LogInformation("Ignoring installation event: action={Action}", payload.Action);
+            return;
+        }
+
+        _logger.LogInformation("Processing GitHub App uninstallation for installation {InstallationId}", payload.Installation.Id);
+
+        try {
+            // Get all tasks for this installation
+            var tasks = await _taskStore.GetTasksByInstallationIdAsync(payload.Installation.Id, cancellationToken);
+
+            foreach (var task in tasks) {
+                // Cancel task if it's in progress
+                if (task.Status == AgentTaskStatus.PendingPlanning || 
+                    task.Status == AgentTaskStatus.Planned || 
+                    task.Status == AgentTaskStatus.Executing) {
+                    
+                    task.Status = AgentTaskStatus.Cancelled;
+                    task.CompletedAt = DateTime.UtcNow;
+                    await _taskStore.UpdateTaskAsync(task, cancellationToken);
+                    
+                    _logger.LogInformation("Cancelled task {TaskId} due to app uninstallation", task.Id);
+                }
+            }
+
+            // Find and cancel any active jobs for this installation
+            // Use pagination to handle large numbers of jobs
+            const int pageSize = 100;
+            var skip = 0;
+            var hasMore = true;
+
+            while (hasMore) {
+                var jobs = await _jobStatusStore.GetJobsAsync(
+                    status: null,
+                    jobType: null,
+                    source: null,
+                    skip: skip,
+                    take: pageSize,
+                    cancellationToken);
+
+                if (jobs.Count == 0) {
+                    hasMore = false;
+                    break;
+                }
+
+                foreach (var job in jobs) {
+                    if (job.Status == BackgroundJobStatus.Queued || job.Status == BackgroundJobStatus.Processing) {
+                        // Check if job metadata contains InstallationId
+                        if (job.Metadata.TryGetValue("InstallationId", out var installationIdStr) &&
+                            long.TryParse(installationIdStr, out var installationId) &&
+                            installationId == payload.Installation.Id) {
+                            
+                            _jobDispatcher.CancelJob(job.JobId);
+                            _logger.LogInformation("Cancelled job {JobId} due to app uninstallation", job.JobId);
+                        }
+                    }
+                }
+
+                skip += pageSize;
+                hasMore = jobs.Count == pageSize;
+            }
+
+            _logger.LogInformation("Completed handling uninstallation for installation {InstallationId}", payload.Installation.Id);
+        }
+        catch (Exception ex) {
+            _logger.LogError(ex, "Error handling installation event for installation {InstallationId}", payload.Installation.Id);
+            throw;
+        }
     }
 
     public async Task<string> HandleIssuesEventAsync(GitHubIssueEventPayload payload, CancellationToken cancellationToken = default) {
@@ -81,6 +153,7 @@ public sealed class WebhookHandler : IWebhookHandler {
                 Priority = 5, // Higher priority for plan generation
                 Metadata = new Dictionary<string, string> {
                     ["TaskId"] = taskId,
+                    ["InstallationId"] = payload.Installation.Id.ToString(),
                     ["RepositoryOwner"] = task.RepositoryOwner,
                     ["RepositoryName"] = task.RepositoryName,
                     ["IssueNumber"] = task.IssueNumber.ToString(),
