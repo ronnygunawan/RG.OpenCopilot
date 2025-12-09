@@ -11,21 +11,40 @@ internal sealed class RetryPolicyCalculator : IRetryPolicyCalculator {
             return 0;
         }
 
-        // Calculate base delay based on strategy
-        var baseDelay = policy.BackoffStrategy switch {
+        // Calculate base delay based on strategy, using long to prevent overflow
+        long baseDelay = policy.BackoffStrategy switch {
             RetryBackoffStrategy.Constant => policy.BaseDelayMilliseconds,
-            RetryBackoffStrategy.Linear => policy.BaseDelayMilliseconds * (retryCount + 1),
-            RetryBackoffStrategy.Exponential => policy.BaseDelayMilliseconds * (int)Math.Pow(2, retryCount),
+            RetryBackoffStrategy.Linear => (long)policy.BaseDelayMilliseconds * (retryCount + 1),
+            RetryBackoffStrategy.Exponential => CalculateExponentialDelay(policy.BaseDelayMilliseconds, retryCount),
             _ => policy.BaseDelayMilliseconds
         };
 
-        // Cap at max delay
-        var cappedDelay = Math.Min(baseDelay, policy.MaxDelayMilliseconds);
+        // Cap at max delay before converting to int
+        var cappedDelay = (int)Math.Min(baseDelay, policy.MaxDelayMilliseconds);
 
         // Apply jitter
         var delayWithJitter = ApplyJitter(cappedDelay, policy.MinJitterFactor, policy.MaxJitterFactor);
 
         return delayWithJitter;
+    }
+
+    private static long CalculateExponentialDelay(int baseDelay, int retryCount) {
+        // Handle negative retry counts (defensive programming)
+        if (retryCount < 0) {
+            // 2^-1 = 0.5, 2^-2 = 0.25, etc.
+            return (long)(baseDelay * Math.Pow(2, retryCount));
+        }
+
+        // Calculate 2^retryCount safely
+        // If retryCount is too large, just return a very large value that will be capped
+        if (retryCount >= 31) {
+            // 2^31 or larger would overflow int, return max to trigger capping
+            return long.MaxValue;
+        }
+
+        // Safe to calculate now
+        long multiplier = 1L << retryCount; // Equivalent to (long)Math.Pow(2, retryCount) but faster and exact
+        return (long)baseDelay * multiplier;
     }
 
     /// <inheritdoc />
