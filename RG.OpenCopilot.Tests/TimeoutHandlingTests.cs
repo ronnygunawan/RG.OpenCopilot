@@ -92,6 +92,7 @@ public class TimeoutHandlingTests {
 
         // Assert
         result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
         result.ErrorMessage.ShouldContain("timed out");
         result.ErrorMessage.ShouldContain("1 seconds");
     }
@@ -146,6 +147,7 @@ public class TimeoutHandlingTests {
 
         // Assert
         result.Success.ShouldBeFalse();
+        result.ErrorMessage.ShouldNotBeNull();
         result.ErrorMessage.ShouldContain("timed out");
         result.ErrorMessage.ShouldContain("1 seconds");
 

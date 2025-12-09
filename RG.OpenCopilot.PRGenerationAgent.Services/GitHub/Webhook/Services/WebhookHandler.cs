@@ -53,25 +53,40 @@ public sealed class WebhookHandler : IWebhookHandler {
             }
 
             // Find and cancel any active jobs for this installation
-            var jobs = await _jobStatusStore.GetJobsAsync(
-                status: null,
-                jobType: null,
-                source: null,
-                skip: 0,
-                take: 1000,
-                cancellationToken);
+            // Use pagination to handle large numbers of jobs
+            const int pageSize = 100;
+            var skip = 0;
+            var hasMore = true;
 
-            foreach (var job in jobs) {
-                if (job.Status == BackgroundJobStatus.Queued || job.Status == BackgroundJobStatus.Processing) {
-                    // Check if job metadata contains InstallationId
-                    if (job.Metadata.TryGetValue("InstallationId", out var installationIdStr) &&
-                        long.TryParse(installationIdStr, out var installationId) &&
-                        installationId == payload.Installation.Id) {
-                        
-                        _jobDispatcher.CancelJob(job.JobId);
-                        _logger.LogInformation("Cancelled job {JobId} due to app uninstallation", job.JobId);
+            while (hasMore) {
+                var jobs = await _jobStatusStore.GetJobsAsync(
+                    status: null,
+                    jobType: null,
+                    source: null,
+                    skip: skip,
+                    take: pageSize,
+                    cancellationToken);
+
+                if (jobs.Count == 0) {
+                    hasMore = false;
+                    break;
+                }
+
+                foreach (var job in jobs) {
+                    if (job.Status == BackgroundJobStatus.Queued || job.Status == BackgroundJobStatus.Processing) {
+                        // Check if job metadata contains InstallationId
+                        if (job.Metadata.TryGetValue("InstallationId", out var installationIdStr) &&
+                            long.TryParse(installationIdStr, out var installationId) &&
+                            installationId == payload.Installation.Id) {
+                            
+                            _jobDispatcher.CancelJob(job.JobId);
+                            _logger.LogInformation("Cancelled job {JobId} due to app uninstallation", job.JobId);
+                        }
                     }
                 }
+
+                skip += pageSize;
+                hasMore = jobs.Count == pageSize;
             }
 
             _logger.LogInformation("Completed handling uninstallation for installation {InstallationId}", payload.Installation.Id);
