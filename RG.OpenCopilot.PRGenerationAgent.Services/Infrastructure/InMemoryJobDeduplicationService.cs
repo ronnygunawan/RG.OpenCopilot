@@ -17,6 +17,12 @@ internal sealed class InMemoryJobDeduplicationService : IJobDeduplicationService
 
     /// <inheritdoc />
     public Task RegisterJobAsync(string jobId, string idempotencyKey, CancellationToken cancellationToken = default) {
+        // Handle race condition: if this job ID was previously registered with a different key,
+        // we need to clean up the old mapping atomically
+        if (_jobIdToIdempotencyKey.TryGetValue(jobId, out var oldKey) && oldKey != idempotencyKey) {
+            _idempotencyKeyToJobId.TryRemove(oldKey, out _);
+        }
+        
         _idempotencyKeyToJobId[idempotencyKey] = jobId;
         _jobIdToIdempotencyKey[jobId] = idempotencyKey;
         return Task.CompletedTask;

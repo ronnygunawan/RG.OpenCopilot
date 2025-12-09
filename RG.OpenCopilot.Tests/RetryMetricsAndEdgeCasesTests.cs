@@ -103,7 +103,7 @@ public class RetryMetricsAndEdgeCasesTests {
         totalRetries.ShouldBe(5); // 2 + 3 + 0
         
         var successfulRetries = 1; // Only successAfterRetry succeeded after retries
-        var retrySuccessRate = totalRetries > 0 ? (double)successfulRetries / totalRetries : 0.0;
+        _ = totalRetries > 0 ? (double)successfulRetries / totalRetries : 0.0;
         
         // Verify metrics include useful information
         metrics.CompletedCount.ShouldBeGreaterThan(0);
@@ -146,8 +146,8 @@ public class RetryMetricsAndEdgeCasesTests {
         var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
         
         // Act
-        var cts = new CancellationTokenSource();
-        var processorTask = processor.StartAsync(cts.Token);
+        using var cts = new CancellationTokenSource();
+        _ = processor.StartAsync(cts.Token);
         
         var job = new BackgroundJob {
             Type = "NoRetryJob",

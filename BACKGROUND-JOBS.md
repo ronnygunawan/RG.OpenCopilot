@@ -100,7 +100,7 @@ Retry 3: 20000ms (5000 × 2^2)
 Retry 4: 40000ms (5000 × 2^3)
 ```
 
-With jitter (MinJitter = -0.1, MaxJitter = 0.2), delays will vary ±10-20% to prevent thundering herd problems.
+With jitter (MinJitter = -0.1, MaxJitter = 0.2), delays will vary from -10% to +20% to prevent thundering herd problems.
 
 ## Idempotency and Deduplication
 

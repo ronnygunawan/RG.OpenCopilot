@@ -4,7 +4,6 @@ namespace RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 /// Default implementation of retry policy calculator
 /// </summary>
 internal sealed class RetryPolicyCalculator : IRetryPolicyCalculator {
-    private readonly Random _random = new();
 
     /// <inheritdoc />
     public int CalculateRetryDelay(RetryPolicy policy, int retryCount) {
@@ -46,11 +45,12 @@ internal sealed class RetryPolicyCalculator : IRetryPolicyCalculator {
         // Generate random jitter between min and max factors
         // Jitter can reduce delay (negative) or increase it (positive)
         var jitterRange = maxJitterFactor - minJitterFactor;
-        var randomJitter = minJitterFactor + (_random.NextDouble() * jitterRange);
+        var randomJitter = minJitterFactor + (Random.Shared.NextDouble() * jitterRange);
         
         // Apply jitter as a percentage
         var jitteredDelay = delay * (1.0 + randomJitter);
         
-        return (int)jitteredDelay;
+        // Prevent integer overflow when casting from double to int
+        return (int)Math.Min(jitteredDelay, int.MaxValue);
     }
 }

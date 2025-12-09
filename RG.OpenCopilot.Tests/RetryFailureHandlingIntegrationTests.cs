@@ -59,8 +59,8 @@ public class RetryFailureHandlingIntegrationTests {
         var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
         
         // Act
-        var cts = new CancellationTokenSource();
-        var processorTask = processor.StartAsync(cts.Token);
+        using var cts = new CancellationTokenSource();
+        _ = processor.StartAsync(cts.Token);
         
         var job = new BackgroundJob {
             Type = "TransientFailureJob",
@@ -142,8 +142,8 @@ public class RetryFailureHandlingIntegrationTests {
         var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
         
         // Act
-        var cts = new CancellationTokenSource();
-        var processorTask = processor.StartAsync(cts.Token);
+        using var cts = new CancellationTokenSource();
+        _ = processor.StartAsync(cts.Token);
         
         var job = new BackgroundJob {
             Type = "PersistentFailureJob",
@@ -211,8 +211,8 @@ public class RetryFailureHandlingIntegrationTests {
         var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
         
         // Act
-        var cts = new CancellationTokenSource();
-        var processorTask = processor.StartAsync(cts.Token);
+        using var cts = new CancellationTokenSource();
+        _ = processor.StartAsync(cts.Token);
         
         var job = new BackgroundJob {
             Type = "ExhaustRetriesJob",
@@ -309,8 +309,8 @@ public class RetryFailureHandlingIntegrationTests {
         var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
         
         // Act
-        var cts = new CancellationTokenSource();
-        var processorTask = processor.StartAsync(cts.Token);
+        using var cts = new CancellationTokenSource();
+        _ = processor.StartAsync(cts.Token);
         
         var validationJob = new BackgroundJob { Type = "ValidationJob", MaxRetries = 3 };
         var timeoutJob = new BackgroundJob { Type = "TimeoutJob", MaxRetries = 3 };
@@ -417,8 +417,8 @@ public class RetryFailureHandlingIntegrationTests {
         var idempotencyKey = "order:12345:process-payment";
         
         // Act
-        var cts = new CancellationTokenSource();
-        var processorTask = processor.StartAsync(cts.Token);
+        using var cts = new CancellationTokenSource();
+        _ = processor.StartAsync(cts.Token);
         
         var job1 = new BackgroundJob {
             Type = "IdempotentJob",
@@ -477,8 +477,8 @@ public class RetryFailureHandlingIntegrationTests {
         var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
         
         // Act
-        var cts = new CancellationTokenSource();
-        var processorTask = processor.StartAsync(cts.Token);
+        using var cts = new CancellationTokenSource();
+        _ = processor.StartAsync(cts.Token);
         
         var job = new BackgroundJob {
             Type = "TestJob",

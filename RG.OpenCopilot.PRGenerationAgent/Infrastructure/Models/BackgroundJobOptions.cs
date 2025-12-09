@@ -45,19 +45,26 @@ public sealed class BackgroundJobOptions {
                 return _retryPolicy;
             }
 
-            // Otherwise, create from deprecated properties for backward compatibility
-            return new RetryPolicy {
-                Enabled = EnableRetry,
-                MaxRetries = 3,
-                BackoffStrategy = RetryBackoffStrategy.Constant,
-                BaseDelayMilliseconds = RetryDelayMilliseconds,
-                MaxDelayMilliseconds = 300000,
-                MinJitterFactor = 0.0,
-                MaxJitterFactor = 0.0 // No jitter for backward compatibility
-            };
+            // Cache synthesized policy to ensure consistent reference equality
+            if (_synthesizedRetryPolicy == null) {
+                _synthesizedRetryPolicy = new RetryPolicy {
+                    Enabled = EnableRetry,
+                    MaxRetries = 3,
+                    BackoffStrategy = RetryBackoffStrategy.Constant,
+                    BaseDelayMilliseconds = RetryDelayMilliseconds,
+                    MaxDelayMilliseconds = 300000,
+                    MinJitterFactor = 0.0,
+                    MaxJitterFactor = 0.0 // No jitter for backward compatibility
+                };
+            }
+            return _synthesizedRetryPolicy;
         }
-        init => _retryPolicy = value;
+        init {
+            _retryPolicy = value;
+            _synthesizedRetryPolicy = null;
+        }
     }
 
     private readonly RetryPolicy? _retryPolicy;
+    private RetryPolicy? _synthesizedRetryPolicy;
 }
