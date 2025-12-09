@@ -23,4 +23,11 @@ internal sealed class InMemoryAgentTaskStore : IAgentTaskStore {
         _tasks[task.Id] = task;
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<AgentTask>> GetTasksByInstallationIdAsync(long installationId, CancellationToken cancellationToken = default) {
+        var tasks = _tasks.Values
+            .Where(t => t.InstallationId == installationId)
+            .ToList();
+        return Task.FromResult<IReadOnlyList<AgentTask>>(tasks);
+    }
 }

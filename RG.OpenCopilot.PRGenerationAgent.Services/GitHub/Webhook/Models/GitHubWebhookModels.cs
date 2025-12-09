@@ -34,3 +34,9 @@ public sealed class GitHubInstallation {
 public sealed class GitHubLabel {
     public string Name { get; set; } = "";
 }
+
+public sealed class GitHubInstallationEventPayload {
+    public string Action { get; set; } = "";
+    public GitHubInstallation? Installation { get; set; }
+    public List<GitHubRepository> Repositories { get; set; } = [];
+}

@@ -5,6 +5,7 @@ using RG.OpenCopilot.PRGenerationAgent.Infrastructure.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Webhook.Models;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Webhook.Services;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 public partial class Program {
     [ExcludeFromCodeCoverage]
@@ -37,33 +38,51 @@ public partial class Program {
                 var eventTypeSanitized = context.Request.Headers["X-GitHub-Event"].ToString().Replace("\r", "").Replace("\n", "");
                 logger.LogInformation("Received webhook: {EventType}", eventTypeSanitized);
 
-                // Check if this is an issues event
+                // Check event type
                 var eventType = context.Request.Headers["X-GitHub-Event"].ToString();
-                var eventTypeSanitizedForLog = eventType.Replace("\r", "").Replace("\n", "");
-                if (eventType != "issues") {
-                    logger.LogInformation("Ignoring non-issues event: {EventType}", eventTypeSanitizedForLog);
+                
+                // Handle installation events
+                if (eventType == "installation") {
+                    var installationPayload = JsonSerializer.Deserialize<GitHubInstallationEventPayload>(body, new JsonSerializerOptions {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    if (installationPayload == null) {
+                        logger.LogWarning("Failed to parse installation webhook payload");
+                        return Results.BadRequest("Invalid payload");
+                    }
+
+                    await handler.HandleInstallationEventAsync(installationPayload);
                     return Results.Ok();
                 }
 
-                // Parse the payload
-                var payload = JsonSerializer.Deserialize<GitHubIssueEventPayload>(body, new JsonSerializerOptions {
-                    PropertyNameCaseInsensitive = true
-                });
+                // Handle issues events
+                if (eventType == "issues") {
+                    // Parse the payload
+                    var payload = JsonSerializer.Deserialize<GitHubIssueEventPayload>(body, new JsonSerializerOptions {
+                        PropertyNameCaseInsensitive = true
+                    });
 
-                if (payload == null) {
-                    logger.LogWarning("Failed to parse webhook payload");
-                    return Results.BadRequest("Invalid payload");
+                    if (payload == null) {
+                        logger.LogWarning("Failed to parse webhook payload");
+                        return Results.BadRequest("Invalid payload");
+                    }
+
+                    // Handle the event and get job ID
+                    var jobId = await handler.HandleIssuesEventAsync(payload);
+
+                    // Return 202 Accepted if a job was enqueued
+                    if (!string.IsNullOrEmpty(jobId)) {
+                        var statusUrl = $"{context.Request.Scheme}://{context.Request.Host}/jobs/{jobId}/status";
+                        return Results.Accepted(statusUrl, new { jobId, statusUrl });
+                    }
+
+                    return Results.Ok();
                 }
 
-                // Handle the event and get job ID
-                var jobId = await handler.HandleIssuesEventAsync(payload);
-
-                // Return 202 Accepted if a job was enqueued
-                if (!string.IsNullOrEmpty(jobId)) {
-                    var statusUrl = $"{context.Request.Scheme}://{context.Request.Host}/jobs/{jobId}/status";
-                    return Results.Accepted(statusUrl, new { jobId, statusUrl });
-                }
-
+                // Ignore other event types
+                var eventTypeSanitizedForLog = eventType.Replace("\r", "").Replace("\n", "");
+                logger.LogInformation("Ignoring event: {EventType}", eventTypeSanitizedForLog);
                 return Results.Ok();
             }
             catch (Exception ex) {
@@ -158,6 +177,24 @@ public partial class Program {
             }
         });
 
+        app.MapPost("/jobs/{jobId}/cancel", (string jobId, IJobDispatcher jobDispatcher, ILogger<JobCancelEndpoint> logger) => {
+            try {
+                var cancelled = jobDispatcher.CancelJob(jobId);
+                if (cancelled) {
+                    logger.LogInformation("Cancelled job {JobId}", jobId);
+                    return Results.Ok(new { jobId, cancelled = true });
+                }
+
+                logger.LogWarning("Job {JobId} not found or already completed", jobId);
+                return Results.NotFound(new { error = "Job not found or already completed" });
+            }
+            catch (Exception ex) {
+                var jobIdSanitized = jobId.Replace("\r", "").Replace("\n", "");
+                logger.LogError(ex, "Error cancelling job {JobId}", jobIdSanitized);
+                return Results.StatusCode(500);
+            }
+        });
+
         app.Run();
     }
 }
@@ -176,4 +213,7 @@ internal sealed class JobMetricsEndpoint { }
 
 // Marker class for logging in dead-letter endpoint
 internal sealed class DeadLetterEndpoint { }
+
+// Marker class for logging in job cancel endpoint
+internal sealed class JobCancelEndpoint { }
 

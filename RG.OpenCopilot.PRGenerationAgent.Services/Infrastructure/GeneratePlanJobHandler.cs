@@ -30,6 +30,7 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
     private readonly IInstructionsLoader _instructionsLoader;
     private readonly IJobDispatcher _jobDispatcher;
     private readonly IJobStatusStore _jobStatusStore;
+    private readonly BackgroundJobOptions _options;
     private readonly ILogger<GeneratePlanJobHandler> _logger;
 
     public string JobType => JobTypeName;
@@ -42,6 +43,7 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
         IInstructionsLoader instructionsLoader,
         IJobDispatcher jobDispatcher,
         IJobStatusStore jobStatusStore,
+        BackgroundJobOptions options,
         ILogger<GeneratePlanJobHandler> logger) {
         _taskStore = taskStore;
         _plannerService = plannerService;
@@ -50,6 +52,7 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
         _instructionsLoader = instructionsLoader;
         _jobDispatcher = jobDispatcher;
         _jobStatusStore = jobStatusStore;
+        _options = options;
         _logger = logger;
     }
 
@@ -58,143 +61,37 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
             // Update job status to Processing
             await UpdateJobStatusAsync(jobId: job.Id, status: BackgroundJobStatus.Processing, job.Metadata, cancellationToken);
 
-            // Deserialize payload
-            var payload = JsonSerializer.Deserialize<GeneratePlanJobPayload>(job.Payload);
-            if (payload == null) {
-                await UpdateJobStatusAsync(
-                    jobId: job.Id,
-                    status: BackgroundJobStatus.Failed,
-                    job.Metadata,
-                    cancellationToken,
-                    errorMessage: "Failed to deserialize job payload");
-                return JobResult.CreateFailure(errorMessage: "Failed to deserialize job payload", shouldRetry: false);
+            // Apply timeout if configured
+            CancellationTokenSource? timeoutCts = null;
+            CancellationToken effectiveCancellationToken = cancellationToken;
+
+            if (_options.PlanTimeoutSeconds > 0) {
+                timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(_options.PlanTimeoutSeconds));
+                effectiveCancellationToken = timeoutCts.Token;
+                _logger.LogInformation("Plan generation timeout set to {TimeoutSeconds} seconds", _options.PlanTimeoutSeconds);
             }
 
-            _logger.LogInformation(
-                "Generating plan for issue #{IssueNumber} in {Repo}",
-                payload.IssueNumber,
-                $"{payload.RepositoryOwner}/{payload.RepositoryName}");
-
-            // Create working branch
-            var branchName = await _gitHubService.CreateWorkingBranchAsync(
-                payload.RepositoryOwner,
-                payload.RepositoryName,
-                payload.IssueNumber,
-                cancellationToken);
-
-            // Create WIP PR with initial issue prompt
-            var prNumber = await _gitHubService.CreateWipPullRequestAsync(
-                payload.RepositoryOwner,
-                payload.RepositoryName,
-                branchName,
-                payload.IssueNumber,
-                payload.IssueTitle,
-                payload.IssueBody,
-                cancellationToken);
-
-            _logger.LogInformation("Created WIP PR #{PrNumber} for task {TaskId}", prNumber, payload.TaskId);
-
-            // Analyze repository to gather context
-            RepositoryAnalysis? repoAnalysis = null;
             try {
-                repoAnalysis = await _repositoryAnalyzer.AnalyzeAsync(
-                    payload.RepositoryOwner,
-                    payload.RepositoryName,
-                    cancellationToken);
+                return await ExecutePlanGenerationAsync(job, effectiveCancellationToken);
             }
-            catch (Exception ex) {
-                _logger.LogWarning(ex, "Failed to analyze repository, proceeding without analysis");
+            finally {
+                timeoutCts?.Dispose();
             }
-
-            // Load custom instructions if available
-            string? instructions = null;
-            try {
-                instructions = await _instructionsLoader.LoadInstructionsAsync(
-                    payload.RepositoryOwner,
-                    payload.RepositoryName,
-                    payload.IssueNumber,
-                    cancellationToken);
-            }
-            catch (Exception ex) {
-                _logger.LogWarning(ex, "Failed to load instructions, proceeding without them");
-            }
-
-            // Generate plan with all available context
-            var context = new AgentTaskContext {
-                IssueTitle = payload.IssueTitle,
-                IssueBody = payload.IssueBody,
-                RepositorySummary = repoAnalysis?.Summary,
-                InstructionsMarkdown = instructions
-            };
-
-            var plan = await _plannerService.CreatePlanAsync(context, cancellationToken);
-            
-            // Update task with plan
-            var task = await _taskStore.GetTaskAsync(payload.TaskId, cancellationToken);
-            if (task == null) {
-                await UpdateJobStatusAsync(
-                    jobId: job.Id,
-                    status: BackgroundJobStatus.Failed,
-                    job.Metadata,
-                    cancellationToken,
-                    errorMessage: $"Task {payload.TaskId} not found");
-                return JobResult.CreateFailure(errorMessage: $"Task {payload.TaskId} not found", shouldRetry: false);
-            }
-
-            task.Plan = plan;
-            task.Status = AgentTaskStatus.Planned;
-            await _taskStore.UpdateTaskAsync(task, cancellationToken);
-
-            _logger.LogInformation("Generated plan for task {TaskId}", payload.TaskId);
-
-            // Update PR description with the plan
-            var updatedPrBody = FormatPrBodyWithPlan(
-                payload.IssueNumber,
-                payload.IssueTitle,
-                payload.IssueBody,
-                plan);
-            await _gitHubService.UpdatePullRequestDescriptionAsync(
-                payload.RepositoryOwner,
-                payload.RepositoryName,
-                prNumber,
-                $"[WIP] {payload.IssueTitle}",
-                updatedPrBody,
-                cancellationToken);
-
-            _logger.LogInformation("Updated PR #{PrNumber} with plan for task {TaskId}", prNumber, payload.TaskId);
-
-            // Dispatch job to execute the plan in the background
-            var executionPayload = new ExecutePlanJobPayload { TaskId = payload.TaskId };
-            var executionJob = new BackgroundJob {
-                Type = ExecutePlanJobHandler.JobTypeName,
-                Payload = JsonSerializer.Serialize(executionPayload),
-                Priority = 0,
-                Metadata = new Dictionary<string, string> {
-                    ["TaskId"] = payload.TaskId,
-                    ["RepositoryOwner"] = payload.RepositoryOwner,
-                    ["RepositoryName"] = payload.RepositoryName,
-                    ["IssueNumber"] = payload.IssueNumber.ToString()
-                }
-            };
-
-            var dispatched = await _jobDispatcher.DispatchAsync(executionJob, cancellationToken);
-            if (dispatched) {
-                _logger.LogInformation("Dispatched execution job {JobId} for task {TaskId}", executionJob.Id, payload.TaskId);
-            }
-            else {
-                _logger.LogWarning("Failed to dispatch execution job for task {TaskId}", payload.TaskId);
-            }
-
-            // Update job status to Completed
-            var resultData = JsonSerializer.Serialize(new { prNumber, branchName });
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+            // Timeout occurred
+            _logger.LogWarning("Plan generation timed out for job {JobId} after {TimeoutSeconds} seconds", 
+                job.Id, _options.PlanTimeoutSeconds);
             await UpdateJobStatusAsync(
                 jobId: job.Id,
-                status: BackgroundJobStatus.Completed,
+                status: BackgroundJobStatus.Failed,
                 job.Metadata,
                 cancellationToken,
-                resultData: resultData);
-
-            return JobResult.CreateSuccess();
+                errorMessage: $"Plan generation timed out after {_options.PlanTimeoutSeconds} seconds");
+            return JobResult.CreateFailure(
+                errorMessage: $"Plan generation timed out after {_options.PlanTimeoutSeconds} seconds",
+                shouldRetry: false);
         }
         catch (OperationCanceledException) {
             _logger.LogWarning("Plan generation cancelled for job {JobId}", job.Id);
@@ -215,6 +112,147 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
                 errorMessage: ex.Message);
             return JobResult.CreateFailure(errorMessage: ex.Message, exception: ex, shouldRetry: true);
         }
+    }
+
+    private async Task<JobResult> ExecutePlanGenerationAsync(BackgroundJob job, CancellationToken cancellationToken) {
+        // Deserialize payload
+        var payload = JsonSerializer.Deserialize<GeneratePlanJobPayload>(job.Payload);
+        if (payload == null) {
+            await UpdateJobStatusAsync(
+                jobId: job.Id,
+                status: BackgroundJobStatus.Failed,
+                job.Metadata,
+                cancellationToken,
+                errorMessage: "Failed to deserialize job payload");
+            return JobResult.CreateFailure(errorMessage: "Failed to deserialize job payload", shouldRetry: false);
+        }
+
+        _logger.LogInformation(
+            "Generating plan for issue #{IssueNumber} in {Repo}",
+            payload.IssueNumber,
+            $"{payload.RepositoryOwner}/{payload.RepositoryName}");
+
+        // Create working branch
+        var branchName = await _gitHubService.CreateWorkingBranchAsync(
+            payload.RepositoryOwner,
+            payload.RepositoryName,
+            payload.IssueNumber,
+            cancellationToken);
+
+        // Create WIP PR with initial issue prompt
+        var prNumber = await _gitHubService.CreateWipPullRequestAsync(
+            payload.RepositoryOwner,
+            payload.RepositoryName,
+            branchName,
+            payload.IssueNumber,
+            payload.IssueTitle,
+            payload.IssueBody,
+            cancellationToken);
+
+        _logger.LogInformation("Created WIP PR #{PrNumber} for task {TaskId}", prNumber, payload.TaskId);
+
+        // Analyze repository to gather context
+        RepositoryAnalysis? repoAnalysis = null;
+        try {
+            repoAnalysis = await _repositoryAnalyzer.AnalyzeAsync(
+                payload.RepositoryOwner,
+                payload.RepositoryName,
+                cancellationToken);
+        }
+        catch (Exception ex) {
+            _logger.LogWarning(ex, "Failed to analyze repository, proceeding without analysis");
+        }
+
+        // Load custom instructions if available
+        string? instructions = null;
+        try {
+            instructions = await _instructionsLoader.LoadInstructionsAsync(
+                payload.RepositoryOwner,
+                payload.RepositoryName,
+                payload.IssueNumber,
+                cancellationToken);
+        }
+        catch (Exception ex) {
+            _logger.LogWarning(ex, "Failed to load instructions, proceeding without them");
+        }
+
+        // Generate plan with all available context
+        var context = new AgentTaskContext {
+            IssueTitle = payload.IssueTitle,
+            IssueBody = payload.IssueBody,
+            RepositorySummary = repoAnalysis?.Summary,
+            InstructionsMarkdown = instructions
+        };
+
+        var plan = await _plannerService.CreatePlanAsync(context, cancellationToken);
+        
+        // Update task with plan
+        var task = await _taskStore.GetTaskAsync(payload.TaskId, cancellationToken);
+        if (task == null) {
+            await UpdateJobStatusAsync(
+                jobId: job.Id,
+                status: BackgroundJobStatus.Failed,
+                job.Metadata,
+                cancellationToken,
+                errorMessage: $"Task {payload.TaskId} not found");
+            return JobResult.CreateFailure(errorMessage: $"Task {payload.TaskId} not found", shouldRetry: false);
+        }
+
+        task.Plan = plan;
+        task.Status = AgentTaskStatus.Planned;
+        await _taskStore.UpdateTaskAsync(task, cancellationToken);
+
+        _logger.LogInformation("Generated plan for task {TaskId}", payload.TaskId);
+
+        // Update PR description with the plan
+        var updatedPrBody = FormatPrBodyWithPlan(
+            payload.IssueNumber,
+            payload.IssueTitle,
+            payload.IssueBody,
+            plan);
+        await _gitHubService.UpdatePullRequestDescriptionAsync(
+            payload.RepositoryOwner,
+            payload.RepositoryName,
+            prNumber,
+            $"[WIP] {payload.IssueTitle}",
+            updatedPrBody,
+            cancellationToken);
+
+        _logger.LogInformation("Updated PR #{PrNumber} with plan for task {TaskId}", prNumber, payload.TaskId);
+
+        // Dispatch job to execute the plan in the background
+        var executionPayload = new ExecutePlanJobPayload { TaskId = payload.TaskId };
+        var executionJob = new BackgroundJob {
+            Type = ExecutePlanJobHandler.JobTypeName,
+            Payload = JsonSerializer.Serialize(executionPayload),
+            Priority = 0,
+            Metadata = new Dictionary<string, string> {
+                ["TaskId"] = payload.TaskId,
+                ["InstallationId"] = payload.InstallationId.ToString(),
+                ["RepositoryOwner"] = payload.RepositoryOwner,
+                ["RepositoryName"] = payload.RepositoryName,
+                ["IssueNumber"] = payload.IssueNumber.ToString()
+            }
+        };
+
+        var dispatched = await _jobDispatcher.DispatchAsync(executionJob, cancellationToken);
+        if (dispatched) {
+            _logger.LogInformation("Dispatched execution job {JobId} for task {TaskId}", executionJob.Id, payload.TaskId);
+        }
+        else {
+            _logger.LogWarning("Failed to dispatch execution job for task {TaskId}", payload.TaskId);
+        }
+
+        // Update job status to Completed
+        var resultData = JsonSerializer.Serialize(new { prNumber, branchName });
+        await UpdateJobStatusAsync(
+            jobId: job.Id,
+            status: BackgroundJobStatus.Completed,
+            job.Metadata,
+            cancellationToken,
+            resultData: resultData);
+
+        return JobResult.CreateSuccess();
     }
 
     private async Task UpdateJobStatusAsync(

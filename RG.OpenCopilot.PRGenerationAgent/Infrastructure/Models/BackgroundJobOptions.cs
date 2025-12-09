@@ -25,6 +25,16 @@ public sealed class BackgroundJobOptions {
     public int ShutdownTimeoutSeconds { get; init; } = 30;
 
     /// <summary>
+    /// Timeout in seconds for plan generation phase (0 for no timeout)
+    /// </summary>
+    public int PlanTimeoutSeconds { get; init; } = 300;
+
+    /// <summary>
+    /// Timeout in seconds for plan execution phase (0 for no timeout)
+    /// </summary>
+    public int ExecutionTimeoutSeconds { get; init; } = 1800;
+
+    /// <summary>
     /// Whether to retry failed jobs (deprecated, use RetryPolicy.Enabled)
     /// </summary>
     public bool EnableRetry { get; init; } = true;

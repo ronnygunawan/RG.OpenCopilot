@@ -26,6 +26,7 @@ public class GeneratePlanJobHandlerTests {
             instructionsLoader.Object,
             jobDispatcher.Object,
             jobStatusStore,
+            new BackgroundJobOptions(),
             logger);
 
         // Create a task
@@ -154,6 +155,7 @@ public class GeneratePlanJobHandlerTests {
             instructionsLoader.Object,
             jobDispatcher.Object,
             jobStatusStore,
+            new BackgroundJobOptions(),
             logger);
 
         var job = new BackgroundJob {
@@ -199,6 +201,7 @@ public class GeneratePlanJobHandlerTests {
             instructionsLoader.Object,
             jobDispatcher.Object,
             jobStatusStore,
+            new BackgroundJobOptions(),
             logger);
 
         // Setup mocks for early steps
@@ -281,6 +284,7 @@ public class GeneratePlanJobHandlerTests {
             instructionsLoader.Object,
             jobDispatcher.Object,
             jobStatusStore,
+            new BackgroundJobOptions(),
             logger);
 
         var task = new AgentTask {
@@ -345,6 +349,7 @@ public class GeneratePlanJobHandlerTests {
             instructionsLoader.Object,
             jobDispatcher.Object,
             jobStatusStore,
+            new BackgroundJobOptions(),
             logger);
 
         var task = new AgentTask {
@@ -413,6 +418,7 @@ public class GeneratePlanJobHandlerTests {
             instructionsLoader.Object,
             jobDispatcher.Object,
             jobStatusStore,
+            new BackgroundJobOptions(),
             logger);
 
         var task = new AgentTask {
@@ -507,6 +513,7 @@ public class GeneratePlanJobHandlerTests {
             instructionsLoader.Object,
             jobDispatcher.Object,
             jobStatusStore,
+            new BackgroundJobOptions(),
             logger);
 
         var task = new AgentTask {
@@ -604,6 +611,7 @@ public class GeneratePlanJobHandlerTests {
             instructionsLoader.Object,
             jobDispatcher.Object,
             jobStatusStore,
+            new BackgroundJobOptions(),
             logger);
 
         var task = new AgentTask {
@@ -698,6 +706,7 @@ public class GeneratePlanJobHandlerTests {
             instructionsLoader.Object,
             jobDispatcher.Object,
             jobStatusStore,
+            new BackgroundJobOptions(),
             logger);
 
         var task = new AgentTask {
