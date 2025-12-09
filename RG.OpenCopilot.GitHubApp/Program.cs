@@ -17,6 +17,9 @@ public partial class Program {
 
         var app = builder.Build();
 
+        // Apply database migrations if PostgreSQL is configured
+        app.Services.ApplyDatabaseMigrations();
+
         app.MapGet("/health", () => Results.Ok("ok"));
 
         app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<WebhookEndpoint> logger) => {

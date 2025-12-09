@@ -176,4 +176,17 @@ public static class ServiceCollectionExtensions {
 
         return services;
     }
+
+    /// <summary>
+    /// Applies pending EF Core migrations to the database if PostgreSQL is configured
+    /// </summary>
+    public static void ApplyDatabaseMigrations(this IServiceProvider serviceProvider) {
+        using var scope = serviceProvider.CreateScope();
+        var context = scope.ServiceProvider.GetService<AgentTaskDbContext>();
+        
+        if (context != null) {
+            // Only apply migrations if PostgreSQL is configured
+            context.Database.Migrate();
+        }
+    }
 }

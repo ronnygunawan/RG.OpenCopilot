@@ -78,11 +78,39 @@ CREATE USER opencopilot_user WITH PASSWORD 'yourpassword';
 GRANT ALL PRIVILEGES ON DATABASE opencopilot TO opencopilot_user;
 ```
 
+### 3. Apply Migrations
+
+**Automatic (Recommended for Development):**
+
+The application automatically applies pending migrations on startup when PostgreSQL is configured. Just run the application:
+
+```bash
+cd RG.OpenCopilot.GitHubApp
+dotnet run
+```
+
+**Manual (Recommended for Production):**
+
+For production deployments, manually apply migrations before deploying the application:
+
+```bash
+cd RG.OpenCopilot.PRGenerationAgent.Services
+dotnet ef database update --context AgentTaskDbContext
+```
+
+Or generate and run SQL scripts (see "Generating SQL Scripts" section below).
+
 ## EF Core Migrations
+
+### Automatic Migration on Startup
+
+The application automatically applies pending migrations on startup when a PostgreSQL connection string is configured. This is convenient for development but **not recommended for production**. For production deployments, use manual migrations or SQL scripts (see below).
+
+To disable automatic migrations, remove or comment out the `app.Services.ApplyDatabaseMigrations();` line in `Program.cs`.
 
 ### Initial Setup
 
-The initial migration has already been created. To apply it to your database:
+The initial migration has already been created. If you need to manually apply it to your database:
 
 ```bash
 cd RG.OpenCopilot.PRGenerationAgent.Services
