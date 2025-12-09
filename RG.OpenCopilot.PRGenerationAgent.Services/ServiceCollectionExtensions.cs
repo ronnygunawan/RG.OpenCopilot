@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.SemanticKernel;
@@ -14,6 +15,7 @@ using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Git.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Repository;
 using RG.OpenCopilot.PRGenerationAgent.Services.GitHub.Webhook.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure.Persistence;
 using RG.OpenCopilot.PRGenerationAgent.Services.Planner;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services;
@@ -70,6 +72,18 @@ public static class ServiceCollectionExtensions {
         var kernel = kernelBuilder.Build();
         services.AddSingleton(kernel);
         
+        // Configure Database
+        var connectionString = configuration.GetConnectionString("AgentTaskDatabase");
+        var usePostgreSQL = !string.IsNullOrEmpty(connectionString);
+        
+        if (usePostgreSQL) {
+            services.AddDbContext<AgentTaskDbContext>(options =>
+                options.UseNpgsql(connectionString));
+            services.AddScoped<IAgentTaskStore, PostgreSqlAgentTaskStore>();
+        } else {
+            services.AddSingleton<IAgentTaskStore, InMemoryAgentTaskStore>();
+        }
+        
         // Register services
         services.AddSingleton<IPlannerService, LlmPlannerService>();
         services.AddSingleton<ICodeGenerator, CodeGenerator>();
@@ -78,7 +92,6 @@ public static class ServiceCollectionExtensions {
         services.AddSingleton<IContainerManager, DockerContainerManager>();
         services.AddSingleton<ICommandExecutor, ProcessCommandExecutor>();
         services.AddSingleton<IExecutorService, ContainerExecutorService>();
-        services.AddSingleton<IAgentTaskStore, InMemoryAgentTaskStore>();
         services.AddSingleton<IWebhookHandler, WebhookHandler>();
         services.AddSingleton<IWebhookValidator, WebhookValidator>();
         services.AddSingleton<IRepositoryAnalyzer, RepositoryAnalyzer>();
