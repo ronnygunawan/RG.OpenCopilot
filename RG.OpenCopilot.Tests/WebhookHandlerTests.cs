@@ -15,6 +15,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            new FakeTimeProvider(),
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -41,6 +42,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            new FakeTimeProvider(),
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -71,6 +73,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            new FakeTimeProvider(),
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -104,6 +107,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            new FakeTimeProvider(),
             new TestLogger<WebhookHandler>());
 
         // Create an existing task
@@ -143,6 +147,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            new FakeTimeProvider(),
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -170,6 +175,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            new FakeTimeProvider(),
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {

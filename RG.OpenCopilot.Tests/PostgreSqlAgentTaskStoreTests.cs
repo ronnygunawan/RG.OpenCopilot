@@ -286,8 +286,8 @@ public class PostgreSqlAgentTaskStoreTests : IDisposable {
         };
         await _store.CreateTaskAsync(task);
 
-        var startedAt = DateTime.UtcNow;
-        var completedAt = DateTime.UtcNow.AddMinutes(5);
+        var startedAt = new FakeTimeProvider().GetUtcNow().DateTime;
+        var completedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(5);
 
         // Act
         task.Status = AgentTaskStatus.Executing;
@@ -519,11 +519,11 @@ public class PostgreSqlAgentTaskStoreTests : IDisposable {
         await _store.UpdateTaskAsync(task);
 
         task.Status = AgentTaskStatus.Executing;
-        task.StartedAt = DateTime.UtcNow;
+        task.StartedAt = new FakeTimeProvider().GetUtcNow().DateTime;
         await _store.UpdateTaskAsync(task);
 
         task.Status = AgentTaskStatus.Completed;
-        task.CompletedAt = DateTime.UtcNow;
+        task.CompletedAt = new FakeTimeProvider().GetUtcNow().DateTime;
         await _store.UpdateTaskAsync(task);
 
         // Assert

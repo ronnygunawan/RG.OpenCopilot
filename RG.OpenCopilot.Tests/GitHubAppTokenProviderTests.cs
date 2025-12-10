@@ -57,7 +57,7 @@ public class GitHubAppTokenProviderTests {
     [Fact]
     public void JwtTokenGenerator_GeneratesValidToken() {
         // Arrange
-        var generator = new JwtTokenGenerator();
+        var generator = new JwtTokenGenerator(new FakeTimeProvider());
         var appId = "12345";
         var privateKey = GenerateTestPrivateKey();
 

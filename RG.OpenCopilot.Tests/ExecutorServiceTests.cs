@@ -20,6 +20,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -51,6 +52,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -95,6 +97,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -134,6 +137,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -179,6 +183,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -220,6 +225,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -312,6 +318,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -350,6 +357,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -391,6 +399,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -429,6 +438,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -472,6 +482,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -511,6 +522,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -550,6 +562,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -590,6 +603,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -634,6 +648,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {

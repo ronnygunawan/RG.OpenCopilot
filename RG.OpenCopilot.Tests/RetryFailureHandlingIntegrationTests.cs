@@ -44,7 +44,7 @@ public class RetryFailureHandlingIntegrationTests {
         handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => {
                 attemptCount++;
-                attemptTimestamps.Add(DateTime.UtcNow);
+                attemptTimestamps.Add(new FakeTimeProvider().GetUtcNow().DateTime);
                 
                 // Fail first 2 attempts with transient error, succeed on 3rd
                 if (attemptCount < 3) {

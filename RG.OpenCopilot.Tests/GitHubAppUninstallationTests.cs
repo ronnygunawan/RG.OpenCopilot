@@ -109,7 +109,7 @@ public class GitHubAppUninstallationTests {
             JobId = "job-1",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Processing,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string> {
                 ["InstallationId"] = "123",
                 ["TaskId"] = "test/repo/issues/1"
@@ -120,7 +120,7 @@ public class GitHubAppUninstallationTests {
             JobId = "job-2",
             JobType = "ExecutePlan",
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string> {
                 ["InstallationId"] = "123",
                 ["TaskId"] = "test/repo/issues/2"
@@ -131,7 +131,7 @@ public class GitHubAppUninstallationTests {
             JobId = "job-3",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Completed,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string> {
                 ["InstallationId"] = "123",
                 ["TaskId"] = "test/repo/issues/3"
@@ -142,7 +142,7 @@ public class GitHubAppUninstallationTests {
             JobId = "job-4",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Processing,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string> {
                 ["InstallationId"] = "456", // Different installation
                 ["TaskId"] = "other/repo/issues/1"

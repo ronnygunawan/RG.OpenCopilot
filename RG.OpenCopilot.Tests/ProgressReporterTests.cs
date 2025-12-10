@@ -769,7 +769,7 @@ public class ProgressReporterTests {
             RepositoryOwner = "owner",
             RepositoryName = "repo",
             IssueNumber = 123,
-            StartedAt = DateTime.UtcNow.AddMinutes(-10),
+            StartedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-10),
             Plan = new AgentPlan {
                 Steps = [
                     new PlanStep { Id = "1", Title = "Step 1", Done = true },

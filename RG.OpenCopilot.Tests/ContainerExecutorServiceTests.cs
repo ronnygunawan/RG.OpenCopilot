@@ -19,6 +19,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -49,6 +50,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -87,6 +89,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -130,6 +133,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -170,6 +174,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -210,6 +215,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -250,6 +256,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -287,6 +294,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -327,6 +335,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -367,6 +376,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -408,6 +418,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            new FakeTimeProvider(),
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {

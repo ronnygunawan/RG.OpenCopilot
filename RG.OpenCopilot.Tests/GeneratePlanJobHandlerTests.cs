@@ -758,7 +758,7 @@ public class GeneratePlanJobHandlerTests {
             JobId = "job-123",
             JobType = GeneratePlanJobHandler.JobTypeName,
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string>()
         });
 

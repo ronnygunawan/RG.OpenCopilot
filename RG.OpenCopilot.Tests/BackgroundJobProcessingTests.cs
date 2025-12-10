@@ -211,6 +211,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         // Create a task with a plan
@@ -259,6 +260,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var job = new BackgroundJob {
@@ -286,6 +288,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         // Create a task without a plan
@@ -323,6 +326,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
@@ -368,6 +372,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
@@ -591,6 +596,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var job = new BackgroundJob {
@@ -715,7 +721,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -752,7 +758,7 @@ public class BackgroundJobProcessingTests {
         var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -802,7 +808,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -851,7 +857,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -901,7 +907,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -949,7 +955,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -999,7 +1005,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1038,7 +1044,7 @@ public class BackgroundJobProcessingTests {
         var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1079,7 +1085,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1116,7 +1122,7 @@ public class BackgroundJobProcessingTests {
         var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act & Assert - should not throw
         processor.Dispose();
@@ -1146,7 +1152,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
