@@ -85,6 +85,7 @@ public static class ServiceCollectionExtensions {
         }
         
         // Register infrastructure services
+        services.AddSingleton<ICorrelationIdProvider, CorrelationIdProvider>();
         services.AddSingleton<IAuditLogger, AuditLogger>();
         services.AddSingleton<IHealthCheckService, HealthCheckService>();
         

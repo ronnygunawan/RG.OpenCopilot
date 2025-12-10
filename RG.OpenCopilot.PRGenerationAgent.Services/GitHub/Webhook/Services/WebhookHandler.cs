@@ -16,6 +16,7 @@ public sealed class WebhookHandler : IWebhookHandler {
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<WebhookHandler> _logger;
     private readonly IAuditLogger _auditLogger;
+    private readonly ICorrelationIdProvider _correlationIdProvider;
 
     public WebhookHandler(
         IAgentTaskStore taskStore,
@@ -23,21 +24,22 @@ public sealed class WebhookHandler : IWebhookHandler {
         IJobStatusStore jobStatusStore,
         TimeProvider timeProvider,
         ILogger<WebhookHandler> logger,
-        IAuditLogger auditLogger) {
+        IAuditLogger auditLogger,
+        ICorrelationIdProvider correlationIdProvider) {
         _taskStore = taskStore;
         _jobDispatcher = jobDispatcher;
         _jobStatusStore = jobStatusStore;
         _timeProvider = timeProvider;
         _logger = logger;
         _auditLogger = auditLogger;
+        _correlationIdProvider = correlationIdProvider;
     }
 
     public async Task HandleInstallationEventAsync(GitHubInstallationEventPayload payload, CancellationToken cancellationToken = default) {
-        var correlationId = Guid.NewGuid().ToString();
+        var correlationId = _correlationIdProvider.GenerateCorrelationId();
         
         _auditLogger.LogWebhookReceived(
             eventType: "installation",
-            correlationId: correlationId,
             data: new Dictionary<string, object> {
                 ["Action"] = payload.Action,
                 ["InstallationId"] = payload.Installation?.Id ?? 0
@@ -68,8 +70,7 @@ public sealed class WebhookHandler : IWebhookHandler {
                     _auditLogger.LogTaskStateTransition(
                         taskId: task.Id,
                         fromState: previousStatus,
-                        toState: AgentTaskStatus.Cancelled.ToString(),
-                        correlationId: correlationId);
+                        toState: AgentTaskStatus.Cancelled.ToString());
                     
                     _logger.LogInformation("Cancelled task {TaskId} due to app uninstallation", task.Id);
                 }
@@ -121,11 +122,10 @@ public sealed class WebhookHandler : IWebhookHandler {
     }
 
     public async Task<string> HandleIssuesEventAsync(GitHubIssueEventPayload payload, CancellationToken cancellationToken = default) {
-        var correlationId = Guid.NewGuid().ToString();
+        var correlationId = _correlationIdProvider.GenerateCorrelationId();
         
         _auditLogger.LogWebhookReceived(
             eventType: "issues",
-            correlationId: correlationId,
             data: new Dictionary<string, object> {
                 ["Action"] = payload.Action,
                 ["Label"] = payload.Label?.Name ?? "N/A",
@@ -173,8 +173,7 @@ public sealed class WebhookHandler : IWebhookHandler {
             _auditLogger.LogTaskStateTransition(
                 taskId: taskId,
                 fromState: "None",
-                toState: AgentTaskStatus.PendingPlanning.ToString(),
-                correlationId: correlationId);
+                toState: AgentTaskStatus.PendingPlanning.ToString());
             
             _logger.LogInformation("Created task {TaskId}", taskId);
 
@@ -219,8 +218,7 @@ public sealed class WebhookHandler : IWebhookHandler {
             _auditLogger.LogJobStateTransition(
                 jobId: job.Id,
                 fromState: "None",
-                toState: BackgroundJobStatus.Queued.ToString(),
-                correlationId: correlationId);
+                toState: BackgroundJobStatus.Queued.ToString());
 
             var dispatched = await _jobDispatcher.DispatchAsync(job, cancellationToken);
             if (dispatched) {

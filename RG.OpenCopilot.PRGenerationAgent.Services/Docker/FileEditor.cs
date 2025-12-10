@@ -26,8 +26,6 @@ public sealed class FileEditor : IFileEditor {
     public async Task CreateFileAsync(string containerId, string filePath, string content, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Creating file {FilePath} in container {ContainerId}", filePath, containerId);
 
-        var correlationId = $"file-create-{containerId}";
-
         try {
             // Check if file already exists
             var fileExists = await FileExistsAsync(containerId, filePath, cancellationToken);
@@ -36,7 +34,6 @@ public sealed class FileEditor : IFileEditor {
                 _auditLogger.LogFileOperation(
                     operation: "CreateFile",
                     filePath: filePath,
-                    correlationId: correlationId,
                     success: false,
                     errorMessage: errorMsg);
 
@@ -62,14 +59,12 @@ public sealed class FileEditor : IFileEditor {
             _auditLogger.LogFileOperation(
                 operation: "CreateFile",
                 filePath: filePath,
-                correlationId: correlationId,
                 success: true);
         }
         catch (Exception ex) when (ex is not InvalidOperationException) {
             _auditLogger.LogFileOperation(
                 operation: "CreateFile",
                 filePath: filePath,
-                correlationId: correlationId,
                 success: false,
                 errorMessage: ex.Message);
             throw;
@@ -82,8 +77,6 @@ public sealed class FileEditor : IFileEditor {
     public async Task ModifyFileAsync(string containerId, string filePath, Func<string, string> transform, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Modifying file {FilePath} in container {ContainerId}", filePath, containerId);
 
-        var correlationId = $"file-modify-{containerId}";
-
         try {
             // Read the current content
             string oldContent;
@@ -95,7 +88,6 @@ public sealed class FileEditor : IFileEditor {
                 _auditLogger.LogFileOperation(
                     operation: "ModifyFile",
                     filePath: filePath,
-                    correlationId: correlationId,
                     success: false,
                     errorMessage: errorMsg);
 
@@ -112,7 +104,6 @@ public sealed class FileEditor : IFileEditor {
                 _auditLogger.LogFileOperation(
                     operation: "ModifyFile",
                     filePath: filePath,
-                    correlationId: correlationId,
                     success: true);
 
                 return;
@@ -134,14 +125,12 @@ public sealed class FileEditor : IFileEditor {
             _auditLogger.LogFileOperation(
                 operation: "ModifyFile",
                 filePath: filePath,
-                correlationId: correlationId,
                 success: true);
         }
         catch (Exception ex) when (ex is not InvalidOperationException) {
             _auditLogger.LogFileOperation(
                 operation: "ModifyFile",
                 filePath: filePath,
-                correlationId: correlationId,
                 success: false,
                 errorMessage: ex.Message);
             throw;
@@ -154,8 +143,6 @@ public sealed class FileEditor : IFileEditor {
     public async Task DeleteFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Deleting file {FilePath} in container {ContainerId}", filePath, containerId);
 
-        var correlationId = $"file-delete-{containerId}";
-
         try {
             // Safety check: don't delete critical files
             if (IsCriticalFile(filePath)) {
@@ -163,7 +150,6 @@ public sealed class FileEditor : IFileEditor {
                 _auditLogger.LogFileOperation(
                     operation: "DeleteFile",
                     filePath: filePath,
-                    correlationId: correlationId,
                     success: false,
                     errorMessage: errorMsg);
 
@@ -181,7 +167,6 @@ public sealed class FileEditor : IFileEditor {
                 _auditLogger.LogFileOperation(
                     operation: "DeleteFile",
                     filePath: filePath,
-                    correlationId: correlationId,
                     success: true);
 
                 return;
@@ -198,7 +183,6 @@ public sealed class FileEditor : IFileEditor {
                 _auditLogger.LogFileOperation(
                     operation: "DeleteFile",
                     filePath: filePath,
-                    correlationId: correlationId,
                     success: false,
                     errorMessage: result.Error);
 
@@ -218,14 +202,12 @@ public sealed class FileEditor : IFileEditor {
             _auditLogger.LogFileOperation(
                 operation: "DeleteFile",
                 filePath: filePath,
-                correlationId: correlationId,
                 success: true);
         }
         catch (Exception ex) when (ex is not InvalidOperationException) {
             _auditLogger.LogFileOperation(
                 operation: "DeleteFile",
                 filePath: filePath,
-                correlationId: correlationId,
                 success: false,
                 errorMessage: ex.Message);
             throw;

@@ -10,7 +10,8 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.WebhookReceived,
@@ -42,13 +43,13 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
-        var correlationId = "webhook-123";
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        correlationIdProvider.SetCorrelationId("webhook-123");
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
 
         // Act
         auditLogger.LogWebhookReceived(
             eventType: "issues",
-            correlationId: correlationId,
             data: new Dictionary<string, object> {
                 ["action"] = "labeled",
                 ["issueNumber"] = 42
@@ -66,11 +67,12 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
-        var correlationId = "validation-123";
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        correlationIdProvider.SetCorrelationId("validation-123");
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
 
         // Act
-        auditLogger.LogWebhookValidation(isValid: true, correlationId: correlationId);
+        auditLogger.LogWebhookValidation(isValid: true);
 
         // Assert
         logger.LoggedMessages.ShouldNotBeEmpty();
@@ -84,11 +86,12 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
-        var correlationId = "validation-456";
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        correlationIdProvider.SetCorrelationId("validation-456");
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
 
         // Act
-        auditLogger.LogWebhookValidation(isValid: false, correlationId: correlationId);
+        auditLogger.LogWebhookValidation(isValid: false);
 
         // Assert
         logger.LoggedMessages.ShouldNotBeEmpty();
@@ -102,16 +105,15 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         var taskId = "owner/repo/issues/42";
-        var correlationId = "task-transition-123";
 
         // Act
         auditLogger.LogTaskStateTransition(
             taskId: taskId,
             fromState: "PendingPlanning",
-            toState: "Planned",
-            correlationId: correlationId);
+            toState: "Planned");
 
         // Assert
         logger.LoggedMessages.ShouldNotBeEmpty();
@@ -126,13 +128,12 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
-        var correlationId = "api-call-123";
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
 
         // Act
         auditLogger.LogGitHubApiCall(
             operation: "CreatePullRequest",
-            correlationId: correlationId,
             durationMs: 250,
             success: true);
 
@@ -148,13 +149,12 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
-        var correlationId = "api-call-456";
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
 
         // Act
         auditLogger.LogGitHubApiCall(
             operation: "CreateBranch",
-            correlationId: correlationId,
             durationMs: 100,
             success: false,
             errorMessage: "Rate limit exceeded");
@@ -172,16 +172,15 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         var jobId = "job-12345";
-        var correlationId = "job-transition-123";
 
         // Act
         auditLogger.LogJobStateTransition(
             jobId: jobId,
             fromState: "Queued",
-            toState: "Processing",
-            correlationId: correlationId);
+            toState: "Processing");
 
         // Assert
         logger.LoggedMessages.ShouldNotBeEmpty();
@@ -196,7 +195,8 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.TaskStateTransition,
@@ -220,12 +220,12 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
 
         // Act & Assert
         Should.NotThrow(() => auditLogger.LogWebhookReceived(
             eventType: "ping",
-            correlationId: "test-123",
             data: null));
         logger.LoggedMessages.ShouldNotBeEmpty();
     }
@@ -235,7 +235,8 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         
         var eventTypes = new[] {
             AuditEventType.WebhookReceived,
@@ -271,7 +272,8 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.WebhookReceived,
@@ -293,7 +295,8 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         
         var largeData = new Dictionary<string, object>();
         for (int i = 0; i < 50; i++) {
@@ -321,9 +324,9 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         var taskId = "owner/repo/issues/42";
-        var correlationId = "task-123";
 
         var transitions = new[] {
             ("None", "PendingPlanning"),
@@ -337,8 +340,7 @@ public class AuditLoggerTests {
             auditLogger.LogTaskStateTransition(
                 taskId: taskId,
                 fromState: from,
-                toState: to,
-                correlationId: correlationId);
+                toState: to);
         }
 
         // Assert
@@ -354,9 +356,9 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         var jobId = "job-123";
-        var correlationId = "transition-456";
 
         var statuses = new[] {
             "Queued", "Processing", "Completed", "Failed", "Cancelled", "Retried", "DeadLetter"
@@ -367,8 +369,7 @@ public class AuditLoggerTests {
             auditLogger.LogJobStateTransition(
                 jobId: jobId,
                 fromState: statuses[i],
-                toState: statuses[i + 1],
-                correlationId: correlationId);
+                toState: statuses[i + 1]);
         }
 
         // Assert
@@ -381,12 +382,12 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
 
         // Act
         auditLogger.LogGitHubApiCall(
             operation: "CreatePullRequest",
-            correlationId: "api-123",
             durationMs: 30000, // 30 seconds
             success: true);
 
@@ -400,12 +401,12 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
 
         // Act & Assert
         Should.NotThrow(() => auditLogger.LogGitHubApiCall(
             operation: "GetRepository",
-            correlationId: null,
             durationMs: 100,
             success: true));
         logger.LoggedMessages.ShouldNotBeEmpty();
@@ -416,7 +417,8 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.ContainerOperation,
@@ -442,13 +444,18 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
 
         // Act
-        auditLogger.LogWebhookValidation(isValid: true, correlationId: "valid-1");
-        auditLogger.LogWebhookValidation(isValid: false, correlationId: "invalid-1");
-        auditLogger.LogWebhookValidation(isValid: true, correlationId: "valid-2");
-        auditLogger.LogWebhookValidation(isValid: false, correlationId: "invalid-2");
+        correlationIdProvider.SetCorrelationId("valid-1");
+        auditLogger.LogWebhookValidation(isValid: true);
+        correlationIdProvider.SetCorrelationId("invalid-1");
+        auditLogger.LogWebhookValidation(isValid: false);
+        correlationIdProvider.SetCorrelationId("valid-2");
+        auditLogger.LogWebhookValidation(isValid: true);
+        correlationIdProvider.SetCorrelationId("invalid-2");
+        auditLogger.LogWebhookValidation(isValid: false);
 
         // Assert
         logger.LoggedMessages.Count.ShouldBe(4);
@@ -463,7 +470,8 @@ public class AuditLoggerTests {
         // Arrange
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
-        var auditLogger = new AuditLogger(logger, timeProvider);
+        var correlationIdProvider = new TestCorrelationIdProvider();
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.PlanGeneration,
