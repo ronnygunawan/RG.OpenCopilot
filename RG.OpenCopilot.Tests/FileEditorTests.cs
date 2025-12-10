@@ -277,6 +277,47 @@ public class FileEditorTests {
         changes[2].Path.ShouldBe("existing.txt");
     }
 
+    [Fact]
+    public async Task CreateFileAsync_WhenWriteFails_ThrowsAndLogsError() {
+        // Arrange
+        var containerManager = new TestContainerManager();
+        containerManager.FailNextWrite = true;
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
+
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(
+            async () => await editor.CreateFileAsync(containerId: "test-container", filePath: "test.txt", content: "content"));
+    }
+
+    [Fact]
+    public async Task ModifyFileAsync_WhenWriteFails_ThrowsAndLogsError() {
+        // Arrange
+        var containerManager = new TestContainerManager();
+        containerManager.SetFileExists("test.txt", content: "original");
+        containerManager.FailNextWrite = true;
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
+
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(
+            async () => await editor.ModifyFileAsync(
+                containerId: "test-container",
+                filePath: "test.txt",
+                transform: c => "modified"));
+    }
+
+    [Fact]
+    public async Task DeleteFileAsync_WhenDeleteFails_ThrowsAndLogsError() {
+        // Arrange
+        var containerManager = new TestContainerManager();
+        containerManager.SetFileExists("test.txt", content: "to delete");
+        containerManager.FailNextDelete = true;
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
+
+        // Act & Assert
+        await Should.ThrowAsync<InvalidOperationException>(
+            async () => await editor.DeleteFileAsync(containerId: "test-container", filePath: "test.txt"));
+    }
+
     // Test helper classes
     private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
@@ -289,6 +330,8 @@ public class FileEditorTests {
         public Dictionary<string, string> WrittenFiles { get; } = new();
         public List<string> DeletedFiles { get; } = new();
         public List<string> CreatedDirectories { get; } = new();
+        public bool FailNextWrite { get; set; }
+        public bool FailNextDelete { get; set; }
 
         public void SetFileExists(string path, string content) {
             _files[path] = content;
@@ -324,6 +367,14 @@ public class FileEditorTests {
 
             if (command == "rm" && args.Length >= 2 && args[0] == "-f") {
                 var filePath = args[1];
+                if (FailNextDelete) {
+                    FailNextDelete = false;
+                    return Task.FromResult(new CommandResult {
+                        ExitCode = 1,
+                        Output = "",
+                        Error = "Failed to delete file"
+                    });
+                }
                 DeletedFiles.Add(filePath);
                 return Task.FromResult(new CommandResult {
                     ExitCode = 0,
@@ -347,6 +398,10 @@ public class FileEditorTests {
         }
 
         public Task WriteFileInContainerAsync(string containerId, string filePath, string content, CancellationToken cancellationToken = default) {
+            if (FailNextWrite) {
+                FailNextWrite = false;
+                throw new InvalidOperationException("Failed to write file");
+            }
             WrittenFiles[filePath] = content;
             return Task.CompletedTask;
         }
