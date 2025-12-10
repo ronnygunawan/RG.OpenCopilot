@@ -30,6 +30,7 @@ public class TimeoutHandlingTests {
             jobDispatcher.Object,
             jobStatusStore,
             options,
+            new FakeTimeProvider(),
             logger);
 
         // Create a task
@@ -111,6 +112,7 @@ public class TimeoutHandlingTests {
             taskStore,
             executorService.Object,
             options,
+            new FakeTimeProvider(),
             logger);
 
         // Create a task
@@ -181,6 +183,7 @@ public class TimeoutHandlingTests {
             jobDispatcher.Object,
             jobStatusStore,
             options,
+            new FakeTimeProvider(),
             logger);
 
         // Create a task
@@ -264,6 +267,7 @@ public class TimeoutHandlingTests {
             taskStore,
             executorService.Object,
             options,
+            new FakeTimeProvider(),
             logger);
 
         // Create a task

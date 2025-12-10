@@ -15,6 +15,7 @@ public class ServiceCollectionExtensionsTests {
         // Arrange
         var services = new ServiceCollection();
         services.AddLogging(); // Add logging infrastructure
+        services.AddSingleton(TimeProvider.System); // Add TimeProvider
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
                 ["LLM:Provider"] = "OpenAI",
@@ -57,6 +58,7 @@ public class ServiceCollectionExtensionsTests {
         // Arrange
         var services = new ServiceCollection();
         services.AddLogging(); // Add logging infrastructure
+        services.AddSingleton(TimeProvider.System); // Add TimeProvider
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
                 ["LLM:Provider"] = "AzureOpenAI",
@@ -238,6 +240,7 @@ public class ServiceCollectionExtensionsTests {
         // Arrange
         var services = new ServiceCollection();
         services.AddLogging(); // Add logging infrastructure
+        services.AddSingleton(TimeProvider.System); // Add TimeProvider
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
                 ["LLM:Provider"] = "OpenAI",

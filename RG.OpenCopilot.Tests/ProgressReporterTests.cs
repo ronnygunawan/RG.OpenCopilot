@@ -10,7 +10,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -95,7 +95,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -143,7 +143,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -191,7 +191,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -271,7 +271,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -310,7 +310,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -371,7 +371,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -430,7 +430,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -457,7 +457,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -506,7 +506,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -562,7 +562,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -639,7 +639,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -665,7 +665,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -723,7 +723,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -762,7 +762,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -820,7 +820,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -905,7 +905,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -931,7 +931,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -980,7 +980,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -1030,7 +1030,7 @@ public class ProgressReporterTests {
         // Arrange
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
 
         var task = new AgentTask {
             Id = "task-1",

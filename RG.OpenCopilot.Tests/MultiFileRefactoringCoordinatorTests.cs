@@ -28,6 +28,7 @@ public class MultiFileRefactoringCoordinatorTests {
             fileEditor: _fileEditor.Object,
             buildVerifier: _buildVerifier.Object,
             containerManager: _containerManager.Object,
+            timeProvider: new FakeTimeProvider(),
             logger: _logger);
     }
 

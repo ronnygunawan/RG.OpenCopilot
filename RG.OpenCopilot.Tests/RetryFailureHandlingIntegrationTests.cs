@@ -56,7 +56,7 @@ public class RetryFailureHandlingIntegrationTests {
             });
         
         dispatcher.RegisterHandler(handler.Object);
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, new FakeTimeProvider(), processorLogger);
         
         // Act
         using var cts = new CancellationTokenSource();
@@ -139,7 +139,7 @@ public class RetryFailureHandlingIntegrationTests {
             });
         
         dispatcher.RegisterHandler(handler.Object);
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, new FakeTimeProvider(), processorLogger);
         
         // Act
         using var cts = new CancellationTokenSource();
@@ -208,7 +208,7 @@ public class RetryFailureHandlingIntegrationTests {
             });
         
         dispatcher.RegisterHandler(handler.Object);
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, new FakeTimeProvider(), processorLogger);
         
         // Act
         using var cts = new CancellationTokenSource();
@@ -306,7 +306,7 @@ public class RetryFailureHandlingIntegrationTests {
         dispatcher.RegisterHandler(validationHandler.Object);
         dispatcher.RegisterHandler(timeoutHandler.Object);
         dispatcher.RegisterHandler(networkHandler.Object);
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, new FakeTimeProvider(), processorLogger);
         
         // Act
         using var cts = new CancellationTokenSource();
@@ -412,7 +412,7 @@ public class RetryFailureHandlingIntegrationTests {
             .ReturnsAsync(JobResult.CreateSuccess());
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, new FakeTimeProvider(), processorLogger);
         
         var idempotencyKey = "order:12345:process-payment";
         
@@ -474,7 +474,7 @@ public class RetryFailureHandlingIntegrationTests {
             .ReturnsAsync(() => JobResult.CreateFailure("Test error", shouldRetry: true));
         
         dispatcher.RegisterHandler(handler.Object);
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, new FakeTimeProvider(), processorLogger);
         
         // Act
         using var cts = new CancellationTokenSource();

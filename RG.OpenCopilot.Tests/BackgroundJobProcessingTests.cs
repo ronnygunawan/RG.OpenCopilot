@@ -417,6 +417,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            new FakeTimeProvider(),
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {

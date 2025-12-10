@@ -143,7 +143,7 @@ public class RetryMetricsAndEdgeCasesTests {
             });
         
         dispatcher.RegisterHandler(handler.Object);
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, new FakeTimeProvider(), processorLogger);
         
         // Act
         using var cts = new CancellationTokenSource();

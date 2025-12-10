@@ -35,6 +35,7 @@ public class TaskCancellationTests {
             taskStore,
             executorService.Object,
             options,
+            new FakeTimeProvider(),
             logger);
 
         // Create a task

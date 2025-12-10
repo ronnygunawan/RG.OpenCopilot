@@ -27,6 +27,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         // Create a task
@@ -156,6 +157,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var job = new BackgroundJob {
@@ -202,6 +204,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         // Setup mocks for early steps
@@ -285,6 +288,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
@@ -350,6 +354,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
@@ -419,6 +424,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
@@ -514,6 +520,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
@@ -612,6 +619,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
@@ -707,6 +715,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {

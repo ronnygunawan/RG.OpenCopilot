@@ -19,7 +19,7 @@ public class GitHubAppTokenProviderTests {
             })
             .Build();
         var logger = new TestLogger<GitHubAppTokenProvider>();
-        var provider = new GitHubAppTokenProvider(mockClient.Object, mockJwtGenerator.Object, configuration, logger);
+        var provider = new GitHubAppTokenProvider(mockClient.Object, mockJwtGenerator.Object, configuration, new FakeTimeProvider(), logger);
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -45,7 +45,7 @@ public class GitHubAppTokenProviderTests {
             })
             .Build();
         var logger = new TestLogger<GitHubAppTokenProvider>();
-        var provider = new GitHubAppTokenProvider(mockClient.Object, mockJwtGenerator.Object, configuration, logger);
+        var provider = new GitHubAppTokenProvider(mockClient.Object, mockJwtGenerator.Object, configuration, new FakeTimeProvider(), logger);
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -57,7 +57,7 @@ public class GitHubAppTokenProviderTests {
     [Fact]
     public void JwtTokenGenerator_GeneratesValidToken() {
         // Arrange
-        var generator = new JwtTokenGenerator(new FakeTimeProvider());
+        var generator = new JwtTokenGenerator(new FakeTimeProvider(DateTimeOffset.UtcNow));
         var appId = "12345";
         var privateKey = GenerateTestPrivateKey();
 

@@ -18,6 +18,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            new FakeTimeProvider(),
             logger);
 
         // Create tasks for the installation
@@ -102,6 +103,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            new FakeTimeProvider(),
             logger);
 
         // Create job statuses for the installation
@@ -181,6 +183,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
@@ -221,6 +224,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            new FakeTimeProvider(),
             logger);
 
         var payload = new GitHubInstallationEventPayload {
@@ -247,6 +251,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            new FakeTimeProvider(),
             logger);
 
         var payload = new GitHubInstallationEventPayload {
@@ -270,6 +275,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
@@ -308,6 +314,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            new FakeTimeProvider(),
             logger);
 
         var task = new AgentTask {
