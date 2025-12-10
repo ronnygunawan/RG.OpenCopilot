@@ -13,24 +13,28 @@ public sealed class GitHubAppTokenProvider : IGitHubAppTokenProvider {
     private readonly IJwtTokenGenerator _jwtGenerator;
     private readonly string? _appId;
     private readonly string? _privateKey;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<GitHubAppTokenProvider> _logger;
 
     public GitHubAppTokenProvider(
         IGitHubClient client,
         IConfiguration configuration,
+        TimeProvider timeProvider,
         ILogger<GitHubAppTokenProvider> logger)
-        : this(client, new JwtTokenGenerator(), configuration, logger) {
+        : this(client, new JwtTokenGenerator(timeProvider), configuration, timeProvider, logger) {
     }
 
     public GitHubAppTokenProvider(
         IGitHubClient client,
         IJwtTokenGenerator jwtGenerator,
         IConfiguration configuration,
+        TimeProvider timeProvider,
         ILogger<GitHubAppTokenProvider> logger) {
         _client = client;
         _jwtGenerator = jwtGenerator;
         _appId = configuration["GitHub:AppId"];
         _privateKey = configuration["GitHub:AppPrivateKey"];
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -67,6 +71,12 @@ public interface IJwtTokenGenerator {
 }
 
 public sealed class JwtTokenGenerator : IJwtTokenGenerator {
+    private readonly TimeProvider _timeProvider;
+
+    public JwtTokenGenerator(TimeProvider timeProvider) {
+        _timeProvider = timeProvider;
+    }
+
     public string GenerateJwtToken(string appId, string privateKey) {
         // GitHub requires the JWT to be signed with RS256
         // The token should expire within 10 minutes
@@ -78,7 +88,7 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator {
             key: new RsaSecurityKey(rsa),
             algorithm: SecurityAlgorithms.RsaSha256);
 
-        var now = DateTimeOffset.UtcNow;
+        var now = _timeProvider.GetUtcNow();
         var tokenDescriptor = new SecurityTokenDescriptor {
             Issuer = appId,
             IssuedAt = now.DateTime,

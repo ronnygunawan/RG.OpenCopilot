@@ -8,12 +8,13 @@ public class JobStatusTrackingTests {
     [Fact]
     public async Task InMemoryJobStatusStore_SetAndGetStatus_WorksCorrectly() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var store = new InMemoryJobStatusStore();
         var statusInfo = new BackgroundJobStatusInfo {
             JobId = "test-job-1",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Source = "TestSource",
             Metadata = new Dictionary<string, string> { ["Key1"] = "Value1" }
         };
@@ -46,12 +47,13 @@ public class JobStatusTrackingTests {
     [Fact]
     public async Task InMemoryJobStatusStore_DeleteStatus_RemovesJob() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var store = new InMemoryJobStatusStore();
         var statusInfo = new BackgroundJobStatusInfo {
             JobId = "test-job-1",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = timeProvider.GetUtcNow().DateTime
         };
 
         await store.SetStatusAsync(statusInfo);
@@ -67,24 +69,25 @@ public class JobStatusTrackingTests {
     [Fact]
     public async Task InMemoryJobStatusStore_GetJobsByStatus_FiltersCorrectly() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var store = new InMemoryJobStatusStore();
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-1",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = timeProvider.GetUtcNow().DateTime
         });
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-2",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Processing,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = timeProvider.GetUtcNow().DateTime
         });
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-3",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = timeProvider.GetUtcNow().DateTime
         });
 
         // Act
@@ -98,24 +101,25 @@ public class JobStatusTrackingTests {
     [Fact]
     public async Task InMemoryJobStatusStore_GetJobsByType_FiltersCorrectly() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var store = new InMemoryJobStatusStore();
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-1",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = timeProvider.GetUtcNow().DateTime
         });
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-2",
             JobType = "ExecutePlan",
             Status = BackgroundJobStatus.Processing,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = timeProvider.GetUtcNow().DateTime
         });
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-3",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Completed,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = timeProvider.GetUtcNow().DateTime
         });
 
         // Act
@@ -129,26 +133,27 @@ public class JobStatusTrackingTests {
     [Fact]
     public async Task InMemoryJobStatusStore_GetJobsBySource_FiltersCorrectly() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var store = new InMemoryJobStatusStore();
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-1",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Source = "Webhook"
         });
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-2",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Processing,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Source = "Manual"
         });
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-3",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Completed,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Source = "Webhook"
         });
 
@@ -163,26 +168,27 @@ public class JobStatusTrackingTests {
     [Fact]
     public async Task InMemoryJobStatusStore_GetJobs_WithMultipleFilters_FiltersCorrectly() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var store = new InMemoryJobStatusStore();
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-1",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Completed,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Source = "Webhook"
         });
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-2",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Failed,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Source = "Webhook"
         });
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
             JobId = "job-3",
             JobType = "ExecutePlan",
             Status = BackgroundJobStatus.Completed,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Source = "Webhook"
         });
 
@@ -203,13 +209,14 @@ public class JobStatusTrackingTests {
     [Fact]
     public async Task InMemoryJobStatusStore_GetJobs_WithPagination_ReturnsCorrectPage() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var store = new InMemoryJobStatusStore();
         for (int i = 0; i < 25; i++) {
             await store.SetStatusAsync(new BackgroundJobStatusInfo {
                 JobId = $"job-{i}",
                 JobType = "TestJob",
                 Status = BackgroundJobStatus.Completed,
-                CreatedAt = DateTime.UtcNow.AddMinutes(-i)
+                CreatedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-i)
             });
         }
 
@@ -230,8 +237,9 @@ public class JobStatusTrackingTests {
     [Fact]
     public async Task InMemoryJobStatusStore_GetMetrics_CalculatesCorrectly() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var store = new InMemoryJobStatusStore();
-        var now = DateTime.UtcNow;
+        var now = timeProvider.GetUtcNow().DateTime;
         
         // Add jobs with different statuses
         await store.SetStatusAsync(new BackgroundJobStatusInfo {
@@ -362,7 +370,8 @@ public class JobStatusTrackingTests {
     [Fact]
     public void BackgroundJobStatusInfo_StoresRetryInformation() {
         // Arrange & Act
-        var now = DateTime.UtcNow;
+        var timeProvider = new FakeTimeProvider();
+        var now = timeProvider.GetUtcNow().DateTime;
         var statusInfo = new BackgroundJobStatusInfo {
             JobId = "test-job",
             JobType = "TestJob",
@@ -383,11 +392,12 @@ public class JobStatusTrackingTests {
     [Fact]
     public void BackgroundJobStatusInfo_StoresCorrelationInformation() {
         // Arrange & Act
+        var timeProvider = new FakeTimeProvider();
         var statusInfo = new BackgroundJobStatusInfo {
             JobId = "child-job",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             ParentJobId = "parent-job",
             CorrelationId = "correlation-123",
             Source = "Webhook"
@@ -402,11 +412,12 @@ public class JobStatusTrackingTests {
     [Fact]
     public void BackgroundJobStatusInfo_StoresDurationMetrics() {
         // Arrange & Act
+        var timeProvider = new FakeTimeProvider();
         var statusInfo = new BackgroundJobStatusInfo {
             JobId = "test-job",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Completed,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             ProcessingDurationMs = 5000,
             QueueWaitTimeMs = 2000
         };

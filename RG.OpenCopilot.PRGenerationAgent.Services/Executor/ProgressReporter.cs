@@ -8,12 +8,15 @@ namespace RG.OpenCopilot.PRGenerationAgent.Services.Executor;
 /// </summary>
 internal sealed class ProgressReporter : IProgressReporter {
     private readonly IGitHubService _gitHubService;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<ProgressReporter> _logger;
 
     public ProgressReporter(
         IGitHubService gitHubService,
+        TimeProvider timeProvider,
         ILogger<ProgressReporter> logger) {
         _gitHubService = gitHubService;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -114,7 +117,7 @@ internal sealed class ProgressReporter : IProgressReporter {
         sb.AppendLine($"**Duration:** {FormatDuration(result.Duration)}");
         
         if (task.StartedAt.HasValue) {
-            var elapsed = DateTime.UtcNow - task.StartedAt.Value;
+            var elapsed = _timeProvider.GetUtcNow().DateTime - task.StartedAt.Value;
             sb.AppendLine($"**Elapsed Time:** {FormatDuration(elapsed)}");
             
             // Calculate estimated completion
@@ -305,7 +308,7 @@ internal sealed class ProgressReporter : IProgressReporter {
         sb.AppendLine(message);
         sb.AppendLine();
         sb.AppendLine("---");
-        sb.AppendLine($"_Automated update by RG.OpenCopilot • {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC_");
+        sb.AppendLine($"_Automated update by RG.OpenCopilot • {_timeProvider.GetUtcNow().DateTime:yyyy-MM-dd HH:mm:ss} UTC_");
         
         return sb.ToString();
     }

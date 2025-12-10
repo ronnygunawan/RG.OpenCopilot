@@ -150,6 +150,35 @@ public class FeatureTests {
 ### Mocking and Test Data
 - Use **Moq** for mocking dependencies and external services
 - Each test class should have its own `TestLogger<T>` implementation
+- **FakeTimeProvider usage**:
+  - **Always create a single `FakeTimeProvider` instance at the beginning of each test** and reuse it throughout the test
+  - **Never inline `new FakeTimeProvider()`** - always assign to a variable, even if used only once
+  - Example:
+    ```csharp
+    [Fact]
+    public void MyTest() {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var obj = new MyClass {
+            CreatedAt = timeProvider.GetUtcNow().DateTime
+        };
+        // ...
+    }
+    ```
+  - NOT:
+    ```csharp
+    [Fact]
+    public void MyTest() {
+        // Arrange - BAD: Multiple instances created
+        var obj1 = new MyClass {
+            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime
+        };
+        var obj2 = new MyClass {
+            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime  // Different instance!
+        };
+        // ...
+    }
+    ```
 - When mocking LLM responses or other AI-generated content:
   - **Generate realistic, comprehensive responses** that represent actual LLM behavior
   - Include detailed steps, thorough explanations, and complete information

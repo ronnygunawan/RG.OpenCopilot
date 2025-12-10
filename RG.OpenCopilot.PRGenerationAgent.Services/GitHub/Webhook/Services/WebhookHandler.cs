@@ -13,16 +13,19 @@ public sealed class WebhookHandler : IWebhookHandler {
     private readonly IAgentTaskStore _taskStore;
     private readonly IJobDispatcher _jobDispatcher;
     private readonly IJobStatusStore _jobStatusStore;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<WebhookHandler> _logger;
 
     public WebhookHandler(
         IAgentTaskStore taskStore,
         IJobDispatcher jobDispatcher,
         IJobStatusStore jobStatusStore,
+        TimeProvider timeProvider,
         ILogger<WebhookHandler> logger) {
         _taskStore = taskStore;
         _jobDispatcher = jobDispatcher;
         _jobStatusStore = jobStatusStore;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -45,7 +48,7 @@ public sealed class WebhookHandler : IWebhookHandler {
                     task.Status == AgentTaskStatus.Executing) {
                     
                     task.Status = AgentTaskStatus.Cancelled;
-                    task.CompletedAt = DateTime.UtcNow;
+                    task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
                     await _taskStore.UpdateTaskAsync(task, cancellationToken);
                     
                     _logger.LogInformation("Cancelled task {TaskId} due to app uninstallation", task.Id);
@@ -129,7 +132,8 @@ public sealed class WebhookHandler : IWebhookHandler {
                 RepositoryOwner = payload.Repository.Owner?.Login ?? "",
                 RepositoryName = payload.Repository.Name,
                 IssueNumber = payload.Issue.Number,
-                Status = AgentTaskStatus.PendingPlanning
+                Status = AgentTaskStatus.PendingPlanning,
+                CreatedAt = _timeProvider.GetUtcNow().DateTime
             };
 
             await _taskStore.CreateTaskAsync(task, cancellationToken);
@@ -151,6 +155,7 @@ public sealed class WebhookHandler : IWebhookHandler {
                 Type = GeneratePlanJobHandler.JobTypeName,
                 Payload = JsonSerializer.Serialize(jobPayload),
                 Priority = 5, // Higher priority for plan generation
+                CreatedAt = _timeProvider.GetUtcNow().DateTime,
                 Metadata = new Dictionary<string, string> {
                     ["TaskId"] = taskId,
                     ["InstallationId"] = payload.Installation.Id.ToString(),
@@ -166,7 +171,7 @@ public sealed class WebhookHandler : IWebhookHandler {
                 JobId = job.Id,
                 JobType = GeneratePlanJobHandler.JobTypeName,
                 Status = BackgroundJobStatus.Queued,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = _timeProvider.GetUtcNow().DateTime,
                 Metadata = job.Metadata
             }, cancellationToken);
 

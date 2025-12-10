@@ -87,7 +87,8 @@ public static class ServiceCollectionExtensions {
         // Register services
         services.AddSingleton<IPlannerService, LlmPlannerService>();
         services.AddSingleton<ICodeGenerator, CodeGenerator>();
-        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddSingleton<IJwtTokenGenerator>(sp => 
+            new JwtTokenGenerator(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IGitHubAppTokenProvider, GitHubAppTokenProvider>();
         services.AddSingleton<IContainerManager, DockerContainerManager>();
         services.AddSingleton<ICommandExecutor, ProcessCommandExecutor>();
@@ -170,8 +171,9 @@ public static class ServiceCollectionExtensions {
             var jobStatusStore = sp.GetRequiredService<IJobStatusStore>();
             var retryPolicyCalculator = sp.GetRequiredService<IRetryPolicyCalculator>();
             var deduplicationService = sp.GetRequiredService<IJobDeduplicationService>();
+            var timeProvider = sp.GetRequiredService<TimeProvider>();
             var logger = sp.GetRequiredService<ILogger<BackgroundJobProcessor>>();
-            return new BackgroundJobProcessor(queue, dispatcher, jobStatusStore, retryPolicyCalculator, deduplicationService, jobOptions, logger);
+            return new BackgroundJobProcessor(queue, dispatcher, jobStatusStore, retryPolicyCalculator, deduplicationService, jobOptions, timeProvider, logger);
         });
 
         return services;

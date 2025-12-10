@@ -12,6 +12,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
     private readonly IFileEditor _fileEditor;
     private readonly IBuildVerifier _buildVerifier;
     private readonly IContainerManager _containerManager;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<MultiFileRefactoringCoordinator> _logger;
     private readonly ConcurrentBag<string> _transactionLog = [];
 
@@ -28,11 +29,13 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
         IFileEditor fileEditor,
         IBuildVerifier buildVerifier,
         IContainerManager containerManager,
+        TimeProvider timeProvider,
         ILogger<MultiFileRefactoringCoordinator> logger) {
         _fileAnalyzer = fileAnalyzer;
         _fileEditor = fileEditor;
         _buildVerifier = buildVerifier;
         _containerManager = containerManager;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -163,7 +166,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
         
         try {
             foreach (var change in orderedChanges) {
-                _transactionLog.Add($"[{DateTime.UtcNow:O}] Applying {change.Type} to {change.Path}");
+                _transactionLog.Add($"[{_timeProvider.GetUtcNow().DateTime:O}] Applying {change.Type} to {change.Path}");
                 
                 switch (change.Type) {
                     case ChangeType.Created:
@@ -187,14 +190,14 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
                 }
                 
                 appliedChanges.Add(change);
-                _transactionLog.Add($"[{DateTime.UtcNow:O}] Successfully applied {change.Type} to {change.Path}");
+                _transactionLog.Add($"[{_timeProvider.GetUtcNow().DateTime:O}] Successfully applied {change.Type} to {change.Path}");
             }
 
             _logger.LogInformation("All {ChangeCount} changes applied successfully", orderedChanges.Count);
         }
         catch (Exception ex) {
             _logger.LogError(ex, "Error applying changes, rolling back {AppliedCount} changes", appliedChanges.Count);
-            _transactionLog.Add($"[{DateTime.UtcNow:O}] ERROR: {ex.Message}");
+            _transactionLog.Add($"[{_timeProvider.GetUtcNow().DateTime:O}] ERROR: {ex.Message}");
             await RollbackChangesAsync(containerId, appliedChanges, cancellationToken);
             throw;
         }
@@ -208,13 +211,13 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
         
         foreach (var change in reversedChanges) {
             try {
-                _transactionLog.Add($"[{DateTime.UtcNow:O}] Rolling back {change.Type} on {change.Path}");
+                _transactionLog.Add($"[{_timeProvider.GetUtcNow().DateTime:O}] Rolling back {change.Type} on {change.Path}");
                 
                 switch (change.Type) {
                     case ChangeType.Created:
                         // Rollback creation by deleting the file
                         await _fileEditor.DeleteFileAsync(containerId, change.Path, cancellationToken);
-                        _transactionLog.Add($"[{DateTime.UtcNow:O}] Deleted {change.Path} (rollback create)");
+                        _transactionLog.Add($"[{_timeProvider.GetUtcNow().DateTime:O}] Deleted {change.Path} (rollback create)");
                         break;
                     
                     case ChangeType.Modified:
@@ -225,7 +228,7 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
                                 change.Path, 
                                 _ => change.OldContent, 
                                 cancellationToken);
-                            _transactionLog.Add($"[{DateTime.UtcNow:O}] Restored old content to {change.Path}");
+                            _transactionLog.Add($"[{_timeProvider.GetUtcNow().DateTime:O}] Restored old content to {change.Path}");
                         }
                         break;
                     
@@ -233,14 +236,14 @@ internal sealed class MultiFileRefactoringCoordinator : IMultiFileRefactoringCoo
                         // Rollback deletion by recreating the file
                         if (change.OldContent != null) {
                             await _fileEditor.CreateFileAsync(containerId, change.Path, change.OldContent, cancellationToken);
-                            _transactionLog.Add($"[{DateTime.UtcNow:O}] Recreated {change.Path} (rollback delete)");
+                            _transactionLog.Add($"[{_timeProvider.GetUtcNow().DateTime:O}] Recreated {change.Path} (rollback delete)");
                         }
                         break;
                 }
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "Error rolling back change to {FilePath}", change.Path);
-                _transactionLog.Add($"[{DateTime.UtcNow:O}] ERROR rolling back {change.Path}: {ex.Message}");
+                _transactionLog.Add($"[{_timeProvider.GetUtcNow().DateTime:O}] ERROR rolling back {change.Path}: {ex.Message}");
             }
         }
 

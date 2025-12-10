@@ -8,6 +8,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_ThrowsWhenPlanIsNull() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -20,6 +21,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -39,6 +41,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_UpdatesTaskStatusToExecuting() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -51,6 +54,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -83,6 +87,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_ClonesRepository() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -95,6 +100,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -122,6 +128,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_MarksStepsAsDone() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -134,6 +141,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -167,6 +175,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_PostsProgressComment() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -179,6 +188,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -208,6 +218,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_CleansUpRepositoryOnSuccess() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -220,6 +231,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -300,6 +312,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_WithRepositoryCloningFailure_ThrowsException() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryClonerThatFails();
         var executor = new TestCommandExecutor();
@@ -312,6 +325,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -338,6 +352,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_CleansUpRepositoryOnFailure() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFails();
@@ -350,6 +365,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -379,6 +395,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_WithMissingToken_UsesEmptyToken() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProviderReturningEmpty();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -391,6 +408,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -417,6 +435,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_WithUncommittedChanges_CommitsAndPushes() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorWithChanges();
@@ -429,6 +448,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -460,6 +480,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_WithGitStatusFailure_ThrowsException() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFailsGitStatus();
@@ -472,6 +493,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -499,6 +521,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_WithGitCommitFailure_ThrowsException() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFailsGitCommit();
@@ -511,6 +534,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -538,6 +562,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_WithGitPushFailure_ThrowsException() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFailsGitPush();
@@ -550,6 +575,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             new TestProgressReporter(),
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -577,6 +603,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_WhenAllStepsComplete_FinalizesThePR() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -590,6 +617,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {
@@ -621,6 +649,7 @@ public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_WhenGitStatusFails_DoesNotFinalizePR() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFailsGitStatus(); // Executor that fails git status
@@ -634,6 +663,7 @@ public class ExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
+            timeProvider,
             new TestLogger<ExecutorService>());
 
         var task = new AgentTask {

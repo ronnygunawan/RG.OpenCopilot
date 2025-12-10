@@ -12,6 +12,9 @@ public partial class Program {
     private static void Main(string[] args) {
         var builder = WebApplication.CreateBuilder(args);
 
+        // Register TimeProvider.System for time operations
+        builder.Services.AddSingleton(TimeProvider.System);
+
         // Add PR Generation Agent services
         builder.Services.AddPRGenerationAgentServices(builder.Configuration);
 

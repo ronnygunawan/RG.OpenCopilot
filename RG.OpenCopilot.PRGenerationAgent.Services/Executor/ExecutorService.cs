@@ -13,6 +13,7 @@ public sealed class ExecutorService : IExecutorService {
     private readonly IGitHubService _gitHubService;
     private readonly IAgentTaskStore _taskStore;
     private readonly IProgressReporter _progressReporter;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<ExecutorService> _logger;
 
     public ExecutorService(
@@ -22,6 +23,7 @@ public sealed class ExecutorService : IExecutorService {
         IGitHubService gitHubService,
         IAgentTaskStore taskStore,
         IProgressReporter progressReporter,
+        TimeProvider timeProvider,
         ILogger<ExecutorService> logger) {
         _tokenProvider = tokenProvider;
         _repositoryCloner = repositoryCloner;
@@ -29,6 +31,7 @@ public sealed class ExecutorService : IExecutorService {
         _gitHubService = gitHubService;
         _taskStore = taskStore;
         _progressReporter = progressReporter;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -111,7 +114,7 @@ public sealed class ExecutorService : IExecutorService {
             // Update task status
             if (task.Plan.Steps.All(s => s.Done)) {
                 task.Status = AgentTaskStatus.Completed;
-                task.CompletedAt = DateTime.UtcNow;
+                task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
                 _logger.LogInformation("Task {TaskId} completed successfully", task.Id);
                 
                 // Finalize the PR: remove [WIP], rewrite description, archive WIP details
@@ -121,7 +124,7 @@ public sealed class ExecutorService : IExecutorService {
             }
             else if (failedSteps.Any()) {
                 task.Status = AgentTaskStatus.Failed;
-                task.CompletedAt = DateTime.UtcNow;
+                task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
                 _logger.LogWarning("Task {TaskId} failed with {FailedCount} failed steps", task.Id, failedSteps.Count);
             }
 
@@ -130,7 +133,7 @@ public sealed class ExecutorService : IExecutorService {
         catch (Exception ex) {
             _logger.LogError(ex, "Error executing task {TaskId}", task.Id);
             task.Status = AgentTaskStatus.Failed;
-            task.CompletedAt = DateTime.UtcNow;
+            task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
             await _taskStore.UpdateTaskAsync(task, cancellationToken);
             throw;
         }

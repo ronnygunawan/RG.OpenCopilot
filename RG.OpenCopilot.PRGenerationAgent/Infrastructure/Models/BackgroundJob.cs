@@ -27,7 +27,7 @@ public sealed class BackgroundJob {
     /// <summary>
     /// When the job was created
     /// </summary>
-    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; init; }
 
     /// <summary>
     /// When the job should be executed (for delayed jobs)

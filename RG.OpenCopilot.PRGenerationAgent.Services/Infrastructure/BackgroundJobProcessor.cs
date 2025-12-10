@@ -13,6 +13,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
     private readonly IRetryPolicyCalculator _retryPolicyCalculator;
     private readonly IJobDeduplicationService _deduplicationService;
     private readonly BackgroundJobOptions _options;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<BackgroundJobProcessor> _logger;
     private readonly SemaphoreSlim _concurrencySemaphore;
     private readonly List<Task> _processingTasks;
@@ -24,6 +25,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
         IRetryPolicyCalculator retryPolicyCalculator,
         IJobDeduplicationService deduplicationService,
         BackgroundJobOptions options,
+        TimeProvider timeProvider,
         ILogger<BackgroundJobProcessor> logger) {
         _jobQueue = jobQueue;
         _jobDispatcher = (JobDispatcher)jobDispatcher;
@@ -31,6 +33,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
         _retryPolicyCalculator = retryPolicyCalculator;
         _deduplicationService = deduplicationService;
         _options = options;
+        _timeProvider = timeProvider;
         _logger = logger;
         _concurrencySemaphore = new SemaphoreSlim(_options.MaxConcurrency, _options.MaxConcurrency);
         _processingTasks = [];
@@ -83,7 +86,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
     }
 
     private async Task ProcessJobAsync(BackgroundJob job, CancellationToken stoppingToken) {
-        var startedAt = DateTime.UtcNow;
+        var startedAt = _timeProvider.GetUtcNow().DateTime;
         var queueWaitTimeMs = (startedAt - job.CreatedAt).TotalMilliseconds;
 
         try {
@@ -103,7 +106,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
                 await UpdateJobStatusAsync(
                     job,
                     BackgroundJobStatus.Failed,
-                    completedAt: DateTime.UtcNow,
+                    completedAt: _timeProvider.GetUtcNow().DateTime,
                     errorMessage: $"No handler found for job type {job.Type}",
                     startedAt: startedAt,
                     queueWaitTimeMs: (long)queueWaitTimeMs);
@@ -117,7 +120,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
             }
             catch (OperationCanceledException) {
                 _logger.LogWarning("Job {JobId} was cancelled", job.Id);
-                await UpdateJobStatusAsync(job, BackgroundJobStatus.Cancelled, completedAt: DateTime.UtcNow, startedAt: startedAt, queueWaitTimeMs: (long)queueWaitTimeMs);
+                await UpdateJobStatusAsync(job, BackgroundJobStatus.Cancelled, completedAt: _timeProvider.GetUtcNow().DateTime, startedAt: startedAt, queueWaitTimeMs: (long)queueWaitTimeMs);
                 return;
             }
             catch (Exception ex) {
@@ -125,7 +128,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
                 result = JobResult.CreateFailure(ex.Message, exception: ex, shouldRetry: true);
             }
 
-            var completedAt = DateTime.UtcNow;
+            var completedAt = _timeProvider.GetUtcNow().DateTime;
             var processingDurationMs = (completedAt - startedAt).TotalMilliseconds;
 
             // Create attempt record
@@ -171,7 +174,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
                         job,
                         BackgroundJobStatus.Retried,
                         errorMessage: result.ErrorMessage,
-                        lastRetryAt: DateTime.UtcNow,
+                        lastRetryAt: _timeProvider.GetUtcNow().DateTime,
                         startedAt: startedAt,
                         processingDurationMs: (long)processingDurationMs,
                         queueWaitTimeMs: (long)queueWaitTimeMs,
@@ -213,11 +216,11 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
             var failedAttempt = new JobAttempt {
                 AttemptNumber = job.RetryCount + 1,
                 StartedAt = startedAt,
-                CompletedAt = DateTime.UtcNow,
+                CompletedAt = _timeProvider.GetUtcNow().DateTime,
                 Succeeded = false,
                 ErrorMessage = ex.Message,
                 ExceptionType = ex.GetType().Name,
-                DurationMs = (long)(DateTime.UtcNow - startedAt).TotalMilliseconds,
+                DurationMs = (long)(_timeProvider.GetUtcNow().DateTime - startedAt).TotalMilliseconds,
                 DelayBeforeAttemptMs = 0,
                 BackoffStrategy = _options.RetryPolicy.BackoffStrategy
             };
@@ -225,7 +228,7 @@ internal sealed class BackgroundJobProcessor : BackgroundService {
             await UpdateJobStatusAsync(
                 job,
                 BackgroundJobStatus.Failed,
-                completedAt: DateTime.UtcNow,
+                completedAt: _timeProvider.GetUtcNow().DateTime,
                 errorMessage: ex.Message,
                 startedAt: startedAt,
                 queueWaitTimeMs: (long)queueWaitTimeMs,

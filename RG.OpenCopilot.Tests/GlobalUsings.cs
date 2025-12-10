@@ -1,4 +1,5 @@
 // Global usings for RG.OpenCopilot.Tests
+global using Microsoft.Extensions.Time.Testing;
 global using RG.OpenCopilot.PRGenerationAgent.Planning.Models;
 global using RG.OpenCopilot.PRGenerationAgent.Planning.Services;
 global using RG.OpenCopilot.PRGenerationAgent.Execution.Models;

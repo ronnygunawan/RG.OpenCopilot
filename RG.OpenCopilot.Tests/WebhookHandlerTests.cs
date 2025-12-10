@@ -8,6 +8,7 @@ public class WebhookHandlerTests {
     [Fact]
     public async Task HandleIssuesEventAsync_IgnoresNonLabeledActions() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new TestJobDispatcher();
         var jobStatusStore = new TestJobStatusStore();
@@ -15,6 +16,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            timeProvider,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -34,6 +36,7 @@ public class WebhookHandlerTests {
     [Fact]
     public async Task HandleIssuesEventAsync_EnqueuesJobForCopilotAssistedLabel() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new TestJobDispatcher();
         var jobStatusStore = new TestJobStatusStore();
@@ -41,6 +44,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            timeProvider,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -64,6 +68,7 @@ public class WebhookHandlerTests {
     [Fact]
     public async Task HandleIssuesEventAsync_CreatesTaskWithCorrectDetails() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new TestJobDispatcher();
         var jobStatusStore = new TestJobStatusStore();
@@ -71,6 +76,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            timeProvider,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -97,6 +103,7 @@ public class WebhookHandlerTests {
     [Fact]
     public async Task HandleIssuesEventAsync_SkipsWhenTaskAlreadyExists() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new TestJobDispatcher();
         var jobStatusStore = new TestJobStatusStore();
@@ -104,6 +111,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            timeProvider,
             new TestLogger<WebhookHandler>());
 
         // Create an existing task
@@ -136,6 +144,7 @@ public class WebhookHandlerTests {
     [Fact]
     public async Task HandleIssuesEventAsync_IgnoresUnlabeledAction() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new TestJobDispatcher();
         var jobStatusStore = new TestJobStatusStore();
@@ -143,6 +152,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            timeProvider,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -163,6 +173,7 @@ public class WebhookHandlerTests {
     [Fact]
     public async Task HandleIssuesEventAsync_IgnoresNonCopilotAssistedLabel() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new TestJobDispatcher();
         var jobStatusStore = new TestJobStatusStore();
@@ -170,6 +181,7 @@ public class WebhookHandlerTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
+            timeProvider,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {

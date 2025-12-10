@@ -280,10 +280,11 @@ public class RetryPolicyTests {
     [Fact]
     public void JobAttempt_StoresAttemptInformation() {
         // Arrange & Act
+        var timeProvider = new FakeTimeProvider();
         var attempt = new JobAttempt {
             AttemptNumber = 1,
-            StartedAt = DateTime.UtcNow.AddMinutes(-1),
-            CompletedAt = DateTime.UtcNow,
+            StartedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-1),
+            CompletedAt = timeProvider.GetUtcNow().DateTime,
             Succeeded = false,
             ErrorMessage = "Test error",
             ExceptionType = "TestException",

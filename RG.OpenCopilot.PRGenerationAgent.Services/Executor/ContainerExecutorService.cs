@@ -14,6 +14,7 @@ public sealed class ContainerExecutorService : IExecutorService {
     private readonly IGitHubService _gitHubService;
     private readonly IAgentTaskStore _taskStore;
     private readonly IProgressReporter _progressReporter;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<ContainerExecutorService> _logger;
 
     public ContainerExecutorService(
@@ -22,12 +23,14 @@ public sealed class ContainerExecutorService : IExecutorService {
         IGitHubService gitHubService,
         IAgentTaskStore taskStore,
         IProgressReporter progressReporter,
+        TimeProvider timeProvider,
         ILogger<ContainerExecutorService> logger) {
         _tokenProvider = tokenProvider;
         _containerManager = containerManager;
         _gitHubService = gitHubService;
         _taskStore = taskStore;
         _progressReporter = progressReporter;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -38,7 +41,7 @@ public sealed class ContainerExecutorService : IExecutorService {
 
         _logger.LogInformation("Starting container-based execution of task {TaskId}", task.Id);
         task.Status = AgentTaskStatus.Executing;
-        task.StartedAt = DateTime.UtcNow;
+        task.StartedAt = _timeProvider.GetUtcNow().DateTime;
         await _taskStore.UpdateTaskAsync(task, cancellationToken);
 
         string? containerId = null;
@@ -144,7 +147,7 @@ public sealed class ContainerExecutorService : IExecutorService {
             // Update task status
             if (task.Plan.Steps.All(s => s.Done)) {
                 task.Status = AgentTaskStatus.Completed;
-                task.CompletedAt = DateTime.UtcNow;
+                task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
                 _logger.LogInformation("Task {TaskId} completed successfully", task.Id);
                 
                 // Finalize the PR: remove [WIP], rewrite description, archive WIP details
@@ -154,7 +157,7 @@ public sealed class ContainerExecutorService : IExecutorService {
             }
             else if (failedSteps.Any()) {
                 task.Status = AgentTaskStatus.Failed;
-                task.CompletedAt = DateTime.UtcNow;
+                task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
                 _logger.LogWarning("Task {TaskId} failed with {FailedCount} failed steps", task.Id, failedSteps.Count);
             }
 
@@ -163,7 +166,7 @@ public sealed class ContainerExecutorService : IExecutorService {
         catch (Exception ex) {
             _logger.LogError(ex, "Error executing task {TaskId}", task.Id);
             task.Status = AgentTaskStatus.Failed;
-            task.CompletedAt = DateTime.UtcNow;
+            task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
             await _taskStore.UpdateTaskAsync(task, cancellationToken);
             throw;
         }

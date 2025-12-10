@@ -9,6 +9,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_HappyPath_ExecutesSuccessfully() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -27,6 +28,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            timeProvider,
             logger);
 
         // Create a task
@@ -138,6 +140,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_InvalidPayload_ReturnsFailure() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -156,6 +159,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            timeProvider,
             logger);
 
         var job = new BackgroundJob {
@@ -184,6 +188,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_TaskNotFound_ReturnsFailure() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -202,6 +207,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            timeProvider,
             logger);
 
         // Setup mocks for early steps
@@ -267,6 +273,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_CancellationRequested_ThrowsOperationCancelledException() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -285,6 +292,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -332,6 +340,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_ExceptionDuringExecution_ReturnsFailureWithRetry() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -350,6 +359,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -401,6 +411,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_RepositoryAnalyzerFails_ContinuesWithoutAnalysis() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -419,6 +430,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -496,6 +508,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_InstructionsLoaderFails_ContinuesWithoutInstructions() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -514,6 +527,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -594,6 +608,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_ExecutionJobDispatchFails_StillReturnsSuccess() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -612,6 +627,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -689,6 +705,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_UpdatesJobStatusThroughAllStages() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -707,6 +724,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -758,7 +776,7 @@ public class GeneratePlanJobHandlerTests {
             JobId = "job-123",
             JobType = GeneratePlanJobHandler.JobTypeName,
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string>()
         });
 

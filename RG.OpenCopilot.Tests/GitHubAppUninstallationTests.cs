@@ -9,6 +9,7 @@ public class GitHubAppUninstallationTests {
     [Fact]
     public async Task HandleInstallationEvent_DeletedAction_CancelsActiveTasks() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
         var jobStatusStore = new InMemoryJobStatusStore();
@@ -18,6 +19,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            timeProvider,
             logger);
 
         // Create tasks for the installation
@@ -93,6 +95,7 @@ public class GitHubAppUninstallationTests {
     [Fact]
     public async Task HandleInstallationEvent_DeletedAction_CancelsActiveJobs() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
         var jobStatusStore = new InMemoryJobStatusStore();
@@ -102,6 +105,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            timeProvider,
             logger);
 
         // Create job statuses for the installation
@@ -109,7 +113,7 @@ public class GitHubAppUninstallationTests {
             JobId = "job-1",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Processing,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string> {
                 ["InstallationId"] = "123",
                 ["TaskId"] = "test/repo/issues/1"
@@ -120,7 +124,7 @@ public class GitHubAppUninstallationTests {
             JobId = "job-2",
             JobType = "ExecutePlan",
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string> {
                 ["InstallationId"] = "123",
                 ["TaskId"] = "test/repo/issues/2"
@@ -131,7 +135,7 @@ public class GitHubAppUninstallationTests {
             JobId = "job-3",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Completed,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string> {
                 ["InstallationId"] = "123",
                 ["TaskId"] = "test/repo/issues/3"
@@ -142,7 +146,7 @@ public class GitHubAppUninstallationTests {
             JobId = "job-4",
             JobType = "GeneratePlan",
             Status = BackgroundJobStatus.Processing,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string> {
                 ["InstallationId"] = "456", // Different installation
                 ["TaskId"] = "other/repo/issues/1"
@@ -172,6 +176,7 @@ public class GitHubAppUninstallationTests {
     [Fact]
     public async Task HandleInstallationEvent_NonDeletedAction_IgnoresEvent() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
         var jobStatusStore = new InMemoryJobStatusStore();
@@ -181,6 +186,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -212,6 +218,7 @@ public class GitHubAppUninstallationTests {
     [Fact]
     public async Task HandleInstallationEvent_NullInstallation_IgnoresEvent() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
         var jobStatusStore = new InMemoryJobStatusStore();
@@ -221,6 +228,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            timeProvider,
             logger);
 
         var payload = new GitHubInstallationEventPayload {
@@ -238,6 +246,7 @@ public class GitHubAppUninstallationTests {
     [Fact]
     public async Task HandleInstallationEvent_NoTasksForInstallation_CompletesWithoutError() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
         var jobStatusStore = new InMemoryJobStatusStore();
@@ -247,6 +256,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            timeProvider,
             logger);
 
         var payload = new GitHubInstallationEventPayload {
@@ -261,6 +271,7 @@ public class GitHubAppUninstallationTests {
     [Fact]
     public async Task HandleInstallationEvent_PendingPlanningTasks_GetsCancelled() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
         var jobStatusStore = new InMemoryJobStatusStore();
@@ -270,6 +281,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -299,6 +311,7 @@ public class GitHubAppUninstallationTests {
     [Fact]
     public async Task HandleInstallationEvent_FailedTasks_NotCancelled() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
         var jobStatusStore = new InMemoryJobStatusStore();
@@ -308,6 +321,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
+            timeProvider,
             logger);
 
         var task = new AgentTask {
