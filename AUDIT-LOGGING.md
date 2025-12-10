@@ -4,7 +4,54 @@ This document describes the audit logging and observability features in RG.OpenC
 
 ## Overview
 
-RG.OpenCopilot includes comprehensive audit logging and health monitoring capabilities to track all important operations, state transitions, and system health.
+RG.OpenCopilot includes comprehensive audit logging and health monitoring capabilities to track all important operations, state transitions, and system health. Audit logs are persisted to a database for long-term retention, querying, and compliance.
+
+## Audit Log Persistence
+
+### Storage Backends
+
+RG.OpenCopilot supports two audit log storage backends:
+
+- **In-Memory Storage** (default) - Audit logs are stored in memory and lost on application restart. Suitable for development and testing.
+- **PostgreSQL Storage** - Audit logs are persisted to a PostgreSQL database for long-term retention, querying, and compliance.
+
+### Configuration
+
+To enable PostgreSQL persistence, configure the connection string in `appsettings.json`:
+
+```json
+{
+  "ConnectionStrings": {
+    "AgentTaskDatabase": "Host=localhost;Database=opencopilot;Username=postgres;Password=yourpassword"
+  },
+  "AuditLog": {
+    "RetentionDays": 90
+  }
+}
+```
+
+Or use environment variables:
+
+```bash
+export ConnectionStrings__AgentTaskDatabase="Host=localhost;Database=opencopilot;Username=postgres;Password=yourpassword"
+export AuditLog__RetentionDays="90"
+```
+
+**Note:** The same database connection is used for both agent tasks and audit logs.
+
+### Retention Policies
+
+Audit logs are automatically cleaned up based on the configured retention period:
+
+- **Default retention**: 90 days
+- **Configurable**: Set `AuditLog:RetentionDays` in configuration
+- **Manual cleanup**: Use the `/audit-logs/cleanup` endpoint
+
+To trigger manual cleanup:
+
+```bash
+curl -X DELETE http://localhost:5000/audit-logs/cleanup
+```
 
 ## Audit Logging
 
@@ -64,8 +111,69 @@ Correlation IDs are automatically propagated through the system:
 2. **Background Jobs**: Included in job metadata
 3. **Task Operations**: Tracked through task lifecycle
 4. **API Calls**: Associated with originating webhook/job
+5. **Audit Log Queries**: Can filter audit logs by correlation ID
 
 This allows tracing a complete operation from webhook receipt through execution to completion.
+
+## Querying Audit Logs
+
+### API Endpoint
+
+**Endpoint**: `GET /audit-logs`
+
+Query audit logs with optional filters:
+
+```bash
+# Get all audit logs (limited to 100 by default)
+curl http://localhost:5000/audit-logs
+
+# Filter by event type
+curl http://localhost:5000/audit-logs?eventType=WebhookReceived
+
+# Filter by correlation ID
+curl http://localhost:5000/audit-logs?correlationId=abc123
+
+# Filter by date range
+curl "http://localhost:5000/audit-logs?startDate=2025-12-01&endDate=2025-12-10"
+
+# Combine filters with custom limit
+curl "http://localhost:5000/audit-logs?eventType=GitHubApiCall&limit=50"
+```
+
+**Query Parameters:**
+
+- `eventType` (optional): Filter by AuditEventType (WebhookReceived, TaskStateTransition, GitHubApiCall, etc.)
+- `correlationId` (optional): Filter by correlation ID
+- `startDate` (optional): Filter by start date (ISO 8601 format)
+- `endDate` (optional): Filter by end date (ISO 8601 format)
+- `limit` (optional): Maximum number of results (default: 100, max: 1000)
+
+**Response:**
+
+```json
+{
+  "logs": [
+    {
+      "id": "guid",
+      "eventType": "WebhookReceived",
+      "timestamp": "2025-12-10T16:00:00Z",
+      "correlationId": "abc123",
+      "description": "Webhook received: issues",
+      "data": {
+        "eventType": "issues",
+        "action": "labeled"
+      },
+      "initiator": null,
+      "target": null,
+      "result": "Received",
+      "durationMs": null,
+      "errorMessage": null
+    }
+  ],
+  "count": 1,
+  "limit": 100
+}
+```
 
 ## Health Check Endpoints
 
@@ -192,6 +300,30 @@ The structured audit logs and health check endpoints can be integrated with:
 - **ELK Stack**: Parse JSON audit logs for visualization
 - **Datadog**: Use structured logging for APM and monitoring
 
+## Database Schema
+
+### audit_logs Table
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | varchar(100) | Primary key (GUID) |
+| event_type | varchar(50) | Audit event type (enum stored as string) |
+| timestamp | timestamp with time zone | Event timestamp |
+| correlation_id | varchar(100) | Correlation ID for tracking related events (nullable) |
+| description | varchar(1000) | Event description |
+| data | jsonb | Additional structured event data stored as JSON |
+| initiator | varchar(255) | User or system that initiated the event (nullable) |
+| target | varchar(500) | Target resource affected by the event (nullable) |
+| result | varchar(50) | Operation result (Success, Failure, etc.) (nullable) |
+| duration_ms | bigint | Operation duration in milliseconds (nullable) |
+| error_message | varchar(2000) | Error message if the operation failed (nullable) |
+
+**Indexes:**
+- `ix_audit_logs_event_type` - For filtering by event type
+- `ix_audit_logs_correlation_id` - For filtering by correlation ID
+- `ix_audit_logs_timestamp` - For sorting and date range queries
+- `ix_audit_logs_event_type_timestamp` - Composite index for common queries
+
 ## Best Practices
 
 1. **Always use correlation IDs** when logging related operations
@@ -200,14 +332,19 @@ The structured audit logs and health check endpoints can be integrated with:
 4. **Set up alerts** for unhealthy or degraded states
 5. **Review audit logs** for security and compliance
 6. **Track failure rates** to identify systemic issues
+7. **Configure appropriate retention periods** based on compliance requirements
+8. **Use audit log queries** to troubleshoot issues and track operations
+9. **Monitor audit log storage** to ensure sufficient database capacity
 
 ## Security Considerations
 
 - Audit logs may contain sensitive information (repository names, issue numbers)
-- Ensure proper access controls on log storage
+- Ensure proper access controls on log storage and query endpoints
 - Sanitize log input to prevent log injection attacks
 - Correlation IDs do not contain sensitive information
 - Health check endpoint can be exposed for monitoring but contains system metrics
+- Protect database connection strings and credentials
+- Consider encrypting sensitive data in audit logs
 
 ## Future Enhancements
 
@@ -218,3 +355,6 @@ Planned improvements:
 - Historical trends in health check response
 - Alerting configuration via appsettings.json
 - Custom health check components
+- Audit log export functionality
+- Advanced filtering and search capabilities
+- Audit log analytics and reporting
