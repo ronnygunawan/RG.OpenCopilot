@@ -44,10 +44,9 @@ public sealed class ExecutorService : IExecutorService {
         }
 
         var startTime = _timeProvider.GetUtcNow().DateTime;
-        var correlationId = task.Id;
 
         _logger.LogInformation("Starting execution of task {TaskId}", task.Id);
-        _auditLogger.LogPlanExecution(taskId: task.Id, correlationId: correlationId, durationMs: null, success: true);
+        _auditLogger.LogPlanExecution(taskId: task.Id, durationMs: null, success: true);
 
         task.Status = AgentTaskStatus.Executing;
         task.StartedAt = DateTime.UtcNow;
@@ -127,7 +126,6 @@ public sealed class ExecutorService : IExecutorService {
                 
                 _auditLogger.LogPlanExecution(
                     taskId: task.Id,
-                    correlationId: correlationId,
                     durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                     success: true);
                 
@@ -143,7 +141,6 @@ public sealed class ExecutorService : IExecutorService {
 
                 _auditLogger.LogPlanExecution(
                     taskId: task.Id,
-                    correlationId: correlationId,
                     durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                     success: false,
                     errorMessage: $"{failedSteps.Count} steps failed");
@@ -156,7 +153,6 @@ public sealed class ExecutorService : IExecutorService {
             
             _auditLogger.LogPlanExecution(
                 taskId: task.Id,
-                correlationId: correlationId,
                 durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                 success: false,
                 errorMessage: ex.Message);

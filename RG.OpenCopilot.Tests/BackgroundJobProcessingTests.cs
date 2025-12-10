@@ -422,7 +422,7 @@ public class BackgroundJobProcessingTests {
             jobStatusStore,
             timeProvider,
             new TestLogger<WebhookHandler>(),
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",

@@ -21,7 +21,7 @@ public class GitHubAppUninstallationTests {
             jobStatusStore,
             timeProvider,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         // Create tasks for the installation
         var task1 = new AgentTask {
@@ -108,7 +108,7 @@ public class GitHubAppUninstallationTests {
             jobStatusStore,
             timeProvider,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         // Create job statuses for the installation
         var job1 = new BackgroundJobStatusInfo {
@@ -190,7 +190,7 @@ public class GitHubAppUninstallationTests {
             jobStatusStore,
             timeProvider,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -233,7 +233,7 @@ public class GitHubAppUninstallationTests {
             jobStatusStore,
             timeProvider,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var payload = new GitHubInstallationEventPayload {
             Action = "deleted",
@@ -262,7 +262,7 @@ public class GitHubAppUninstallationTests {
             jobStatusStore,
             timeProvider,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var payload = new GitHubInstallationEventPayload {
             Action = "deleted",
@@ -288,7 +288,7 @@ public class GitHubAppUninstallationTests {
             jobStatusStore,
             timeProvider,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -329,7 +329,7 @@ public class GitHubAppUninstallationTests {
             jobStatusStore,
             timeProvider,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",

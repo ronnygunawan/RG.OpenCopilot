@@ -18,7 +18,7 @@ public class WebhookHandlerTests {
             jobStatusStore,
             timeProvider,
             new TestLogger<WebhookHandler>(),
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var payload = new GitHubIssueEventPayload {
             Action = "opened",
@@ -47,7 +47,7 @@ public class WebhookHandlerTests {
             jobStatusStore,
             timeProvider,
             new TestLogger<WebhookHandler>(),
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -80,7 +80,7 @@ public class WebhookHandlerTests {
             jobStatusStore,
             timeProvider,
             new TestLogger<WebhookHandler>(),
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -116,7 +116,7 @@ public class WebhookHandlerTests {
             jobStatusStore,
             timeProvider,
             new TestLogger<WebhookHandler>(),
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         // Create an existing task
         var existingTask = new AgentTask {
@@ -158,7 +158,7 @@ public class WebhookHandlerTests {
             jobStatusStore,
             timeProvider,
             new TestLogger<WebhookHandler>(),
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var payload = new GitHubIssueEventPayload {
             Action = "unlabeled",
@@ -188,7 +188,7 @@ public class WebhookHandlerTests {
             jobStatusStore,
             timeProvider,
             new TestLogger<WebhookHandler>(),
-            new TestAuditLogger());
+            new TestAuditLogger(), new TestCorrelationIdProvider());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",

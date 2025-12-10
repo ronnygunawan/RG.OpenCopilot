@@ -44,8 +44,8 @@ public partial class Program {
             }
         });
 
-        app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<WebhookEndpoint> logger, IAuditLogger auditLogger) => {
-            var correlationId = Guid.NewGuid().ToString();
+        app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<WebhookEndpoint> logger, IAuditLogger auditLogger, ICorrelationIdProvider correlationIdProvider) => {
+            var correlationId = correlationIdProvider.GenerateCorrelationId();
             var startTime = DateTime.UtcNow;
 
             try {
@@ -59,7 +59,7 @@ public partial class Program {
                     var signature = context.Request.Headers["X-Hub-Signature-256"].ToString();
                     var isValid = validator.ValidateSignature(body, signature, webhookSecret);
                     
-                    auditLogger.LogWebhookValidation(isValid, correlationId);
+                    auditLogger.LogWebhookValidation(isValid);
                     
                     if (!isValid) {
                         logger.LogWarning("Invalid webhook signature");

@@ -8,10 +8,12 @@ namespace RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 internal sealed class AuditLogger : IAuditLogger {
     private readonly ILogger<AuditLogger> _logger;
     private readonly TimeProvider _timeProvider;
+    private readonly ICorrelationIdProvider _correlationIdProvider;
 
-    public AuditLogger(ILogger<AuditLogger> logger, TimeProvider timeProvider) {
+    public AuditLogger(ILogger<AuditLogger> logger, TimeProvider timeProvider, ICorrelationIdProvider correlationIdProvider) {
         _logger = logger;
         _timeProvider = timeProvider;
+        _correlationIdProvider = correlationIdProvider;
     }
 
     public void LogAuditEvent(AuditEvent auditEvent) {
@@ -56,11 +58,11 @@ internal sealed class AuditLogger : IAuditLogger {
             JsonSerializer.Serialize(eventData));
     }
 
-    public void LogWebhookReceived(string eventType, string? correlationId, Dictionary<string, object>? data = null) {
+    public void LogWebhookReceived(string eventType, Dictionary<string, object>? data = null) {
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.WebhookReceived,
             Timestamp = _timeProvider.GetUtcNow().DateTime,
-            CorrelationId = correlationId,
+            CorrelationId = _correlationIdProvider.GetCorrelationId(),
             Description = $"Webhook received: {eventType}",
             Data = data ?? [],
             Result = "Received"
@@ -69,7 +71,8 @@ internal sealed class AuditLogger : IAuditLogger {
         LogAuditEvent(auditEvent);
     }
 
-    public void LogWebhookValidation(bool isValid, string? correlationId) {
+    public void LogWebhookValidation(bool isValid) {
+        var correlationId = _correlationIdProvider.GetCorrelationId();
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.WebhookValidation,
             Timestamp = _timeProvider.GetUtcNow().DateTime,
@@ -89,11 +92,11 @@ internal sealed class AuditLogger : IAuditLogger {
         }
     }
 
-    public void LogTaskStateTransition(string taskId, string fromState, string toState, string? correlationId) {
+    public void LogTaskStateTransition(string taskId, string fromState, string toState) {
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.TaskStateTransition,
             Timestamp = _timeProvider.GetUtcNow().DateTime,
-            CorrelationId = correlationId,
+            CorrelationId = _correlationIdProvider.GetCorrelationId(),
             Description = $"Task state transition: {fromState} -> {toState}",
             Target = taskId,
             Data = new Dictionary<string, object> {
@@ -107,7 +110,8 @@ internal sealed class AuditLogger : IAuditLogger {
         LogAuditEvent(auditEvent);
     }
 
-    public void LogGitHubApiCall(string operation, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null) {
+    public void LogGitHubApiCall(string operation, long? durationMs = null, bool success = true, string? errorMessage = null) {
+        var correlationId = _correlationIdProvider.GetCorrelationId();
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.GitHubApiCall,
             Timestamp = _timeProvider.GetUtcNow().DateTime,
@@ -133,11 +137,11 @@ internal sealed class AuditLogger : IAuditLogger {
         }
     }
 
-    public void LogJobStateTransition(string jobId, string fromState, string toState, string? correlationId) {
+    public void LogJobStateTransition(string jobId, string fromState, string toState) {
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.JobStateTransition,
             Timestamp = _timeProvider.GetUtcNow().DateTime,
-            CorrelationId = correlationId,
+            CorrelationId = _correlationIdProvider.GetCorrelationId(),
             Description = $"Job state transition: {fromState} -> {toState}",
             Target = jobId,
             Data = new Dictionary<string, object> {
@@ -151,7 +155,8 @@ internal sealed class AuditLogger : IAuditLogger {
         LogAuditEvent(auditEvent);
     }
 
-    public void LogContainerOperation(string operation, string? containerId, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null) {
+    public void LogContainerOperation(string operation, string? containerId, long? durationMs = null, bool success = true, string? errorMessage = null) {
+        var correlationId = _correlationIdProvider.GetCorrelationId();
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.ContainerOperation,
             Timestamp = _timeProvider.GetUtcNow().DateTime,
@@ -182,7 +187,8 @@ internal sealed class AuditLogger : IAuditLogger {
         }
     }
 
-    public void LogFileOperation(string operation, string filePath, string? correlationId, bool success = true, string? errorMessage = null) {
+    public void LogFileOperation(string operation, string filePath, bool success = true, string? errorMessage = null) {
+        var correlationId = _correlationIdProvider.GetCorrelationId();
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.FileOperation,
             Timestamp = _timeProvider.GetUtcNow().DateTime,
@@ -209,7 +215,8 @@ internal sealed class AuditLogger : IAuditLogger {
         }
     }
 
-    public void LogPlanGeneration(int issueNumber, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null) {
+    public void LogPlanGeneration(int issueNumber, long? durationMs = null, bool success = true, string? errorMessage = null) {
+        var correlationId = _correlationIdProvider.GetCorrelationId();
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.PlanGeneration,
             Timestamp = _timeProvider.GetUtcNow().DateTime,
@@ -236,7 +243,8 @@ internal sealed class AuditLogger : IAuditLogger {
         }
     }
 
-    public void LogPlanExecution(string taskId, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null) {
+    public void LogPlanExecution(string taskId, long? durationMs = null, bool success = true, string? errorMessage = null) {
+        var correlationId = _correlationIdProvider.GetCorrelationId();
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.PlanExecution,
             Timestamp = _timeProvider.GetUtcNow().DateTime,

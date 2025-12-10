@@ -72,7 +72,6 @@ public sealed class DockerContainerManager : IContainerManager {
         ContainerImageType imageType,
         CancellationToken cancellationToken = default) {
         var startTime = _timeProvider.GetUtcNow().DateTime;
-        var correlationId = $"container-{owner}/{repo}";
 
         try {
             // Create a unique container name
@@ -100,7 +99,6 @@ public sealed class DockerContainerManager : IContainerManager {
                 _auditLogger.LogContainerOperation(
                     operation: "CreateContainer",
                     containerId: null,
-                    correlationId: correlationId,
                     durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                     success: false,
                     errorMessage: result.Error);
@@ -131,7 +129,6 @@ public sealed class DockerContainerManager : IContainerManager {
                 _auditLogger.LogContainerOperation(
                     operation: "CreateContainer",
                     containerId: containerId,
-                    correlationId: correlationId,
                     durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                     success: false,
                     errorMessage: $"Failed to clone repository: {cloneResult.Error}");
@@ -144,7 +141,6 @@ public sealed class DockerContainerManager : IContainerManager {
             _auditLogger.LogContainerOperation(
                 operation: "CreateContainer",
                 containerId: containerId,
-                correlationId: correlationId,
                 durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                 success: true);
 
@@ -154,7 +150,6 @@ public sealed class DockerContainerManager : IContainerManager {
             _auditLogger.LogContainerOperation(
                 operation: "CreateContainer",
                 containerId: null,
-                correlationId: correlationId,
                 durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                 success: false,
                 errorMessage: ex.Message);
@@ -291,7 +286,6 @@ public sealed class DockerContainerManager : IContainerManager {
                 _auditLogger.LogContainerOperation(
                     operation: "CommitAndPush",
                     containerId: containerId,
-                    correlationId: correlationId,
                     durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                     success: true);
 
@@ -304,7 +298,6 @@ public sealed class DockerContainerManager : IContainerManager {
                 _auditLogger.LogContainerOperation(
                     operation: "CommitAndPush",
                     containerId: containerId,
-                    correlationId: correlationId,
                     durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                     success: false,
                     errorMessage: $"Failed to commit: {commitResult.Error}");
@@ -322,7 +315,6 @@ public sealed class DockerContainerManager : IContainerManager {
                 _auditLogger.LogContainerOperation(
                     operation: "CommitAndPush",
                     containerId: containerId,
-                    correlationId: correlationId,
                     durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                     success: false,
                     errorMessage: $"Failed to push: {pushResult.Error}");
@@ -335,7 +327,6 @@ public sealed class DockerContainerManager : IContainerManager {
             _auditLogger.LogContainerOperation(
                 operation: "CommitAndPush",
                 containerId: containerId,
-                correlationId: correlationId,
                 durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                 success: true);
         }
@@ -343,7 +334,6 @@ public sealed class DockerContainerManager : IContainerManager {
             _auditLogger.LogContainerOperation(
                 operation: "CommitAndPush",
                 containerId: containerId,
-                correlationId: correlationId,
                 durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                 success: false,
                 errorMessage: ex.Message);
@@ -377,7 +367,6 @@ public sealed class DockerContainerManager : IContainerManager {
             _auditLogger.LogContainerOperation(
                 operation: "CleanupContainer",
                 containerId: containerId,
-                correlationId: correlationId,
                 durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                 success: true);
         }
@@ -385,7 +374,6 @@ public sealed class DockerContainerManager : IContainerManager {
             _auditLogger.LogContainerOperation(
                 operation: "CleanupContainer",
                 containerId: containerId,
-                correlationId: correlationId,
                 durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
                 success: false,
                 errorMessage: ex.Message);

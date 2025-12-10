@@ -63,7 +63,6 @@ public sealed class GitHubService : IGitHubService {
 
                 _auditLogger.LogGitHubApiCall(
                     operation: "CreateBranch",
-                    correlationId: correlationId,
                     durationMs: CalculateDurationMs(startTime),
                     success: true);
 
@@ -75,7 +74,6 @@ public sealed class GitHubService : IGitHubService {
                 // Branch already exists, return it
                 _auditLogger.LogGitHubApiCall(
                     operation: "CreateBranch",
-                    correlationId: correlationId,
                     durationMs: CalculateDurationMs(startTime),
                     success: true);
 
@@ -86,7 +84,6 @@ public sealed class GitHubService : IGitHubService {
         catch (Exception ex) {
             _auditLogger.LogGitHubApiCall(
                 operation: "CreateBranch",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: false,
                 errorMessage: ex.Message);
@@ -124,7 +121,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
 
             _auditLogger.LogGitHubApiCall(
                 operation: "CreatePullRequest",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: true);
             
@@ -135,7 +131,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
         catch (Exception ex) {
             _auditLogger.LogGitHubApiCall(
                 operation: "CreatePullRequest",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: false,
                 errorMessage: ex.Message);
@@ -152,7 +147,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
 
             _auditLogger.LogGitHubApiCall(
                 operation: "UpdatePullRequest",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: true);
 
@@ -161,7 +155,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
         catch (Exception ex) {
             _auditLogger.LogGitHubApiCall(
                 operation: "UpdatePullRequest",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: false,
                 errorMessage: ex.Message);
@@ -180,7 +173,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
             if (pr != null) {
                 _auditLogger.LogGitHubApiCall(
                     operation: "GetPullRequestForBranch",
-                    correlationId: correlationId,
                     durationMs: CalculateDurationMs(startTime),
                     success: true);
 
@@ -190,7 +182,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
 
             _auditLogger.LogGitHubApiCall(
                 operation: "GetPullRequestForBranch",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: true);
 
@@ -200,7 +191,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
         catch (Exception ex) {
             _auditLogger.LogGitHubApiCall(
                 operation: "GetPullRequestForBranch",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: false,
                 errorMessage: ex.Message);
@@ -217,7 +207,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
 
             _auditLogger.LogGitHubApiCall(
                 operation: "PostPullRequestComment",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: true);
 
@@ -226,7 +215,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
         catch (Exception ex) {
             _auditLogger.LogGitHubApiCall(
                 operation: "PostPullRequestComment",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: false,
                 errorMessage: ex.Message);
@@ -243,7 +231,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
 
             _auditLogger.LogGitHubApiCall(
                 operation: "GetPullRequest",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: true);
 
@@ -253,7 +240,6 @@ _The plan and progress will be updated here as the agent works on this issue._";
         catch (Exception ex) {
             _auditLogger.LogGitHubApiCall(
                 operation: "GetPullRequest",
-                correlationId: correlationId,
                 durationMs: CalculateDurationMs(startTime),
                 success: false,
                 errorMessage: ex.Message);
