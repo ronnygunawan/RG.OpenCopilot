@@ -87,7 +87,8 @@ public static class ServiceCollectionExtensions {
         // Register services
         services.AddSingleton<IPlannerService, LlmPlannerService>();
         services.AddSingleton<ICodeGenerator, CodeGenerator>();
-        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddSingleton<IJwtTokenGenerator>(sp => 
+            new JwtTokenGenerator(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IGitHubAppTokenProvider, GitHubAppTokenProvider>();
         services.AddSingleton<IContainerManager, DockerContainerManager>();
         services.AddSingleton<ICommandExecutor, ProcessCommandExecutor>();
