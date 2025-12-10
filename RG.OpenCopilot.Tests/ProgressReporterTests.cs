@@ -8,9 +8,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportStepProgressAsync_SuccessfulStep_PostsFormattedComment() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -93,9 +94,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportStepProgressAsync_FailedStep_PostsErrorDetails() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -141,9 +143,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportStepProgressAsync_StepWithNoChanges_PostsCommentWithoutChangesSection() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -189,9 +192,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportExecutionSummaryAsync_MultipleResults_PostsAggregatedSummary() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -269,9 +273,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportIntermediateProgressAsync_PostsIntermediateUpdate() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -308,9 +313,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportStepProgressAsync_BuildWithErrors_IncludesErrorCount() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -369,9 +375,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportStepProgressAsync_TestsWithFailures_IncludesFailureDetails() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -428,9 +435,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task UpdateProgressAsync_LogsWarning_WhenCalled() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -455,9 +463,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportStepProgressAsync_WithDeletedFiles_ShowsDeletedIcon() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -504,9 +513,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportStepProgressAsync_DurationFormatting_FormatsCorrectly() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -560,9 +570,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task UpdatePullRequestProgressAsync_UpdatesCheckedOffSteps() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -637,9 +648,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task UpdatePullRequestProgressAsync_WithNoPlan_LogsWarning() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -663,9 +675,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportCommitSummaryAsync_PostsFormattedComment() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -721,9 +734,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportCommitSummaryAsync_WithNoChanges_ShowsNoChangesMessage() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -819,9 +833,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task FinalizePullRequestAsync_RemovesWipPrefix_AndArchivesDetails() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -904,9 +919,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task FinalizePullRequestAsync_WithNoPlan_LogsWarning() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -930,9 +946,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task FinalizePullRequestAsync_IncludesTestingSection() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -979,9 +996,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task FinalizePullRequestAsync_OnlyIncludesCompletedSteps() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
@@ -1029,9 +1047,10 @@ public class ProgressReporterTests {
     [Fact]
     public async Task FinalizePullRequestAsync_TitleWithoutWipPrefix_RemainsUnchanged() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",

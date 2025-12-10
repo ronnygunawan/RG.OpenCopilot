@@ -10,6 +10,7 @@ public class GitHubAppTokenProviderTests {
     [Fact]
     public async Task GetInstallationTokenAsync_WithMissingCredentials_ThrowsInvalidOperationException() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockClient = new Mock<IGitHubClient>();
         var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
         var configuration = new ConfigurationBuilder()
@@ -19,7 +20,7 @@ public class GitHubAppTokenProviderTests {
             })
             .Build();
         var logger = new TestLogger<GitHubAppTokenProvider>();
-        var provider = new GitHubAppTokenProvider(mockClient.Object, mockJwtGenerator.Object, configuration, new FakeTimeProvider(), logger);
+        var provider = new GitHubAppTokenProvider(mockClient.Object, mockJwtGenerator.Object, configuration, timeProvider, logger);
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -32,6 +33,7 @@ public class GitHubAppTokenProviderTests {
     [Fact]
     public async Task GetInstallationTokenAsync_WithNonGitHubClient_ThrowsInvalidOperationException() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var privateKey = GenerateTestPrivateKey();
         var mockClient = new Mock<IGitHubClient>(); // Not a GitHubClient instance
         var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
@@ -45,7 +47,7 @@ public class GitHubAppTokenProviderTests {
             })
             .Build();
         var logger = new TestLogger<GitHubAppTokenProvider>();
-        var provider = new GitHubAppTokenProvider(mockClient.Object, mockJwtGenerator.Object, configuration, new FakeTimeProvider(), logger);
+        var provider = new GitHubAppTokenProvider(mockClient.Object, mockJwtGenerator.Object, configuration, timeProvider, logger);
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(

@@ -13,6 +13,7 @@ public class MultiFileRefactoringCoordinatorTests {
     private readonly Mock<IFileEditor> _fileEditor;
     private readonly Mock<IBuildVerifier> _buildVerifier;
     private readonly Mock<IContainerManager> _containerManager;
+    private readonly FakeTimeProvider _timeProvider;
     private readonly TestLogger<MultiFileRefactoringCoordinator> _logger;
     private readonly MultiFileRefactoringCoordinator _coordinator;
 
@@ -21,6 +22,7 @@ public class MultiFileRefactoringCoordinatorTests {
         _fileEditor = new Mock<IFileEditor>();
         _buildVerifier = new Mock<IBuildVerifier>();
         _containerManager = new Mock<IContainerManager>();
+        _timeProvider = new FakeTimeProvider();
         _logger = new TestLogger<MultiFileRefactoringCoordinator>();
 
         _coordinator = new MultiFileRefactoringCoordinator(
@@ -28,7 +30,7 @@ public class MultiFileRefactoringCoordinatorTests {
             fileEditor: _fileEditor.Object,
             buildVerifier: _buildVerifier.Object,
             containerManager: _containerManager.Object,
-            timeProvider: new FakeTimeProvider(),
+            timeProvider: _timeProvider,
             logger: _logger);
     }
 

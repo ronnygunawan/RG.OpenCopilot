@@ -7,6 +7,7 @@ namespace RG.OpenCopilot.Tests;
 public class ContainerExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_ThrowsWhenPlanIsNull() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManager();
@@ -19,7 +20,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -38,6 +39,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_CreatesAndCleansUpContainer() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManager();
@@ -50,7 +52,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -77,6 +79,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_UpdatesTaskStatusToExecuting() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManager();
@@ -89,7 +92,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -121,6 +124,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_PostsProgressComment() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManager();
@@ -133,7 +137,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -162,6 +166,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_CommitsChanges() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManager();
@@ -174,7 +179,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -203,6 +208,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithContainerCreationFailure_ThrowsException() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManagerThatFailsCreation();
@@ -215,7 +221,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -244,6 +250,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithMissingToken_ContinuesWithWarning() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProviderReturningEmpty();
         var containerManager = new TestContainerManager();
@@ -256,7 +263,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -282,6 +289,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_PostsCommentToPullRequest() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManager();
@@ -294,7 +302,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -323,6 +331,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_CleansUpContainerOnException() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManagerThatFailsExecution();
@@ -335,7 +344,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -364,6 +373,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithCommitAndPushFailure_UpdatesTaskStatusToFailed() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManagerThatFailsCommitAndPush();
@@ -376,7 +386,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {
@@ -406,6 +416,7 @@ public class ContainerExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithNoSteps_CompletesSuccessfully() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var tokenProvider = new TestTokenProvider();
         var containerManager = new TestContainerManager();
@@ -418,7 +429,7 @@ public class ContainerExecutorServiceTests {
             gitHubService,
             taskStore,
             progressReporter,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<ContainerExecutorService>());
 
         var task = new AgentTask {

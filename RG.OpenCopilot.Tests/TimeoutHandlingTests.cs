@@ -8,6 +8,7 @@ namespace RG.OpenCopilot.Tests;
 public class TimeoutHandlingTests {
     [Fact]
     public async Task GeneratePlanJobHandler_WithTimeout_CancelsAfterTimeout() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
@@ -30,7 +31,7 @@ public class TimeoutHandlingTests {
             jobDispatcher.Object,
             jobStatusStore,
             options,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         // Create a task
@@ -100,6 +101,7 @@ public class TimeoutHandlingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_WithTimeout_CancelsAfterTimeout() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
@@ -112,7 +114,7 @@ public class TimeoutHandlingTests {
             taskStore,
             executorService.Object,
             options,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         // Create a task
@@ -161,6 +163,7 @@ public class TimeoutHandlingTests {
 
     [Fact]
     public async Task GeneratePlanJobHandler_NoTimeout_CompletesSuccessfully() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
@@ -183,7 +186,7 @@ public class TimeoutHandlingTests {
             jobDispatcher.Object,
             jobStatusStore,
             options,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         // Create a task
@@ -255,6 +258,7 @@ public class TimeoutHandlingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_NoTimeout_CompletesSuccessfully() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
@@ -267,7 +271,7 @@ public class TimeoutHandlingTests {
             taskStore,
             executorService.Object,
             options,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         // Create a task

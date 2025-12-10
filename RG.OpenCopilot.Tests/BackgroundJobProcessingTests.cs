@@ -202,6 +202,7 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_ExecutesSuccessfully() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
@@ -211,7 +212,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         // Create a task with a plan
@@ -251,6 +252,7 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_FailsWhenTaskNotFound() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
@@ -260,7 +262,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var job = new BackgroundJob {
@@ -279,6 +281,7 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_FailsWhenTaskHasNoPlan() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
@@ -288,7 +291,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         // Create a task without a plan
@@ -317,6 +320,7 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_HandlesExecutionException() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
@@ -326,7 +330,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -363,6 +367,7 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_HandlesCancellation() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
@@ -372,7 +377,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -408,6 +413,7 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task WebhookHandler_DispatchesGeneratePlanJob() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new TestJobDispatcher();
@@ -417,7 +423,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             jobDispatcher,
             jobStatusStore,
-            new FakeTimeProvider(),
+            timeProvider,
             new TestLogger<WebhookHandler>());
 
         var payload = new GitHubIssueEventPayload {
@@ -589,6 +595,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task ExecutePlanJobHandler_FailsWhenPayloadIsInvalid() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
         var logger = new TestLogger<ExecutePlanJobHandler>();
@@ -597,7 +604,7 @@ public class BackgroundJobProcessingTests {
             taskStore,
             executorService.Object,
             new BackgroundJobOptions(),
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var job = new BackgroundJob {
@@ -698,6 +705,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_ProcessesJobsSuccessfully() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -722,7 +730,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -748,6 +756,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_HandlesJobWithNoHandler() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -759,7 +768,7 @@ public class BackgroundJobProcessingTests {
         var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -785,6 +794,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_RetriesFailedJobs() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -809,7 +819,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -835,6 +845,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_DoesNotRetryWhenRetryDisabled() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -858,7 +869,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -884,6 +895,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_DoesNotRetryWhenShouldRetryIsFalse() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -908,7 +920,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -934,6 +946,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_HandlesExceptionInHandler() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -956,7 +969,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -982,6 +995,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_ProcessesMultipleJobsConcurrently() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 2,
             MaxQueueSize = 10,
@@ -1006,7 +1020,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1034,6 +1048,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_HandlesOperationCanceledExceptionInMainLoop() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -1045,7 +1060,7 @@ public class BackgroundJobProcessingTests {
         var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1062,6 +1077,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_WaitsForJobsToCompleteOnShutdown() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -1086,7 +1102,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();
@@ -1112,6 +1128,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_Dispose_DisposesResources() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -1123,7 +1140,7 @@ public class BackgroundJobProcessingTests {
         var dispatcher = new JobDispatcher(queue, statusStore, new TestJobDeduplicationService(), dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act & Assert - should not throw
         processor.Dispose();
@@ -1134,6 +1151,7 @@ public class BackgroundJobProcessingTests {
     [Fact]
     public async Task BackgroundJobProcessor_HandlesJobCancellationDuringExecution() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var options = new BackgroundJobOptions {
             MaxConcurrency = 1,
             MaxQueueSize = 10,
@@ -1153,7 +1171,7 @@ public class BackgroundJobProcessingTests {
         
         dispatcher.RegisterHandler(handler.Object);
         
-        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, new FakeTimeProvider(), processorLogger);
+        var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, new TestRetryPolicyCalculator(), new TestJobDeduplicationService(), options, timeProvider, processorLogger);
         
         // Act
         var cts = new CancellationTokenSource();

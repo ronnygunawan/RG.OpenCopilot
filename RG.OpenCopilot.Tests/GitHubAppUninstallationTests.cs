@@ -8,6 +8,7 @@ namespace RG.OpenCopilot.Tests;
 public class GitHubAppUninstallationTests {
     [Fact]
     public async Task HandleInstallationEvent_DeletedAction_CancelsActiveTasks() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
@@ -18,7 +19,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         // Create tasks for the installation
@@ -174,6 +175,7 @@ public class GitHubAppUninstallationTests {
 
     [Fact]
     public async Task HandleInstallationEvent_NonDeletedAction_IgnoresEvent() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
@@ -184,7 +186,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -215,6 +217,7 @@ public class GitHubAppUninstallationTests {
 
     [Fact]
     public async Task HandleInstallationEvent_NullInstallation_IgnoresEvent() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
@@ -225,7 +228,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var payload = new GitHubInstallationEventPayload {
@@ -242,6 +245,7 @@ public class GitHubAppUninstallationTests {
 
     [Fact]
     public async Task HandleInstallationEvent_NoTasksForInstallation_CompletesWithoutError() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
@@ -252,7 +256,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var payload = new GitHubInstallationEventPayload {
@@ -266,6 +270,7 @@ public class GitHubAppUninstallationTests {
 
     [Fact]
     public async Task HandleInstallationEvent_PendingPlanningTasks_GetsCancelled() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
@@ -276,7 +281,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -305,6 +310,7 @@ public class GitHubAppUninstallationTests {
 
     [Fact]
     public async Task HandleInstallationEvent_FailedTasks_NotCancelled() {
+        var timeProvider = new FakeTimeProvider();
         // Arrange
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new Mock<IJobDispatcher>();
@@ -315,7 +321,7 @@ public class GitHubAppUninstallationTests {
             taskStore,
             jobDispatcher.Object,
             jobStatusStore,
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
