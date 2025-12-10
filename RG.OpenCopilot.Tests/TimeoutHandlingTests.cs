@@ -62,11 +62,14 @@ public class TimeoutHandlingTests {
             .Setup(i => i.LoadInstructionsAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
 
-        // Make planner service take too long
+        // Make planner service take too long (use FakeTimeProvider to simulate)
+        var planStartedTcs = new TaskCompletionSource<bool>();
         plannerService
             .Setup(p => p.CreatePlanAsync(It.IsAny<AgentTaskContext>(), It.IsAny<CancellationToken>()))
             .Returns(async (AgentTaskContext context, CancellationToken ct) => {
-                await Task.Delay(5000, ct); // 5 seconds - exceeds timeout
+                planStartedTcs.SetResult(true);
+                // Simulate long operation by waiting indefinitely - the timeout should cancel this
+                await Task.Delay(Timeout.Infinite, ct);
                 return new AgentPlan {
                     ProblemSummary = "Test",
                     Steps = [],
@@ -134,11 +137,11 @@ public class TimeoutHandlingTests {
         };
         await taskStore.CreateTaskAsync(task);
 
-        // Setup executor to take too long
+        // Setup executor to take too long (use infinite delay to simulate - timeout should cancel this)
         executorService
             .Setup(e => e.ExecutePlanAsync(It.IsAny<AgentTask>(), It.IsAny<CancellationToken>()))
             .Returns(async (AgentTask t, CancellationToken ct) => {
-                await Task.Delay(5000, ct); // 5 seconds - exceeds timeout
+                await Task.Delay(Timeout.Infinite, ct);
             });
 
         var job = new BackgroundJob {

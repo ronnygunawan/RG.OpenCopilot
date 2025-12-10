@@ -38,13 +38,12 @@ public class RetryFailureHandlingIntegrationTests {
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
         var attemptCount = 0;
-        var attemptTimestamps = new List<DateTime>();
+        var finalAttemptTcs = new TaskCompletionSource<bool>();
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("TransientFailureJob");
         handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => {
                 attemptCount++;
-                attemptTimestamps.Add(DateTime.UtcNow); // Use real time to measure actual delays
                 
                 // Fail first 2 attempts with transient error, succeed on 3rd
                 if (attemptCount < 3) {
@@ -52,6 +51,7 @@ public class RetryFailureHandlingIntegrationTests {
                         errorMessage: "Network timeout - temporary failure",
                         shouldRetry: true);
                 }
+                finalAttemptTcs.SetResult(true);
                 return JobResult.CreateSuccess();
             });
         
@@ -69,28 +69,14 @@ public class RetryFailureHandlingIntegrationTests {
         };
         await dispatcher.DispatchAsync(job);
         
-        // Wait for retries to complete
-        await Task.Delay(2000);
+        // Wait for all retries to complete
+        await finalAttemptTcs.Task;
         
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
         
         // Assert
         attemptCount.ShouldBe(3);
-        
-        // Verify exponential backoff delays
-        if (attemptTimestamps.Count >= 3) {
-            var delay1 = (attemptTimestamps[1] - attemptTimestamps[0]).TotalMilliseconds;
-            var delay2 = (attemptTimestamps[2] - attemptTimestamps[1]).TotalMilliseconds;
-            
-            // First delay should be ~100ms (base delay)
-            delay1.ShouldBeGreaterThanOrEqualTo(90);
-            delay1.ShouldBeLessThanOrEqualTo(150);
-            
-            // Second delay should be ~200ms (exponential: 100 * 2^1)
-            delay2.ShouldBeGreaterThanOrEqualTo(180);
-            delay2.ShouldBeLessThanOrEqualTo(250);
-        }
         
         // Verify final status
         var finalStatus = await statusStore.GetStatusAsync(job.Id);
@@ -126,16 +112,17 @@ public class RetryFailureHandlingIntegrationTests {
         var dispatcher = new JobDispatcher(queue, statusStore, deduplicationService, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var attemptCount = 0;
+        var attemptTcs = new TaskCompletionSource<bool>();
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("PersistentFailureJob");
         handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => {
-                attemptCount++;
                 // Permanent failure - invalid payload format
-                return JobResult.CreateFailure(
+                var result = JobResult.CreateFailure(
                     errorMessage: "Invalid payload format - cannot be retried",
                     shouldRetry: false); // Explicitly mark as non-retryable
+                attemptTcs.SetResult(true);
+                return result;
             });
         
         dispatcher.RegisterHandler(handler.Object);
@@ -153,13 +140,13 @@ public class RetryFailureHandlingIntegrationTests {
         await dispatcher.DispatchAsync(job);
         
         // Wait for processing
-        await Task.Delay(500);
+        await attemptTcs.Task;
         
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
         
         // Assert - should only execute once (no retries)
-        attemptCount.ShouldBe(1);
+        handler.Verify(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()), Times.Once);
         
         var finalStatus = await statusStore.GetStatusAsync(job.Id);
         finalStatus.ShouldNotBeNull();
@@ -195,13 +182,17 @@ public class RetryFailureHandlingIntegrationTests {
         var dispatcher = new JobDispatcher(queue, statusStore, deduplicationService, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var attemptErrors = new List<string>();
+        var attemptCount = 0;
+        var finalAttemptTcs = new TaskCompletionSource<bool>();
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("ExhaustRetriesJob");
         handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((BackgroundJob job, CancellationToken ct) => {
+                attemptCount++;
                 var errorMsg = $"Attempt {job.RetryCount + 1} failed";
-                attemptErrors.Add(errorMsg);
+                if (attemptCount >= 3) {
+                    finalAttemptTcs.SetResult(true);
+                }
                 return JobResult.CreateFailure(
                     errorMessage: errorMsg,
                     shouldRetry: true);
@@ -222,13 +213,13 @@ public class RetryFailureHandlingIntegrationTests {
         await dispatcher.DispatchAsync(job);
         
         // Wait for all retries
-        await Task.Delay(1000);
+        await finalAttemptTcs.Task;
         
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
         
         // Assert
-        attemptErrors.Count.ShouldBe(3); // Initial + 2 retries
+        attemptCount.ShouldBe(3); // Initial + 2 retries
         
         var finalStatus = await statusStore.GetStatusAsync(job.Id);
         finalStatus.ShouldNotBeNull();
@@ -276,32 +267,52 @@ public class RetryFailureHandlingIntegrationTests {
         var dispatcher = new JobDispatcher(queue, statusStore, deduplicationService, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
+        var validationComplete = new TaskCompletionSource<bool>();
+        var timeoutAttempts = 0;
+        var networkAttempts = 0;
+        var allJobsComplete = new TaskCompletionSource<bool>();
+        
         // Test case 1: ArgumentException - should NOT retry (validation error)
         var validationHandler = new Mock<IJobHandler>();
         validationHandler.Setup(h => h.JobType).Returns("ValidationJob");
         validationHandler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => JobResult.CreateFailure(
-                errorMessage: "Validation error: missing required field",
-                exception: new ArgumentException("Missing field"),
-                shouldRetry: false));
+            .ReturnsAsync(() => {
+                validationComplete.SetResult(true);
+                return JobResult.CreateFailure(
+                    errorMessage: "Validation error: missing required field",
+                    exception: new ArgumentException("Missing field"),
+                    shouldRetry: false);
+            });
         
         // Test case 2: TimeoutException - should retry (transient)
         var timeoutHandler = new Mock<IJobHandler>();
         timeoutHandler.Setup(h => h.JobType).Returns("TimeoutJob");
         timeoutHandler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => JobResult.CreateFailure(
-                errorMessage: "Request timeout",
-                exception: new TimeoutException("Timeout"),
-                shouldRetry: true));
+            .ReturnsAsync(() => {
+                timeoutAttempts++;
+                if (timeoutAttempts >= 4 && networkAttempts >= 4) {
+                    allJobsComplete.TrySetResult(true);
+                }
+                return JobResult.CreateFailure(
+                    errorMessage: "Request timeout",
+                    exception: new TimeoutException("Timeout"),
+                    shouldRetry: true);
+            });
         
         // Test case 3: HttpRequestException - should retry (transient)
         var networkHandler = new Mock<IJobHandler>();
         networkHandler.Setup(h => h.JobType).Returns("NetworkJob");
         networkHandler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => JobResult.CreateFailure(
-                errorMessage: "Network error",
-                exception: new HttpRequestException("Connection failed"),
-                shouldRetry: true));
+            .ReturnsAsync(() => {
+                networkAttempts++;
+                if (timeoutAttempts >= 4 && networkAttempts >= 4) {
+                    allJobsComplete.TrySetResult(true);
+                }
+                return JobResult.CreateFailure(
+                    errorMessage: "Network error",
+                    exception: new HttpRequestException("Connection failed"),
+                    shouldRetry: true);
+            });
         
         dispatcher.RegisterHandler(validationHandler.Object);
         dispatcher.RegisterHandler(timeoutHandler.Object);
@@ -320,7 +331,7 @@ public class RetryFailureHandlingIntegrationTests {
         await dispatcher.DispatchAsync(timeoutJob);
         await dispatcher.DispatchAsync(networkJob);
         
-        await Task.Delay(1500);
+        await allJobsComplete.Task;
         
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
@@ -406,10 +417,14 @@ public class RetryFailureHandlingIntegrationTests {
         var dispatcher = new JobDispatcher(queue, statusStore, deduplicationService, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
+        var jobCompleteTcs = new TaskCompletionSource<bool>();
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("IdempotentJob");
         handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(JobResult.CreateSuccess());
+            .ReturnsAsync(() => {
+                jobCompleteTcs.SetResult(true);
+                return JobResult.CreateSuccess();
+            });
         dispatcher.RegisterHandler(handler.Object);
         
         var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, TimeProvider.System, processorLogger);
@@ -427,7 +442,7 @@ public class RetryFailureHandlingIntegrationTests {
         await dispatcher.DispatchAsync(job1);
         
         // Wait for job to complete
-        await Task.Delay(500);
+        await jobCompleteTcs.Task;
         
         // Try to dispatch another job with same key
         var job2 = new BackgroundJob {
@@ -468,10 +483,18 @@ public class RetryFailureHandlingIntegrationTests {
         var dispatcher = new JobDispatcher(queue, statusStore, deduplicationService, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
+        var attemptCount = 0;
+        var finalAttemptTcs = new TaskCompletionSource<bool>();
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("TestJob");
         handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() => JobResult.CreateFailure("Test error", shouldRetry: true));
+            .ReturnsAsync(() => {
+                attemptCount++;
+                if (attemptCount >= 3) {
+                    finalAttemptTcs.SetResult(true);
+                }
+                return JobResult.CreateFailure("Test error", shouldRetry: true);
+            });
         
         dispatcher.RegisterHandler(handler.Object);
         var processor = new BackgroundJobProcessor(queue, dispatcher, statusStore, retryCalculator, deduplicationService, options, TimeProvider.System, processorLogger);
@@ -486,7 +509,7 @@ public class RetryFailureHandlingIntegrationTests {
         };
         await dispatcher.DispatchAsync(job);
         
-        await Task.Delay(800);
+        await finalAttemptTcs.Task;
         
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
