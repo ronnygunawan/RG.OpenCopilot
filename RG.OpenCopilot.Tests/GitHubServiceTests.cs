@@ -336,6 +336,81 @@ public class GitHubServiceTests {
         result.Body.ShouldBe("Test body content");
     }
 
+    [Fact]
+    public async Task UpdatePullRequestDescriptionAsync_WithApiException_ThrowsException() {
+        // Arrange
+        var mockRepositoryAdapter = new Mock<IGitHubRepositoryAdapter>();
+        var mockGitAdapter = new Mock<IGitHubGitAdapter>();
+        var mockPullRequestAdapter = new Mock<IGitHubPullRequestAdapter>();
+        mockPullRequestAdapter.Setup(p => p.UpdateAsync("owner", "repo", 42, "Title", "Body", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ApiException("Not found", System.Net.HttpStatusCode.NotFound));
+        var mockIssueAdapter = new Mock<IGitHubIssueAdapter>();
+        var logger = new TestLogger<GitHubService>();
+        
+        var service = new GitHubService(
+            mockRepositoryAdapter.Object,
+            mockGitAdapter.Object,
+            mockPullRequestAdapter.Object,
+            mockIssueAdapter.Object,
+            logger,
+            new TestAuditLogger(),
+            TimeProvider.System);
+
+        // Act & Assert
+        await Should.ThrowAsync<ApiException>(
+            async () => await service.UpdatePullRequestDescriptionAsync("owner", "repo", 42, "Title", "Body"));
+    }
+
+    [Fact]
+    public async Task PostPullRequestCommentAsync_WithApiException_ThrowsException() {
+        // Arrange
+        var mockRepositoryAdapter = new Mock<IGitHubRepositoryAdapter>();
+        var mockGitAdapter = new Mock<IGitHubGitAdapter>();
+        var mockPullRequestAdapter = new Mock<IGitHubPullRequestAdapter>();
+        var mockIssueAdapter = new Mock<IGitHubIssueAdapter>();
+        mockIssueAdapter.Setup(i => i.CreateCommentAsync("owner", "repo", 42, "comment", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ApiException("Not found", System.Net.HttpStatusCode.NotFound));
+        var logger = new TestLogger<GitHubService>();
+        
+        var service = new GitHubService(
+            mockRepositoryAdapter.Object,
+            mockGitAdapter.Object,
+            mockPullRequestAdapter.Object,
+            mockIssueAdapter.Object,
+            logger,
+            new TestAuditLogger(),
+            TimeProvider.System);
+
+        // Act & Assert
+        await Should.ThrowAsync<ApiException>(
+            async () => await service.PostPullRequestCommentAsync("owner", "repo", 42, "comment"));
+    }
+
+    [Fact]
+    public async Task GetPullRequestAsync_WithApiException_ThrowsException() {
+        // Arrange
+        var mockRepositoryAdapter = new Mock<IGitHubRepositoryAdapter>();
+        var mockGitAdapter = new Mock<IGitHubGitAdapter>();
+        var mockPullRequestAdapter = new Mock<IGitHubPullRequestAdapter>();
+        mockPullRequestAdapter.Setup(p => p.GetAsync("owner", "repo", 42, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ApiException("Not found", System.Net.HttpStatusCode.NotFound));
+        var mockIssueAdapter = new Mock<IGitHubIssueAdapter>();
+        var logger = new TestLogger<GitHubService>();
+        
+        var service = new GitHubService(
+            mockRepositoryAdapter.Object,
+            mockGitAdapter.Object,
+            mockPullRequestAdapter.Object,
+            mockIssueAdapter.Object,
+            logger,
+            new TestAuditLogger(),
+            TimeProvider.System);
+
+        // Act & Assert
+        await Should.ThrowAsync<ApiException>(
+            async () => await service.GetPullRequestAsync("owner", "repo", 42));
+    }
+
     private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;

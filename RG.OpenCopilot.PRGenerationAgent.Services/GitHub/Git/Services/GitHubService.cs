@@ -144,31 +144,120 @@ _The plan and progress will be updated here as the agent works on this issue._";
     }
 
     public async Task UpdatePullRequestDescriptionAsync(string owner, string repo, int prNumber, string title, string body, CancellationToken cancellationToken = default) {
-        await _pullRequestAdapter.UpdateAsync(owner, repo, prNumber, title, body, cancellationToken);
-        _logger.LogInformation("Updated PR #{PrNumber} with new description", prNumber);
+        var startTime = _timeProvider.GetUtcNow().DateTime;
+        var correlationId = $"pr-{owner}/{repo}/pr-{prNumber}";
+
+        try {
+            await _pullRequestAdapter.UpdateAsync(owner, repo, prNumber, title, body, cancellationToken);
+
+            _auditLogger.LogGitHubApiCall(
+                operation: "UpdatePullRequest",
+                correlationId: correlationId,
+                durationMs: CalculateDurationMs(startTime),
+                success: true);
+
+            _logger.LogInformation("Updated PR #{PrNumber} with new description", prNumber);
+        }
+        catch (Exception ex) {
+            _auditLogger.LogGitHubApiCall(
+                operation: "UpdatePullRequest",
+                correlationId: correlationId,
+                durationMs: CalculateDurationMs(startTime),
+                success: false,
+                errorMessage: ex.Message);
+            throw;
+        }
     }
 
     public async Task<int?> GetPullRequestNumberForBranchAsync(string owner, string repo, string branchName, CancellationToken cancellationToken = default) {
-        var pullRequests = await _pullRequestAdapter.GetAllForRepositoryAsync(owner, repo, cancellationToken);
+        var startTime = _timeProvider.GetUtcNow().DateTime;
+        var correlationId = $"pr-search-{owner}/{repo}/branch-{branchName}";
 
-        var pr = pullRequests.FirstOrDefault(p => p.HeadRef == $"{owner}:{branchName}" || p.HeadRef == branchName);
-        if (pr != null) {
-            _logger.LogInformation("Found PR #{PrNumber} for branch {BranchName}", pr.Number, branchName);
-            return pr.Number;
+        try {
+            var pullRequests = await _pullRequestAdapter.GetAllForRepositoryAsync(owner, repo, cancellationToken);
+
+            var pr = pullRequests.FirstOrDefault(p => p.HeadRef == $"{owner}:{branchName}" || p.HeadRef == branchName);
+            if (pr != null) {
+                _auditLogger.LogGitHubApiCall(
+                    operation: "GetPullRequestForBranch",
+                    correlationId: correlationId,
+                    durationMs: CalculateDurationMs(startTime),
+                    success: true);
+
+                _logger.LogInformation("Found PR #{PrNumber} for branch {BranchName}", pr.Number, branchName);
+                return pr.Number;
+            }
+
+            _auditLogger.LogGitHubApiCall(
+                operation: "GetPullRequestForBranch",
+                correlationId: correlationId,
+                durationMs: CalculateDurationMs(startTime),
+                success: true);
+
+            _logger.LogWarning("No open PR found for branch {BranchName}", branchName);
+            return null;
         }
-
-        _logger.LogWarning("No open PR found for branch {BranchName}", branchName);
-        return null;
+        catch (Exception ex) {
+            _auditLogger.LogGitHubApiCall(
+                operation: "GetPullRequestForBranch",
+                correlationId: correlationId,
+                durationMs: CalculateDurationMs(startTime),
+                success: false,
+                errorMessage: ex.Message);
+            throw;
+        }
     }
 
     public async Task PostPullRequestCommentAsync(string owner, string repo, int prNumber, string comment, CancellationToken cancellationToken = default) {
-        await _issueAdapter.CreateCommentAsync(owner, repo, prNumber, comment, cancellationToken);
-        _logger.LogInformation("Posted comment to PR #{PrNumber}", prNumber);
+        var startTime = _timeProvider.GetUtcNow().DateTime;
+        var correlationId = $"pr-comment-{owner}/{repo}/pr-{prNumber}";
+
+        try {
+            await _issueAdapter.CreateCommentAsync(owner, repo, prNumber, comment, cancellationToken);
+
+            _auditLogger.LogGitHubApiCall(
+                operation: "PostPullRequestComment",
+                correlationId: correlationId,
+                durationMs: CalculateDurationMs(startTime),
+                success: true);
+
+            _logger.LogInformation("Posted comment to PR #{PrNumber}", prNumber);
+        }
+        catch (Exception ex) {
+            _auditLogger.LogGitHubApiCall(
+                operation: "PostPullRequestComment",
+                correlationId: correlationId,
+                durationMs: CalculateDurationMs(startTime),
+                success: false,
+                errorMessage: ex.Message);
+            throw;
+        }
     }
 
     public async Task<PullRequestInfo> GetPullRequestAsync(string owner, string repo, int prNumber, CancellationToken cancellationToken = default) {
-        var pr = await _pullRequestAdapter.GetAsync(owner, repo, prNumber, cancellationToken);
-        _logger.LogInformation("Retrieved PR #{PrNumber}", prNumber);
-        return pr;
+        var startTime = _timeProvider.GetUtcNow().DateTime;
+        var correlationId = $"pr-get-{owner}/{repo}/pr-{prNumber}";
+
+        try {
+            var pr = await _pullRequestAdapter.GetAsync(owner, repo, prNumber, cancellationToken);
+
+            _auditLogger.LogGitHubApiCall(
+                operation: "GetPullRequest",
+                correlationId: correlationId,
+                durationMs: CalculateDurationMs(startTime),
+                success: true);
+
+            _logger.LogInformation("Retrieved PR #{PrNumber}", prNumber);
+            return pr;
+        }
+        catch (Exception ex) {
+            _auditLogger.LogGitHubApiCall(
+                operation: "GetPullRequest",
+                correlationId: correlationId,
+                durationMs: CalculateDurationMs(startTime),
+                success: false,
+                errorMessage: ex.Message);
+            throw;
+        }
     }
 }

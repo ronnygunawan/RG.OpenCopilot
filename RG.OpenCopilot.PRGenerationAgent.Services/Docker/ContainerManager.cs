@@ -39,11 +39,19 @@ public interface IContainerManager : IDirectoryOperations {
 public sealed class DockerContainerManager : IContainerManager {
     private readonly ICommandExecutor _commandExecutor;
     private readonly ILogger<DockerContainerManager> _logger;
+    private readonly IAuditLogger _auditLogger;
+    private readonly TimeProvider _timeProvider;
     private const string WorkDir = "/workspace";
 
-    public DockerContainerManager(ICommandExecutor commandExecutor, ILogger<DockerContainerManager> logger) {
+    public DockerContainerManager(
+        ICommandExecutor commandExecutor,
+        ILogger<DockerContainerManager> logger,
+        IAuditLogger auditLogger,
+        TimeProvider timeProvider) {
         _commandExecutor = commandExecutor;
         _logger = logger;
+        _auditLogger = auditLogger;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -63,55 +71,95 @@ public sealed class DockerContainerManager : IContainerManager {
         string branch,
         ContainerImageType imageType,
         CancellationToken cancellationToken = default) {
-        // Create a unique container name
-        var containerName = $"opencopilot-{owner}-{repo}-{Guid.NewGuid():N}".ToLowerInvariant();
+        var startTime = _timeProvider.GetUtcNow().DateTime;
+        var correlationId = $"container-{owner}/{repo}";
 
-        _logger.LogInformation("Creating {ImageType} container {ContainerName}", imageType, containerName);
+        try {
+            // Create a unique container name
+            var containerName = $"opencopilot-{owner}-{repo}-{Guid.NewGuid():N}".ToLowerInvariant();
 
-        // Select the appropriate base image based on language type
-        var baseImage = GetBaseImage(imageType);
+            _logger.LogInformation("Creating {ImageType} container {ContainerName}", imageType, containerName);
 
-        var result = await _commandExecutor.ExecuteCommandAsync(
-            workingDirectory: Directory.GetCurrentDirectory(),
-            command: "docker",
-            args: new[] {
-                "run",
-                "-d",
-                "--name", containerName,
-                "-w", WorkDir,
-                baseImage,
-                "sleep", "infinity"
-            },
-            cancellationToken: cancellationToken);
+            // Select the appropriate base image based on language type
+            var baseImage = GetBaseImage(imageType);
 
-        if (!result.Success) {
-            throw new InvalidOperationException($"Failed to create container: {result.Error}");
+            var result = await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: new[] {
+                    "run",
+                    "-d",
+                    "--name", containerName,
+                    "-w", WorkDir,
+                    baseImage,
+                    "sleep", "infinity"
+                },
+                cancellationToken: cancellationToken);
+
+            if (!result.Success) {
+                _auditLogger.LogContainerOperation(
+                    operation: "CreateContainer",
+                    containerId: null,
+                    correlationId: correlationId,
+                    durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                    success: false,
+                    errorMessage: result.Error);
+
+                throw new InvalidOperationException($"Failed to create container: {result.Error}");
+            }
+
+            var containerId = result.Output.Trim();
+            _logger.LogInformation("Created container {ContainerId} with image {BaseImage}", containerId, baseImage);
+
+            // Install git if not already present in the image
+            await EnsureGitInstalledAsync(containerId, imageType, cancellationToken);
+
+            // Verify build tools are available
+            await VerifyBuildToolsAsync(containerId, cancellationToken);
+
+            // Clone the repository inside the container
+            var repoUrl = $"https://x-access-token:{token}@github.com/{owner}/{repo}.git";
+            var cloneResult = await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: new[] { "exec", containerId, "git", "clone", "--branch", branch, "--single-branch", repoUrl, WorkDir },
+                cancellationToken: cancellationToken);
+
+            if (!cloneResult.Success) {
+                await CleanupContainerAsync(containerId, cancellationToken);
+
+                _auditLogger.LogContainerOperation(
+                    operation: "CreateContainer",
+                    containerId: containerId,
+                    correlationId: correlationId,
+                    durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                    success: false,
+                    errorMessage: $"Failed to clone repository: {cloneResult.Error}");
+
+                throw new InvalidOperationException($"Failed to clone repository: {cloneResult.Error}");
+            }
+
+            _logger.LogInformation("Cloned repository into container {ContainerId}", containerId);
+
+            _auditLogger.LogContainerOperation(
+                operation: "CreateContainer",
+                containerId: containerId,
+                correlationId: correlationId,
+                durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                success: true);
+
+            return containerId;
         }
-
-        var containerId = result.Output.Trim();
-        _logger.LogInformation("Created container {ContainerId} with image {BaseImage}", containerId, baseImage);
-
-        // Install git if not already present in the image
-        await EnsureGitInstalledAsync(containerId, imageType, cancellationToken);
-
-        // Verify build tools are available
-        await VerifyBuildToolsAsync(containerId, cancellationToken);
-
-        // Clone the repository inside the container
-        var repoUrl = $"https://x-access-token:{token}@github.com/{owner}/{repo}.git";
-        var cloneResult = await _commandExecutor.ExecuteCommandAsync(
-            workingDirectory: Directory.GetCurrentDirectory(),
-            command: "docker",
-            args: new[] { "exec", containerId, "git", "clone", "--branch", branch, "--single-branch", repoUrl, WorkDir },
-            cancellationToken: cancellationToken);
-
-        if (!cloneResult.Success) {
-            await CleanupContainerAsync(containerId, cancellationToken);
-            throw new InvalidOperationException($"Failed to clone repository: {cloneResult.Error}");
+        catch (Exception ex) {
+            _auditLogger.LogContainerOperation(
+                operation: "CreateContainer",
+                containerId: null,
+                correlationId: correlationId,
+                durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                success: false,
+                errorMessage: ex.Message);
+            throw;
         }
-
-        _logger.LogInformation("Cloned repository into container {ContainerId}", containerId);
-        return containerId;
     }
 
     /// <summary>
@@ -224,57 +272,125 @@ public sealed class DockerContainerManager : IContainerManager {
         string branch,
         string token,
         CancellationToken cancellationToken = default) {
-        // Configure git user
-        await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "config", "user.name", "RG.OpenCopilot[bot]" }, cancellationToken: cancellationToken);
-        await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "config", "user.email", "opencopilot@users.noreply.github.com" }, cancellationToken: cancellationToken);
+        var startTime = _timeProvider.GetUtcNow().DateTime;
+        var correlationId = $"commit-push-{owner}/{repo}";
 
-        // Stage all changes
-        await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "add", "." }, cancellationToken: cancellationToken);
+        try {
+            // Configure git user
+            await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "config", "user.name", "RG.OpenCopilot[bot]" }, cancellationToken: cancellationToken);
+            await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "config", "user.email", "opencopilot@users.noreply.github.com" }, cancellationToken: cancellationToken);
 
-        // Check if there are changes to commit
-        var statusResult = await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "status", "--porcelain" }, cancellationToken: cancellationToken);
-        if (string.IsNullOrWhiteSpace(statusResult.Output)) {
-            _logger.LogInformation("No changes to commit in container {ContainerId}", containerId);
-            return;
+            // Stage all changes
+            await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "add", "." }, cancellationToken: cancellationToken);
+
+            // Check if there are changes to commit
+            var statusResult = await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "status", "--porcelain" }, cancellationToken: cancellationToken);
+            if (string.IsNullOrWhiteSpace(statusResult.Output)) {
+                _logger.LogInformation("No changes to commit in container {ContainerId}", containerId);
+
+                _auditLogger.LogContainerOperation(
+                    operation: "CommitAndPush",
+                    containerId: containerId,
+                    correlationId: correlationId,
+                    durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                    success: true);
+
+                return;
+            }
+
+            // Commit
+            var commitResult = await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "commit", "-m", commitMessage }, cancellationToken: cancellationToken);
+            if (!commitResult.Success) {
+                _auditLogger.LogContainerOperation(
+                    operation: "CommitAndPush",
+                    containerId: containerId,
+                    correlationId: correlationId,
+                    durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                    success: false,
+                    errorMessage: $"Failed to commit: {commitResult.Error}");
+
+                throw new InvalidOperationException($"Failed to commit: {commitResult.Error}");
+            }
+
+            // Set remote URL with token
+            var remoteUrl = $"https://x-access-token:{token}@github.com/{owner}/{repo}.git";
+            await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "remote", "set-url", "origin", remoteUrl }, cancellationToken: cancellationToken);
+
+            // Push
+            var pushResult = await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "push", "origin", branch }, cancellationToken: cancellationToken);
+            if (!pushResult.Success) {
+                _auditLogger.LogContainerOperation(
+                    operation: "CommitAndPush",
+                    containerId: containerId,
+                    correlationId: correlationId,
+                    durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                    success: false,
+                    errorMessage: $"Failed to push: {pushResult.Error}");
+
+                throw new InvalidOperationException($"Failed to push: {pushResult.Error}");
+            }
+
+            _logger.LogInformation("Committed and pushed changes from container {ContainerId}", containerId);
+
+            _auditLogger.LogContainerOperation(
+                operation: "CommitAndPush",
+                containerId: containerId,
+                correlationId: correlationId,
+                durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                success: true);
         }
-
-        // Commit
-        var commitResult = await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "commit", "-m", commitMessage }, cancellationToken: cancellationToken);
-        if (!commitResult.Success) {
-            throw new InvalidOperationException($"Failed to commit: {commitResult.Error}");
+        catch (Exception ex) {
+            _auditLogger.LogContainerOperation(
+                operation: "CommitAndPush",
+                containerId: containerId,
+                correlationId: correlationId,
+                durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                success: false,
+                errorMessage: ex.Message);
+            throw;
         }
-
-        // Set remote URL with token
-        var remoteUrl = $"https://x-access-token:{token}@github.com/{owner}/{repo}.git";
-        await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "remote", "set-url", "origin", remoteUrl }, cancellationToken: cancellationToken);
-
-        // Push
-        var pushResult = await ExecuteInContainerAsync(containerId: containerId, command: "git", args: new[] { "push", "origin", branch }, cancellationToken: cancellationToken);
-        if (!pushResult.Success) {
-            throw new InvalidOperationException($"Failed to push: {pushResult.Error}");
-        }
-
-        _logger.LogInformation("Committed and pushed changes from container {ContainerId}", containerId);
     }
 
     public async Task CleanupContainerAsync(string containerId, CancellationToken cancellationToken = default) {
+        var startTime = _timeProvider.GetUtcNow().DateTime;
+        var correlationId = $"cleanup-{containerId}";
+
         _logger.LogInformation("Cleaning up container {ContainerId}", containerId);
 
-        // Stop the container
-        await _commandExecutor.ExecuteCommandAsync(
-            workingDirectory: Directory.GetCurrentDirectory(),
-            command: "docker",
-            args: new[] { "stop", containerId },
-            cancellationToken: cancellationToken);
+        try {
+            // Stop the container
+            await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: new[] { "stop", containerId },
+                cancellationToken: cancellationToken);
 
-        // Remove the container
-        await _commandExecutor.ExecuteCommandAsync(
-            workingDirectory: Directory.GetCurrentDirectory(),
-            command: "docker",
-            args: new[] { "rm", containerId },
-            cancellationToken: cancellationToken);
+            // Remove the container
+            await _commandExecutor.ExecuteCommandAsync(
+                workingDirectory: Directory.GetCurrentDirectory(),
+                command: "docker",
+                args: new[] { "rm", containerId },
+                cancellationToken: cancellationToken);
 
-        _logger.LogInformation("Cleaned up container {ContainerId}", containerId);
+            _logger.LogInformation("Cleaned up container {ContainerId}", containerId);
+
+            _auditLogger.LogContainerOperation(
+                operation: "CleanupContainer",
+                containerId: containerId,
+                correlationId: correlationId,
+                durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                success: true);
+        }
+        catch (Exception ex) {
+            _auditLogger.LogContainerOperation(
+                operation: "CleanupContainer",
+                containerId: containerId,
+                correlationId: correlationId,
+                durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                success: false,
+                errorMessage: ex.Message);
+            throw;
+        }
     }
 
     public async Task<BuildToolsStatus> VerifyBuildToolsAsync(string containerId, CancellationToken cancellationToken = default) {

@@ -10,7 +10,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var containerId = await manager.CreateContainerAsync(
@@ -34,7 +34,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "run" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -55,7 +55,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -77,7 +77,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var result = await manager.ExecuteInContainerAsync(
@@ -96,7 +96,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var content = await manager.ReadFileInContainerAsync(
@@ -116,7 +116,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -132,7 +132,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.WriteFileInContainerAsync(
@@ -155,7 +155,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -174,7 +174,7 @@ public class ContainerManagerTests {
             ReturnNonEmptyStatusOnce = true
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CommitAndPushAsync(
@@ -198,7 +198,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CommitAndPushAsync(
@@ -224,7 +224,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -244,7 +244,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CleanupContainerAsync(containerId: "test-container");
@@ -262,7 +262,7 @@ public class ContainerManagerTests {
             FailOnPush = true
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -282,7 +282,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.WriteFileInContainerAsync(
@@ -303,7 +303,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateContainerAsync(
@@ -324,7 +324,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.ExecuteInContainerAsync(
@@ -346,7 +346,7 @@ public class ContainerManagerTests {
             ReturnNonEmptyStatusOnce = true
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CommitAndPushAsync(
@@ -371,7 +371,7 @@ public class ContainerManagerTests {
             ReturnNonEmptyStatusOnce = true
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CommitAndPushAsync(
@@ -392,7 +392,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act - Test that Windows-style paths with backslashes work
         await manager.CreateDirectoryAsync(
@@ -413,7 +413,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert - Attempt to use .. to escape workspace should throw
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -429,7 +429,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.ReadFileInContainerAsync(
@@ -451,7 +451,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.WriteFileInContainerAsync(
@@ -473,7 +473,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.MoveAsync(
@@ -498,7 +498,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CopyAsync(
@@ -523,7 +523,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.DeleteAsync(
@@ -544,7 +544,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.ListContentsAsync(
@@ -565,7 +565,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.DirectoryExistsAsync(
@@ -586,7 +586,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateDirectoryAsync(
@@ -604,7 +604,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act - this should be allowed as it resolves within workspace
         await manager.CreateDirectoryAsync(
@@ -622,7 +622,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert - null path
         var exception1 = await Should.ThrowAsync<InvalidOperationException>(
@@ -651,7 +651,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.ReadFileInContainerAsync(
@@ -669,7 +669,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateDirectoryAsync(
@@ -689,7 +689,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert - Path that resolves to root should throw
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -708,7 +708,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -727,7 +727,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -747,7 +747,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -766,7 +766,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -786,7 +786,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -806,7 +806,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -825,7 +825,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -841,7 +841,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.WriteFileInContainerAsync(
@@ -862,7 +862,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var result = await manager.DirectoryExistsAsync(
@@ -881,7 +881,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var result = await manager.DirectoryExistsAsync(
@@ -897,7 +897,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.DeleteAsync(
@@ -917,7 +917,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert - Source outside workspace
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -934,7 +934,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act & Assert - Dest outside workspace
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -951,7 +951,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act - Creating at workspace root should be allowed
         await manager.CreateDirectoryAsync(
@@ -969,7 +969,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.ReadFileInContainerAsync(
@@ -989,7 +989,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act - Even with mixed slashes, should normalize
         await manager.WriteFileInContainerAsync(
@@ -1011,7 +1011,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act - Path with consecutive dots should work
         await manager.CreateDirectoryAsync(
@@ -1029,7 +1029,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.MoveAsync(
@@ -1048,7 +1048,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.DeleteAsync(
@@ -1069,7 +1069,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var result = await manager.ListContentsAsync(
@@ -1085,7 +1085,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act - Just slashes should resolve to workspace root
         await manager.CreateDirectoryAsync(
@@ -1103,7 +1103,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CopyAsync(
@@ -1131,7 +1131,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateContainerAsync(
@@ -1153,7 +1153,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateContainerAsync(
@@ -1176,7 +1176,7 @@ public class ContainerManagerTests {
             GitAlreadyInstalled = true
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateContainerAsync(
@@ -1206,7 +1206,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateContainerAsync(
@@ -1233,7 +1233,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateContainerAsync(
@@ -1255,7 +1255,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var result = await manager.CreateContainerAsync(
@@ -1278,7 +1278,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var result = await manager.CreateContainerAsync(
@@ -1301,7 +1301,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var result = await manager.CreateContainerAsync(
@@ -1324,7 +1324,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var result = await manager.CreateContainerAsync(
@@ -1347,7 +1347,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateContainerAsync(
@@ -1375,7 +1375,7 @@ public class ContainerManagerTests {
             GitAlreadyInstalled = true
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateContainerAsync(
@@ -1399,7 +1399,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
         var invalidImageType = (ContainerImageType)999; // Invalid enum value
 
         // Act & Assert
@@ -1420,7 +1420,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var status = await manager.VerifyBuildToolsAsync(containerId: "test-container");
@@ -1440,7 +1440,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var status = await manager.VerifyBuildToolsAsync(containerId: "test-container");
@@ -1463,7 +1463,7 @@ public class ContainerManagerTests {
             FailOnArgs = new[] { "exec" }
         };
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var status = await manager.VerifyBuildToolsAsync(containerId: "test-container");
@@ -1489,7 +1489,7 @@ public class ContainerManagerTests {
         // Arrange
         var commandExecutor = new TestCommandExecutor();
         var logger = new TestLogger<DockerContainerManager>();
-        var manager = new DockerContainerManager(commandExecutor, logger);
+        var manager = new DockerContainerManager(commandExecutor, logger, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await manager.CreateContainerAsync(

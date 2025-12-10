@@ -52,4 +52,45 @@ public interface IAuditLogger {
     /// <param name="toState">New state</param>
     /// <param name="correlationId">Correlation ID</param>
     void LogJobStateTransition(string jobId, string fromState, string toState, string? correlationId);
+    
+    /// <summary>
+    /// Log a container operation
+    /// </summary>
+    /// <param name="operation">Container operation name</param>
+    /// <param name="containerId">Container identifier</param>
+    /// <param name="correlationId">Correlation ID</param>
+    /// <param name="durationMs">Operation duration in milliseconds</param>
+    /// <param name="success">Whether the operation succeeded</param>
+    /// <param name="errorMessage">Error message if failed</param>
+    void LogContainerOperation(string operation, string? containerId, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null);
+    
+    /// <summary>
+    /// Log a file operation
+    /// </summary>
+    /// <param name="operation">File operation name</param>
+    /// <param name="filePath">File path</param>
+    /// <param name="correlationId">Correlation ID</param>
+    /// <param name="success">Whether the operation succeeded</param>
+    /// <param name="errorMessage">Error message if failed</param>
+    void LogFileOperation(string operation, string filePath, string? correlationId, bool success = true, string? errorMessage = null);
+    
+    /// <summary>
+    /// Log a plan generation event
+    /// </summary>
+    /// <param name="issueNumber">Issue number</param>
+    /// <param name="correlationId">Correlation ID</param>
+    /// <param name="durationMs">Operation duration in milliseconds</param>
+    /// <param name="success">Whether the generation succeeded</param>
+    /// <param name="errorMessage">Error message if failed</param>
+    void LogPlanGeneration(int issueNumber, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null);
+    
+    /// <summary>
+    /// Log a plan execution event
+    /// </summary>
+    /// <param name="taskId">Task identifier</param>
+    /// <param name="correlationId">Correlation ID</param>
+    /// <param name="durationMs">Operation duration in milliseconds</param>
+    /// <param name="success">Whether the execution succeeded</param>
+    /// <param name="errorMessage">Error message if failed</param>
+    void LogPlanExecution(string taskId, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null);
 }

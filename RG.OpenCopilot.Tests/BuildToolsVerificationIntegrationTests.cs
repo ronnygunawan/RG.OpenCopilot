@@ -20,7 +20,7 @@ public class BuildToolsVerificationIntegrationTests : IDisposable {
     public BuildToolsVerificationIntegrationTests() {
         var commandExecutor = new ProcessCommandExecutor(new TestLogger<ProcessCommandExecutor>());
         _logger = new TestLogger<DockerContainerManager>();
-        _containerManager = new DockerContainerManager(commandExecutor, _logger);
+        _containerManager = new DockerContainerManager(commandExecutor, _logger, new TestAuditLogger(), new FakeTimeProvider());
         
         // Create test containers for different image types
         _dotnetContainerId = CreateTestContainerAsync("mcr.microsoft.com/dotnet/sdk:10.0").GetAwaiter().GetResult();

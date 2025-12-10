@@ -16,7 +16,7 @@ public class DirectoryOperationsIntegrationTests : IDisposable {
     public DirectoryOperationsIntegrationTests() {
         var commandExecutor = new ProcessCommandExecutor(new TestLogger<ProcessCommandExecutor>());
         _logger = new TestLogger<DockerContainerManager>();
-        _containerManager = new DockerContainerManager(commandExecutor, _logger);
+        _containerManager = new DockerContainerManager(commandExecutor, _logger, new TestAuditLogger(), new FakeTimeProvider());
         
         // Create a test container - this is a slow operation
         _containerId = CreateTestContainerAsync().GetAwaiter().GetResult();

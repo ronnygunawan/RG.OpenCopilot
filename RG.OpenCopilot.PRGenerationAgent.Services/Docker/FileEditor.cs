@@ -8,11 +8,16 @@ namespace RG.OpenCopilot.PRGenerationAgent.Services.Docker;
 public sealed class FileEditor : IFileEditor {
     private readonly IContainerManager _containerManager;
     private readonly ILogger<FileEditor> _logger;
+    private readonly IAuditLogger _auditLogger;
     private readonly List<FileChange> _changes = [];
 
-    public FileEditor(IContainerManager containerManager, ILogger<FileEditor> logger) {
+    public FileEditor(
+        IContainerManager containerManager,
+        ILogger<FileEditor> logger,
+        IAuditLogger auditLogger) {
         _containerManager = containerManager;
         _logger = logger;
+        _auditLogger = auditLogger;
     }
 
     /// <summary>
@@ -21,27 +26,54 @@ public sealed class FileEditor : IFileEditor {
     public async Task CreateFileAsync(string containerId, string filePath, string content, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Creating file {FilePath} in container {ContainerId}", filePath, containerId);
 
-        // Check if file already exists
-        var fileExists = await FileExistsAsync(containerId, filePath, cancellationToken);
-        if (fileExists) {
-            throw new InvalidOperationException($"File {filePath} already exists. Use ModifyFileAsync to update existing files.");
+        var correlationId = $"file-create-{containerId}";
+
+        try {
+            // Check if file already exists
+            var fileExists = await FileExistsAsync(containerId, filePath, cancellationToken);
+            if (fileExists) {
+                var errorMsg = $"File {filePath} already exists. Use ModifyFileAsync to update existing files.";
+                _auditLogger.LogFileOperation(
+                    operation: "CreateFile",
+                    filePath: filePath,
+                    correlationId: correlationId,
+                    success: false,
+                    errorMessage: errorMsg);
+
+                throw new InvalidOperationException(errorMsg);
+            }
+
+            // Ensure parent directory exists
+            await EnsureDirectoryExistsAsync(containerId, filePath, cancellationToken);
+
+            // Write the file
+            await _containerManager.WriteFileInContainerAsync(containerId, filePath, content, cancellationToken);
+
+            // Track the change
+            _changes.Add(new FileChange {
+                Type = ChangeType.Created,
+                Path = filePath,
+                OldContent = null,
+                NewContent = content
+            });
+
+            _logger.LogInformation("File {FilePath} created successfully", filePath);
+
+            _auditLogger.LogFileOperation(
+                operation: "CreateFile",
+                filePath: filePath,
+                correlationId: correlationId,
+                success: true);
         }
-
-        // Ensure parent directory exists
-        await EnsureDirectoryExistsAsync(containerId, filePath, cancellationToken);
-
-        // Write the file
-        await _containerManager.WriteFileInContainerAsync(containerId, filePath, content, cancellationToken);
-
-        // Track the change
-        _changes.Add(new FileChange {
-            Type = ChangeType.Created,
-            Path = filePath,
-            OldContent = null,
-            NewContent = content
-        });
-
-        _logger.LogInformation("File {FilePath} created successfully", filePath);
+        catch (Exception ex) when (ex is not InvalidOperationException) {
+            _auditLogger.LogFileOperation(
+                operation: "CreateFile",
+                filePath: filePath,
+                correlationId: correlationId,
+                success: false,
+                errorMessage: ex.Message);
+            throw;
+        }
     }
 
     /// <summary>
@@ -50,36 +82,70 @@ public sealed class FileEditor : IFileEditor {
     public async Task ModifyFileAsync(string containerId, string filePath, Func<string, string> transform, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Modifying file {FilePath} in container {ContainerId}", filePath, containerId);
 
-        // Read the current content
-        string oldContent;
+        var correlationId = $"file-modify-{containerId}";
+
         try {
-            oldContent = await _containerManager.ReadFileInContainerAsync(containerId, filePath, cancellationToken);
+            // Read the current content
+            string oldContent;
+            try {
+                oldContent = await _containerManager.ReadFileInContainerAsync(containerId, filePath, cancellationToken);
+            }
+            catch (InvalidOperationException) {
+                var errorMsg = $"File {filePath} does not exist. Use CreateFileAsync to create new files.";
+                _auditLogger.LogFileOperation(
+                    operation: "ModifyFile",
+                    filePath: filePath,
+                    correlationId: correlationId,
+                    success: false,
+                    errorMessage: errorMsg);
+
+                throw new InvalidOperationException(errorMsg);
+            }
+
+            // Apply the transformation
+            var newContent = transform(oldContent);
+
+            // Only write if content has changed
+            if (oldContent == newContent) {
+                _logger.LogInformation("File {FilePath} content unchanged, skipping write", filePath);
+
+                _auditLogger.LogFileOperation(
+                    operation: "ModifyFile",
+                    filePath: filePath,
+                    correlationId: correlationId,
+                    success: true);
+
+                return;
+            }
+
+            // Write the modified content
+            await _containerManager.WriteFileInContainerAsync(containerId, filePath, newContent, cancellationToken);
+
+            // Track the change
+            _changes.Add(new FileChange {
+                Type = ChangeType.Modified,
+                Path = filePath,
+                OldContent = oldContent,
+                NewContent = newContent
+            });
+
+            _logger.LogInformation("File {FilePath} modified successfully", filePath);
+
+            _auditLogger.LogFileOperation(
+                operation: "ModifyFile",
+                filePath: filePath,
+                correlationId: correlationId,
+                success: true);
         }
-        catch (InvalidOperationException) {
-            throw new InvalidOperationException($"File {filePath} does not exist. Use CreateFileAsync to create new files.");
+        catch (Exception ex) when (ex is not InvalidOperationException) {
+            _auditLogger.LogFileOperation(
+                operation: "ModifyFile",
+                filePath: filePath,
+                correlationId: correlationId,
+                success: false,
+                errorMessage: ex.Message);
+            throw;
         }
-
-        // Apply the transformation
-        var newContent = transform(oldContent);
-
-        // Only write if content has changed
-        if (oldContent == newContent) {
-            _logger.LogInformation("File {FilePath} content unchanged, skipping write", filePath);
-            return;
-        }
-
-        // Write the modified content
-        await _containerManager.WriteFileInContainerAsync(containerId, filePath, newContent, cancellationToken);
-
-        // Track the change
-        _changes.Add(new FileChange {
-            Type = ChangeType.Modified,
-            Path = filePath,
-            OldContent = oldContent,
-            NewContent = newContent
-        });
-
-        _logger.LogInformation("File {FilePath} modified successfully", filePath);
     }
 
     /// <summary>
@@ -88,41 +154,82 @@ public sealed class FileEditor : IFileEditor {
     public async Task DeleteFileAsync(string containerId, string filePath, CancellationToken cancellationToken = default) {
         _logger.LogInformation("Deleting file {FilePath} in container {ContainerId}", filePath, containerId);
 
-        // Safety check: don't delete critical files
-        if (IsCriticalFile(filePath)) {
-            throw new InvalidOperationException($"Cannot delete critical file: {filePath}");
-        }
+        var correlationId = $"file-delete-{containerId}";
 
-        // Read the current content before deletion for tracking
-        string oldContent;
         try {
-            oldContent = await _containerManager.ReadFileInContainerAsync(containerId, filePath, cancellationToken);
+            // Safety check: don't delete critical files
+            if (IsCriticalFile(filePath)) {
+                var errorMsg = $"Cannot delete critical file: {filePath}";
+                _auditLogger.LogFileOperation(
+                    operation: "DeleteFile",
+                    filePath: filePath,
+                    correlationId: correlationId,
+                    success: false,
+                    errorMessage: errorMsg);
+
+                throw new InvalidOperationException(errorMsg);
+            }
+
+            // Read the current content before deletion for tracking
+            string oldContent;
+            try {
+                oldContent = await _containerManager.ReadFileInContainerAsync(containerId, filePath, cancellationToken);
+            }
+            catch (InvalidOperationException) {
+                _logger.LogWarning("File {FilePath} does not exist, skipping deletion", filePath);
+
+                _auditLogger.LogFileOperation(
+                    operation: "DeleteFile",
+                    filePath: filePath,
+                    correlationId: correlationId,
+                    success: true);
+
+                return;
+            }
+
+            // Delete the file
+            var result = await _containerManager.ExecuteInContainerAsync(
+                containerId: containerId,
+                command: "rm",
+                args: new[] { "-f", filePath },
+                cancellationToken: cancellationToken);
+
+            if (!result.Success) {
+                _auditLogger.LogFileOperation(
+                    operation: "DeleteFile",
+                    filePath: filePath,
+                    correlationId: correlationId,
+                    success: false,
+                    errorMessage: result.Error);
+
+                throw new InvalidOperationException($"Failed to delete file {filePath}: {result.Error}");
+            }
+
+            // Track the change
+            _changes.Add(new FileChange {
+                Type = ChangeType.Deleted,
+                Path = filePath,
+                OldContent = oldContent,
+                NewContent = null
+            });
+
+            _logger.LogInformation("File {FilePath} deleted successfully", filePath);
+
+            _auditLogger.LogFileOperation(
+                operation: "DeleteFile",
+                filePath: filePath,
+                correlationId: correlationId,
+                success: true);
         }
-        catch (InvalidOperationException) {
-            _logger.LogWarning("File {FilePath} does not exist, skipping deletion", filePath);
-            return;
+        catch (Exception ex) when (ex is not InvalidOperationException) {
+            _auditLogger.LogFileOperation(
+                operation: "DeleteFile",
+                filePath: filePath,
+                correlationId: correlationId,
+                success: false,
+                errorMessage: ex.Message);
+            throw;
         }
-
-        // Delete the file
-        var result = await _containerManager.ExecuteInContainerAsync(
-            containerId: containerId,
-            command: "rm",
-            args: new[] { "-f", filePath },
-            cancellationToken: cancellationToken);
-
-        if (!result.Success) {
-            throw new InvalidOperationException($"Failed to delete file {filePath}: {result.Error}");
-        }
-
-        // Track the change
-        _changes.Add(new FileChange {
-            Type = ChangeType.Deleted,
-            Path = filePath,
-            OldContent = oldContent,
-            NewContent = null
-        });
-
-        _logger.LogInformation("File {FilePath} deleted successfully", filePath);
     }
 
     /// <summary>
