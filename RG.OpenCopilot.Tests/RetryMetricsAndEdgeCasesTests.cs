@@ -15,6 +15,7 @@ public class RetryMetricsAndEdgeCasesTests {
     [Fact]
     public async Task Metrics_TrackRetrySuccessRate_Correctly() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var statusStore = new InMemoryJobStatusStore();
         
         // Create jobs with different retry outcomes
@@ -22,30 +23,30 @@ public class RetryMetricsAndEdgeCasesTests {
             JobId = "job1",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Completed,
-            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-5),
-            CompletedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-4),
+            CreatedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-5),
+            CompletedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-4),
             RetryCount = 2,
             MaxRetries = 3,
             Attempts = [
                 new JobAttempt {
                     AttemptNumber = 1,
                     Succeeded = false,
-                    StartedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-5),
-                    CompletedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-5).AddSeconds(10),
+                    StartedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-5),
+                    CompletedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-5).AddSeconds(10),
                     DurationMs = 10000
                 },
                 new JobAttempt {
                     AttemptNumber = 2,
                     Succeeded = false,
-                    StartedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-4).AddSeconds(-30),
-                    CompletedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-4).AddSeconds(-20),
+                    StartedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-4).AddSeconds(-30),
+                    CompletedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-4).AddSeconds(-20),
                     DurationMs = 10000
                 },
                 new JobAttempt {
                     AttemptNumber = 3,
                     Succeeded = true,
-                    StartedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-4).AddSeconds(-10),
-                    CompletedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-4),
+                    StartedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-4).AddSeconds(-10),
+                    CompletedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-4),
                     DurationMs = 10000
                 }
             ]
@@ -55,8 +56,8 @@ public class RetryMetricsAndEdgeCasesTests {
             JobId = "job2",
             JobType = "TestJob",
             Status = BackgroundJobStatus.DeadLetter,
-            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-3),
-            CompletedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-2),
+            CreatedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-3),
+            CompletedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-2),
             RetryCount = 3,
             MaxRetries = 3,
             Attempts = [
@@ -71,16 +72,16 @@ public class RetryMetricsAndEdgeCasesTests {
             JobId = "job3",
             JobType = "TestJob",
             Status = BackgroundJobStatus.Completed,
-            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-1),
-            CompletedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddSeconds(-30),
+            CreatedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-1),
+            CompletedAt = timeProvider.GetUtcNow().DateTime.AddSeconds(-30),
             RetryCount = 0,
             MaxRetries = 3,
             Attempts = [
                 new JobAttempt {
                     AttemptNumber = 1,
                     Succeeded = true,
-                    StartedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-1),
-                    CompletedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddSeconds(-30),
+                    StartedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-1),
+                    CompletedAt = timeProvider.GetUtcNow().DateTime.AddSeconds(-30),
                     DurationMs = 30000
                 }
             ]

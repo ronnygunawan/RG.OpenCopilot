@@ -697,6 +697,7 @@ public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_UpdatesJobStatusThroughAllStages() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -715,7 +716,7 @@ public class GeneratePlanJobHandlerTests {
             jobDispatcher.Object,
             jobStatusStore,
             new BackgroundJobOptions(),
-            new FakeTimeProvider(),
+            timeProvider,
             logger);
 
         var task = new AgentTask {
@@ -767,7 +768,7 @@ public class GeneratePlanJobHandlerTests {
             JobId = "job-123",
             JobType = GeneratePlanJobHandler.JobTypeName,
             Status = BackgroundJobStatus.Queued,
-            CreatedAt = new FakeTimeProvider().GetUtcNow().DateTime,
+            CreatedAt = timeProvider.GetUtcNow().DateTime,
             Metadata = new Dictionary<string, string>()
         });
 

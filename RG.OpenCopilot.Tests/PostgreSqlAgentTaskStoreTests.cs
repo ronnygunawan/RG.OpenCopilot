@@ -276,6 +276,7 @@ public class PostgreSqlAgentTaskStoreTests : IDisposable {
     [Fact]
     public async Task UpdateTaskAsync_WithTimestamps_UpdatesTimestamps() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var task = new AgentTask {
             Id = "test/repo/issues/1",
             InstallationId = 123,
@@ -286,8 +287,8 @@ public class PostgreSqlAgentTaskStoreTests : IDisposable {
         };
         await _store.CreateTaskAsync(task);
 
-        var startedAt = new FakeTimeProvider().GetUtcNow().DateTime;
-        var completedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(5);
+        var startedAt = timeProvider.GetUtcNow().DateTime;
+        var completedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(5);
 
         // Act
         task.Status = AgentTaskStatus.Executing;
@@ -504,6 +505,7 @@ public class PostgreSqlAgentTaskStoreTests : IDisposable {
     [Fact]
     public async Task UpdateTaskAsync_MultipleUpdates_KeepsLatestData() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var task = new AgentTask {
             Id = "test/repo/issues/1",
             InstallationId = 123,
@@ -519,11 +521,11 @@ public class PostgreSqlAgentTaskStoreTests : IDisposable {
         await _store.UpdateTaskAsync(task);
 
         task.Status = AgentTaskStatus.Executing;
-        task.StartedAt = new FakeTimeProvider().GetUtcNow().DateTime;
+        task.StartedAt = timeProvider.GetUtcNow().DateTime;
         await _store.UpdateTaskAsync(task);
 
         task.Status = AgentTaskStatus.Completed;
-        task.CompletedAt = new FakeTimeProvider().GetUtcNow().DateTime;
+        task.CompletedAt = timeProvider.GetUtcNow().DateTime;
         await _store.UpdateTaskAsync(task);
 
         // Assert

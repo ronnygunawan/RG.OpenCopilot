@@ -760,16 +760,17 @@ public class ProgressReporterTests {
     [Fact]
     public async Task ReportStepProgressAsync_WithTimingInfo_IncludesElapsedAndEstimatedTime() {
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var mockGitHubService = new Mock<IGitHubService>();
         var logger = new TestLogger<ProgressReporter>();
-        var reporter = new ProgressReporter(mockGitHubService.Object, new FakeTimeProvider(), logger);
+        var reporter = new ProgressReporter(mockGitHubService.Object, timeProvider, logger);
 
         var task = new AgentTask {
             Id = "task-1",
             RepositoryOwner = "owner",
             RepositoryName = "repo",
             IssueNumber = 123,
-            StartedAt = new FakeTimeProvider().GetUtcNow().DateTime.AddMinutes(-10),
+            StartedAt = timeProvider.GetUtcNow().DateTime.AddMinutes(-10),
             Plan = new AgentPlan {
                 Steps = [
                     new PlanStep { Id = "1", Title = "Step 1", Done = true },
