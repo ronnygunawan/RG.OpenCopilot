@@ -8,8 +8,8 @@ namespace RG.OpenCopilot.Tests;
 public class TimeoutHandlingTests {
     [Fact]
     public async Task GeneratePlanJobHandler_WithTimeout_CancelsAfterTimeout() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -101,8 +101,8 @@ public class TimeoutHandlingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_WithTimeout_CancelsAfterTimeout() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
         var options = new BackgroundJobOptions {
@@ -163,8 +163,8 @@ public class TimeoutHandlingTests {
 
     [Fact]
     public async Task GeneratePlanJobHandler_NoTimeout_CompletesSuccessfully() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -258,8 +258,8 @@ public class TimeoutHandlingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_NoTimeout_CompletesSuccessfully() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
         var options = new BackgroundJobOptions {

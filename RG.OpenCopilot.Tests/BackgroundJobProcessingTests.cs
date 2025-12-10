@@ -202,8 +202,8 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_ExecutesSuccessfully() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
         var logger = new TestLogger<ExecutePlanJobHandler>();
@@ -252,8 +252,8 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_FailsWhenTaskNotFound() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
         var logger = new TestLogger<ExecutePlanJobHandler>();
@@ -281,8 +281,8 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_FailsWhenTaskHasNoPlan() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
         var logger = new TestLogger<ExecutePlanJobHandler>();
@@ -320,8 +320,8 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_HandlesExecutionException() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
         var logger = new TestLogger<ExecutePlanJobHandler>();
@@ -367,8 +367,8 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_HandlesCancellation() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
         var logger = new TestLogger<ExecutePlanJobHandler>();
@@ -413,8 +413,8 @@ public class BackgroundJobProcessingTests {
 
     [Fact]
     public async Task WebhookHandler_DispatchesGeneratePlanJob() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var jobDispatcher = new TestJobDispatcher();
         var jobStatusStore = new TestJobStatusStore();

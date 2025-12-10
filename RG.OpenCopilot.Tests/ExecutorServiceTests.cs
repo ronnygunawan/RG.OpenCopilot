@@ -7,8 +7,8 @@ namespace RG.OpenCopilot.Tests;
 public class ExecutorServiceTests {
     [Fact]
     public async Task ExecutePlanAsync_ThrowsWhenPlanIsNull() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -127,8 +127,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_MarksStepsAsDone() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -174,8 +174,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_PostsProgressComment() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -217,8 +217,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_CleansUpRepositoryOnSuccess() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -311,8 +311,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithRepositoryCloningFailure_ThrowsException() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryClonerThatFails();
         var executor = new TestCommandExecutor();
@@ -351,8 +351,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_CleansUpRepositoryOnFailure() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFails();
@@ -394,8 +394,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithMissingToken_UsesEmptyToken() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProviderReturningEmpty();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -434,8 +434,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithUncommittedChanges_CommitsAndPushes() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorWithChanges();
@@ -479,8 +479,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithGitStatusFailure_ThrowsException() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFailsGitStatus();
@@ -520,8 +520,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithGitCommitFailure_ThrowsException() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFailsGitCommit();
@@ -561,8 +561,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WithGitPushFailure_ThrowsException() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFailsGitPush();
@@ -602,8 +602,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WhenAllStepsComplete_FinalizesThePR() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutor();
@@ -648,8 +648,8 @@ public class ExecutorServiceTests {
 
     [Fact]
     public async Task ExecutePlanAsync_WhenGitStatusFails_DoesNotFinalizePR() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var tokenProvider = new TestTokenProvider();
         var cloner = new TestRepositoryCloner();
         var executor = new TestCommandExecutorThatFailsGitStatus(); // Executor that fails git status

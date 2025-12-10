@@ -25,8 +25,8 @@ public class TaskCancellationTests {
 
     [Fact]
     public async Task ExecutePlanJobHandler_CancelledJob_UpdatesTaskStatus() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var executorService = new Mock<IExecutorService>();
         var options = new BackgroundJobOptions();

@@ -8,8 +8,8 @@ namespace RG.OpenCopilot.Tests;
 public class GeneratePlanJobHandlerTests {
     [Fact]
     public async Task ExecuteAsync_HappyPath_ExecutesSuccessfully() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -139,8 +139,8 @@ public class GeneratePlanJobHandlerTests {
 
     [Fact]
     public async Task ExecuteAsync_InvalidPayload_ReturnsFailure() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -187,8 +187,8 @@ public class GeneratePlanJobHandlerTests {
 
     [Fact]
     public async Task ExecuteAsync_TaskNotFound_ReturnsFailure() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -272,8 +272,8 @@ public class GeneratePlanJobHandlerTests {
 
     [Fact]
     public async Task ExecuteAsync_CancellationRequested_ThrowsOperationCancelledException() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -339,8 +339,8 @@ public class GeneratePlanJobHandlerTests {
 
     [Fact]
     public async Task ExecuteAsync_ExceptionDuringExecution_ReturnsFailureWithRetry() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -410,8 +410,8 @@ public class GeneratePlanJobHandlerTests {
 
     [Fact]
     public async Task ExecuteAsync_RepositoryAnalyzerFails_ContinuesWithoutAnalysis() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -507,8 +507,8 @@ public class GeneratePlanJobHandlerTests {
 
     [Fact]
     public async Task ExecuteAsync_InstructionsLoaderFails_ContinuesWithoutInstructions() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
@@ -607,8 +607,8 @@ public class GeneratePlanJobHandlerTests {
 
     [Fact]
     public async Task ExecuteAsync_ExecutionJobDispatchFails_StillReturnsSuccess() {
-        var timeProvider = new FakeTimeProvider();
         // Arrange
+        var timeProvider = new FakeTimeProvider();
         var taskStore = new InMemoryAgentTaskStore();
         var plannerService = new Mock<IPlannerService>();
         var gitHubService = new Mock<IGitHubService>();
