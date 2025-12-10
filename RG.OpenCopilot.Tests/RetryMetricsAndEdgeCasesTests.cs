@@ -134,12 +134,12 @@ public class RetryMetricsAndEdgeCasesTests {
         var dispatcher = new JobDispatcher(queue, statusStore, deduplicationService, dispatcherLogger);
         var processorLogger = new TestLogger<BackgroundJobProcessor>();
         
-        var attemptCount = 0;
+        var attemptTcs = new TaskCompletionSource<bool>();
         var handler = new Mock<IJobHandler>();
         handler.Setup(h => h.JobType).Returns("NoRetryJob");
         handler.Setup(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => {
-                attemptCount++;
+                attemptTcs.SetResult(true);
                 return JobResult.CreateFailure("Test error", shouldRetry: true);
             });
         
@@ -156,13 +156,13 @@ public class RetryMetricsAndEdgeCasesTests {
         };
         await dispatcher.DispatchAsync(job);
         
-        await Task.Delay(300);
+        await attemptTcs.Task;
         
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
         
         // Assert
-        attemptCount.ShouldBe(1); // Only initial attempt, no retries
+        handler.Verify(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()), Times.Once); // Only initial attempt, no retries
         
         var status = await statusStore.GetStatusAsync(job.Id);
         status.ShouldNotBeNull();
