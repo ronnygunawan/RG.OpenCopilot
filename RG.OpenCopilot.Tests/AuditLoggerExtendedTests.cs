@@ -11,7 +11,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var containerId = "abc123";
 
         // Act
@@ -34,7 +34,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var containerId = "def456";
 
         // Act
@@ -59,7 +59,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act & Assert
         Should.NotThrow(() => auditLogger.LogContainerOperation(
@@ -76,7 +76,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var filePath = "/workspace/src/MyClass.cs";
 
         // Act
@@ -99,7 +99,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var filePath = "/workspace/src/MyClass.cs";
 
         // Act
@@ -123,7 +123,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var operations = new[] { "CreateFile", "ModifyFile", "DeleteFile" };
 
         // Act
@@ -147,7 +147,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var issueNumber = 42;
 
         // Act
@@ -169,7 +169,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var issueNumber = 43;
 
         // Act
@@ -192,7 +192,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var taskId = "owner/repo/issues/42";
 
         // Act
@@ -214,7 +214,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var taskId = "owner/repo/issues/43";
 
         // Act
@@ -237,7 +237,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act & Assert
         Should.NotThrow(() => auditLogger.LogContainerOperation(
@@ -254,7 +254,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act & Assert
         Should.NotThrow(() => auditLogger.LogFileOperation(
@@ -270,7 +270,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act & Assert
         Should.NotThrow(() => auditLogger.LogPlanGeneration(
@@ -286,7 +286,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act & Assert
         Should.NotThrow(() => auditLogger.LogPlanExecution(
@@ -302,7 +302,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var operations = new[] { "CreateContainer", "CleanupContainer", "CommitAndPush", "ExecuteCommand" };
 
         // Act
@@ -327,7 +327,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act
         auditLogger.LogContainerOperation(
@@ -347,7 +347,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var filePath = "/workspace/src/My Class (v2).cs";
 
         // Act
@@ -367,7 +367,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var issueNumbers = new[] { 42, 43, 44, 45 };
 
         // Act
@@ -392,7 +392,7 @@ public class AuditLoggerExtendedTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var taskIds = new[] {
             "owner/repo/issues/1",
             "owner/repo/issues/2",

@@ -227,6 +227,55 @@ public partial class Program {
             }
         });
 
+        app.MapGet("/audit-logs", async (
+            IAuditLogStore auditLogStore,
+            ILogger<AuditLogEndpoint> logger,
+            string? eventType = null,
+            string? correlationId = null,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int limit = 100) => {
+            try {
+                AuditEventType? eventTypeFilter = null;
+                if (!string.IsNullOrEmpty(eventType) && Enum.TryParse<AuditEventType>(eventType, ignoreCase: true, out var parsedEventType)) {
+                    eventTypeFilter = parsedEventType;
+                }
+
+                var logs = await auditLogStore.QueryAsync(
+                    eventType: eventTypeFilter,
+                    correlationId: correlationId,
+                    startDate: startDate,
+                    endDate: endDate,
+                    limit: limit);
+
+                return Results.Ok(new {
+                    logs,
+                    count = logs.Count,
+                    limit
+                });
+            }
+            catch (Exception ex) {
+                logger.LogError(ex, "Error retrieving audit logs");
+                return Results.StatusCode(500);
+            }
+        });
+
+        app.MapDelete("/audit-logs/cleanup", async (
+            IAuditLogCleanupService cleanupService,
+            ILogger<AuditLogCleanupEndpoint> logger) => {
+            try {
+                var deletedCount = await cleanupService.CleanupAsync();
+                return Results.Ok(new {
+                    deletedCount,
+                    message = $"Deleted {deletedCount} old audit logs"
+                });
+            }
+            catch (Exception ex) {
+                logger.LogError(ex, "Error cleaning up audit logs");
+                return Results.StatusCode(500);
+            }
+        });
+
         app.Run();
     }
 }
@@ -248,4 +297,10 @@ internal sealed class DeadLetterEndpoint { }
 
 // Marker class for logging in job cancel endpoint
 internal sealed class JobCancelEndpoint { }
+
+// Marker class for logging in audit log endpoint
+internal sealed class AuditLogEndpoint { }
+
+// Marker class for logging in audit log cleanup endpoint
+internal sealed class AuditLogCleanupEndpoint { }
 

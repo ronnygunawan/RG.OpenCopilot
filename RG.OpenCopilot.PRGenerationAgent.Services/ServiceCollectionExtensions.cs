@@ -80,13 +80,16 @@ public static class ServiceCollectionExtensions {
             services.AddDbContext<AgentTaskDbContext>(options =>
                 options.UseNpgsql(connectionString));
             services.AddScoped<IAgentTaskStore, PostgreSqlAgentTaskStore>();
+            services.AddScoped<IAuditLogStore, PostgreSqlAuditLogStore>();
         } else {
             services.AddSingleton<IAgentTaskStore, InMemoryAgentTaskStore>();
+            services.AddSingleton<IAuditLogStore, InMemoryAuditLogStore>();
         }
         
         // Register infrastructure services
         services.AddSingleton<ICorrelationIdProvider, CorrelationIdProvider>();
         services.AddSingleton<IAuditLogger, AuditLogger>();
+        services.AddSingleton<IAuditLogCleanupService, AuditLogCleanupService>();
         services.AddSingleton<IHealthCheckService, HealthCheckService>();
         
         // Register services

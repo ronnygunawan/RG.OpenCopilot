@@ -11,7 +11,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.WebhookReceived,
@@ -45,7 +45,7 @@ public class AuditLoggerTests {
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
         correlationIdProvider.SetCorrelationId("webhook-123");
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act
         auditLogger.LogWebhookReceived(
@@ -69,7 +69,7 @@ public class AuditLoggerTests {
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
         correlationIdProvider.SetCorrelationId("validation-123");
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act
         auditLogger.LogWebhookValidation(isValid: true);
@@ -88,7 +88,7 @@ public class AuditLoggerTests {
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
         correlationIdProvider.SetCorrelationId("validation-456");
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act
         auditLogger.LogWebhookValidation(isValid: false);
@@ -106,7 +106,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var taskId = "owner/repo/issues/42";
 
         // Act
@@ -129,7 +129,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act
         auditLogger.LogGitHubApiCall(
@@ -150,7 +150,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act
         auditLogger.LogGitHubApiCall(
@@ -173,7 +173,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var jobId = "job-12345";
 
         // Act
@@ -196,7 +196,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.TaskStateTransition,
@@ -221,7 +221,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act & Assert
         Should.NotThrow(() => auditLogger.LogWebhookReceived(
@@ -236,7 +236,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         
         var eventTypes = new[] {
             AuditEventType.WebhookReceived,
@@ -273,7 +273,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.WebhookReceived,
@@ -296,7 +296,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         
         var largeData = new Dictionary<string, object>();
         for (int i = 0; i < 50; i++) {
@@ -325,7 +325,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var taskId = "owner/repo/issues/42";
 
         var transitions = new[] {
@@ -357,7 +357,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         var jobId = "job-123";
 
         var statuses = new[] {
@@ -383,7 +383,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act
         auditLogger.LogGitHubApiCall(
@@ -402,7 +402,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act & Assert
         Should.NotThrow(() => auditLogger.LogGitHubApiCall(
@@ -418,7 +418,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.ContainerOperation,
@@ -445,7 +445,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
 
         // Act
         correlationIdProvider.SetCorrelationId("valid-1");
@@ -471,7 +471,7 @@ public class AuditLoggerTests {
         var timeProvider = new FakeTimeProvider();
         var logger = new TestLogger<AuditLogger>();
         var correlationIdProvider = new TestCorrelationIdProvider();
-        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider);
+        var auditLogger = new AuditLogger(logger, timeProvider, correlationIdProvider, new TestAuditLogStore());
         
         var auditEvent = new AuditEvent {
             EventType = AuditEventType.PlanGeneration,

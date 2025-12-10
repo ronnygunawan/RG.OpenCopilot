@@ -9,11 +9,17 @@ internal sealed class AuditLogger : IAuditLogger {
     private readonly ILogger<AuditLogger> _logger;
     private readonly TimeProvider _timeProvider;
     private readonly ICorrelationIdProvider _correlationIdProvider;
+    private readonly IAuditLogStore _auditLogStore;
 
-    public AuditLogger(ILogger<AuditLogger> logger, TimeProvider timeProvider, ICorrelationIdProvider correlationIdProvider) {
+    public AuditLogger(
+        ILogger<AuditLogger> logger, 
+        TimeProvider timeProvider, 
+        ICorrelationIdProvider correlationIdProvider,
+        IAuditLogStore auditLogStore) {
         _logger = logger;
         _timeProvider = timeProvider;
         _correlationIdProvider = correlationIdProvider;
+        _auditLogStore = auditLogStore;
     }
 
     public void LogAuditEvent(AuditEvent auditEvent) {
@@ -56,6 +62,31 @@ internal sealed class AuditLogger : IAuditLogger {
             auditEvent.EventType,
             auditEvent.Description,
             JsonSerializer.Serialize(eventData));
+
+        // Persist to audit log store
+        var auditLog = new AuditLog {
+            Id = Guid.NewGuid().ToString(),
+            EventType = auditEvent.EventType,
+            Timestamp = auditEvent.Timestamp,
+            CorrelationId = auditEvent.CorrelationId,
+            Description = auditEvent.Description,
+            Data = auditEvent.Data,
+            Initiator = auditEvent.Initiator,
+            Target = auditEvent.Target,
+            Result = auditEvent.Result,
+            DurationMs = auditEvent.DurationMs,
+            ErrorMessage = auditEvent.ErrorMessage
+        };
+
+        // Store asynchronously without blocking
+        _ = Task.Run(async () => {
+            try {
+                await _auditLogStore.StoreAsync(auditLog);
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "Failed to persist audit log: {EventType}", auditEvent.EventType);
+            }
+        });
     }
 
     public void LogWebhookReceived(string eventType, Dictionary<string, object>? data = null) {
