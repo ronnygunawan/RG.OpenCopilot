@@ -31,6 +31,7 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
     private readonly IJobDispatcher _jobDispatcher;
     private readonly IJobStatusStore _jobStatusStore;
     private readonly BackgroundJobOptions _options;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<GeneratePlanJobHandler> _logger;
 
     public string JobType => JobTypeName;
@@ -44,6 +45,7 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
         IJobDispatcher jobDispatcher,
         IJobStatusStore jobStatusStore,
         BackgroundJobOptions options,
+        TimeProvider timeProvider,
         ILogger<GeneratePlanJobHandler> logger) {
         _taskStore = taskStore;
         _plannerService = plannerService;
@@ -53,6 +55,7 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
         _jobDispatcher = jobDispatcher;
         _jobStatusStore = jobStatusStore;
         _options = options;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -263,7 +266,7 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
         string? errorMessage = null,
         string? resultData = null) {
         var statusInfo = await _jobStatusStore.GetStatusAsync(jobId, cancellationToken);
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().DateTime;
         
         statusInfo = new BackgroundJobStatusInfo {
             JobId = jobId,

@@ -170,8 +170,9 @@ public static class ServiceCollectionExtensions {
             var jobStatusStore = sp.GetRequiredService<IJobStatusStore>();
             var retryPolicyCalculator = sp.GetRequiredService<IRetryPolicyCalculator>();
             var deduplicationService = sp.GetRequiredService<IJobDeduplicationService>();
+            var timeProvider = sp.GetRequiredService<TimeProvider>();
             var logger = sp.GetRequiredService<ILogger<BackgroundJobProcessor>>();
-            return new BackgroundJobProcessor(queue, dispatcher, jobStatusStore, retryPolicyCalculator, deduplicationService, jobOptions, logger);
+            return new BackgroundJobProcessor(queue, dispatcher, jobStatusStore, retryPolicyCalculator, deduplicationService, jobOptions, timeProvider, logger);
         });
 
         return services;

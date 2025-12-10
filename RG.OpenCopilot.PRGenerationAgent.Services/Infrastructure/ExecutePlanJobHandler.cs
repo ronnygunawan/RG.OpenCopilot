@@ -19,6 +19,7 @@ internal sealed class ExecutePlanJobHandler : IJobHandler {
     private readonly IAgentTaskStore _taskStore;
     private readonly IExecutorService _executorService;
     private readonly BackgroundJobOptions _options;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<ExecutePlanJobHandler> _logger;
 
     public string JobType => JobTypeName;
@@ -27,10 +28,12 @@ internal sealed class ExecutePlanJobHandler : IJobHandler {
         IAgentTaskStore taskStore,
         IExecutorService executorService,
         BackgroundJobOptions options,
+        TimeProvider timeProvider,
         ILogger<ExecutePlanJobHandler> logger) {
         _taskStore = taskStore;
         _executorService = executorService;
         _options = options;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -65,7 +68,7 @@ internal sealed class ExecutePlanJobHandler : IJobHandler {
                 var task = await _taskStore.GetTaskAsync(payload.TaskId, cancellationToken);
                 if (task != null) {
                     task.Status = AgentTaskStatus.Failed;
-                    task.CompletedAt = DateTime.UtcNow;
+                    task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
                     await _taskStore.UpdateTaskAsync(task, cancellationToken);
                 }
             }
@@ -83,7 +86,7 @@ internal sealed class ExecutePlanJobHandler : IJobHandler {
                 var task = await _taskStore.GetTaskAsync(payload.TaskId, cancellationToken);
                 if (task != null) {
                     task.Status = AgentTaskStatus.Cancelled;
-                    task.CompletedAt = DateTime.UtcNow;
+                    task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
                     await _taskStore.UpdateTaskAsync(task, cancellationToken);
                 }
             }
@@ -117,7 +120,7 @@ internal sealed class ExecutePlanJobHandler : IJobHandler {
 
         // Update task status
         task.Status = AgentTaskStatus.Executing;
-        task.StartedAt = DateTime.UtcNow;
+        task.StartedAt = _timeProvider.GetUtcNow().DateTime;
         await _taskStore.UpdateTaskAsync(task, cancellationToken);
 
         // Execute plan
@@ -125,7 +128,7 @@ internal sealed class ExecutePlanJobHandler : IJobHandler {
 
         // Update task status
         task.Status = AgentTaskStatus.Completed;
-        task.CompletedAt = DateTime.UtcNow;
+        task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
         await _taskStore.UpdateTaskAsync(task, cancellationToken);
 
         _logger.LogInformation("Successfully executed plan for task {TaskId}", payload.TaskId);
