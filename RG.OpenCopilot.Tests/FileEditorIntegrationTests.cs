@@ -14,7 +14,7 @@ public class FileEditorIntegrationTests {
     public async Task CreateFileAsync_IntegrationTest_CreatesFileInContainer() {
         // Arrange
         var containerManager = CreateRealContainerManager();
-        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>(), new TestAuditLogger());
         string? containerId = null;
 
         try {
@@ -56,7 +56,7 @@ public class FileEditorIntegrationTests {
     public async Task ModifyFileAsync_IntegrationTest_ModifiesExistingFile() {
         // Arrange
         var containerManager = CreateRealContainerManager();
-        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>(), new TestAuditLogger());
         string? containerId = null;
 
         try {
@@ -98,7 +98,7 @@ public class FileEditorIntegrationTests {
     public async Task DeleteFileAsync_IntegrationTest_DeletesFile() {
         // Arrange
         var containerManager = CreateRealContainerManager();
-        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>(), new TestAuditLogger());
         string? containerId = null;
 
         try {
@@ -138,7 +138,7 @@ public class FileEditorIntegrationTests {
     public async Task CompleteWorkflow_IntegrationTest_TracksMixedOperations() {
         // Arrange
         var containerManager = CreateRealContainerManager();
-        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>(), new TestAuditLogger());
         string? containerId = null;
 
         try {
@@ -187,7 +187,7 @@ public class FileEditorIntegrationTests {
     public async Task CreateFileAsync_IntegrationTest_CreatesNestedDirectories() {
         // Arrange
         var containerManager = CreateRealContainerManager();
-        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, CreateLogger<FileEditor>(), new TestAuditLogger());
         string? containerId = null;
 
         try {

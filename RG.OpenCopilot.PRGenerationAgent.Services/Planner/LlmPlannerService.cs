@@ -10,16 +10,25 @@ public sealed class LlmPlannerService : IPlannerService {
     private readonly Kernel _kernel;
     private readonly ILogger<LlmPlannerService> _logger;
     private readonly IChatCompletionService _chatService;
+    private readonly IAuditLogger _auditLogger;
+    private readonly TimeProvider _timeProvider;
 
     public LlmPlannerService(
         Kernel kernel,
-        ILogger<LlmPlannerService> logger) {
+        ILogger<LlmPlannerService> logger,
+        IAuditLogger auditLogger,
+        TimeProvider timeProvider) {
         _kernel = kernel;
         _logger = logger;
         _chatService = kernel.GetRequiredService<IChatCompletionService>();
+        _auditLogger = auditLogger;
+        _timeProvider = timeProvider;
     }
 
     public async Task<AgentPlan> CreatePlanAsync(AgentTaskContext context, CancellationToken cancellationToken = default) {
+        var startTime = _timeProvider.GetUtcNow().DateTime;
+        var correlationId = $"plan-{context.IssueTitle.GetHashCode():X}";
+
         _logger.LogInformation("Creating LLM-powered plan for issue: {IssueTitle}", context.IssueTitle);
 
         try {
@@ -51,10 +60,37 @@ public sealed class LlmPlannerService : IPlannerService {
             var plan = ParsePlanFromResponse(response.Content ?? "{}");
 
             _logger.LogInformation("Plan created with {StepCount} steps", plan.Steps.Count);
+
+            _auditLogger.LogAuditEvent(new AuditEvent {
+                EventType = AuditEventType.PlanGeneration,
+                Timestamp = _timeProvider.GetUtcNow().DateTime,
+                CorrelationId = correlationId,
+                Description = $"Plan generation for issue: {context.IssueTitle}",
+                Data = new Dictionary<string, object> {
+                    ["IssueTitle"] = context.IssueTitle,
+                    ["StepCount"] = plan.Steps.Count
+                },
+                DurationMs = (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                Result = "Success"
+            });
+
             return plan;
         }
         catch (Exception ex) {
             _logger.LogError(ex, "Error creating plan with LLM, falling back to simple plan");
+
+            _auditLogger.LogAuditEvent(new AuditEvent {
+                EventType = AuditEventType.PlanGeneration,
+                Timestamp = _timeProvider.GetUtcNow().DateTime,
+                CorrelationId = correlationId,
+                Description = $"Plan generation failed for issue: {context.IssueTitle}",
+                Data = new Dictionary<string, object> {
+                    ["IssueTitle"] = context.IssueTitle
+                },
+                DurationMs = (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                Result = "Failure",
+                ErrorMessage = ex.Message
+            });
 
             // Fallback to a simple plan if LLM fails
             return CreateFallbackPlan(context);

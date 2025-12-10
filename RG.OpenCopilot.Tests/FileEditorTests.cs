@@ -9,7 +9,7 @@ public class FileEditorTests {
     public async Task CreateFileAsync_CreatesNewFile() {
         // Arrange
         var containerManager = new TestContainerManager();
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
         var content = "Hello, World!";
 
         // Act
@@ -24,7 +24,7 @@ public class FileEditorTests {
     public async Task CreateFileAsync_TracksChange() {
         // Arrange
         var containerManager = new TestContainerManager();
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
         var content = "Hello, World!";
 
         // Act
@@ -44,7 +44,7 @@ public class FileEditorTests {
         // Arrange
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists("existing.txt", content: "existing");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act & Assert
         await Should.ThrowAsync<InvalidOperationException>(
@@ -55,7 +55,7 @@ public class FileEditorTests {
     public async Task CreateFileAsync_CreatesParentDirectory() {
         // Arrange
         var containerManager = new TestContainerManager();
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.CreateFileAsync(containerId: "test-container", filePath: "dir/subdir/test.txt", content: "content");
@@ -69,7 +69,7 @@ public class FileEditorTests {
         // Arrange
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists("test.txt", content: "original");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.ModifyFileAsync(
@@ -86,7 +86,7 @@ public class FileEditorTests {
         // Arrange
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists("test.txt", content: "original");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.ModifyFileAsync(
@@ -107,7 +107,7 @@ public class FileEditorTests {
     public async Task ModifyFileAsync_ThrowsWhenFileDoesNotExist() {
         // Arrange
         var containerManager = new TestContainerManager();
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act & Assert
         await Should.ThrowAsync<InvalidOperationException>(
@@ -122,7 +122,7 @@ public class FileEditorTests {
         // Arrange
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists("test.txt", content: "same");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.ModifyFileAsync(
@@ -140,7 +140,7 @@ public class FileEditorTests {
         // Arrange
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists("test.txt", content: "to delete");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.DeleteFileAsync(containerId: "test-container", filePath: "test.txt");
@@ -154,7 +154,7 @@ public class FileEditorTests {
         // Arrange
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists("test.txt", content: "to delete");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.DeleteFileAsync(containerId: "test-container", filePath: "test.txt");
@@ -172,7 +172,7 @@ public class FileEditorTests {
     public async Task DeleteFileAsync_SkipsWhenFileDoesNotExist() {
         // Arrange
         var containerManager = new TestContainerManager();
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.DeleteFileAsync(containerId: "test-container", filePath: "nonexistent.txt");
@@ -187,7 +187,7 @@ public class FileEditorTests {
         // Arrange
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists("README.md", content: "readme");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act & Assert
         await Should.ThrowAsync<InvalidOperationException>(
@@ -199,7 +199,7 @@ public class FileEditorTests {
         // Arrange
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists(".git/config", content: "git config");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act & Assert
         await Should.ThrowAsync<InvalidOperationException>(
@@ -212,7 +212,7 @@ public class FileEditorTests {
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists("modify.txt", content: "original");
         containerManager.SetFileExists("delete.txt", content: "to delete");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.CreateFileAsync(containerId: "test-container", filePath: "create.txt", content: "new");
@@ -231,7 +231,7 @@ public class FileEditorTests {
     public async Task ClearChanges_RemovesAllTrackedChanges() {
         // Arrange
         var containerManager = new TestContainerManager();
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.CreateFileAsync(containerId: "test-container", filePath: "test.txt", content: "content");
@@ -245,7 +245,7 @@ public class FileEditorTests {
     public async Task GetChanges_ReturnsNewList() {
         // Arrange
         var containerManager = new TestContainerManager();
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.CreateFileAsync(containerId: "test-container", filePath: "test.txt", content: "content");
@@ -262,7 +262,7 @@ public class FileEditorTests {
         // Arrange
         var containerManager = new TestContainerManager();
         containerManager.SetFileExists("existing.txt", content: "v1");
-        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>());
+        var editor = new FileEditor(containerManager, new TestLogger<FileEditor>(), new TestAuditLogger());
 
         // Act
         await editor.CreateFileAsync(containerId: "test-container", filePath: "new1.txt", content: "content1");

@@ -15,6 +15,7 @@ public sealed class ExecutorService : IExecutorService {
     private readonly IProgressReporter _progressReporter;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ExecutorService> _logger;
+    private readonly IAuditLogger _auditLogger;
 
     public ExecutorService(
         IGitHubAppTokenProvider tokenProvider,
@@ -24,7 +25,8 @@ public sealed class ExecutorService : IExecutorService {
         IAgentTaskStore taskStore,
         IProgressReporter progressReporter,
         TimeProvider timeProvider,
-        ILogger<ExecutorService> logger) {
+        ILogger<ExecutorService> logger,
+        IAuditLogger auditLogger) {
         _tokenProvider = tokenProvider;
         _repositoryCloner = repositoryCloner;
         _commandExecutor = commandExecutor;
@@ -33,6 +35,7 @@ public sealed class ExecutorService : IExecutorService {
         _progressReporter = progressReporter;
         _timeProvider = timeProvider;
         _logger = logger;
+        _auditLogger = auditLogger;
     }
 
     public async Task ExecutePlanAsync(AgentTask task, CancellationToken cancellationToken = default) {
@@ -40,7 +43,12 @@ public sealed class ExecutorService : IExecutorService {
             throw new InvalidOperationException("Cannot execute task without a plan");
         }
 
+        var startTime = _timeProvider.GetUtcNow().DateTime;
+        var correlationId = task.Id;
+
         _logger.LogInformation("Starting execution of task {TaskId}", task.Id);
+        _auditLogger.LogPlanExecution(taskId: task.Id, correlationId: correlationId, durationMs: null, success: true);
+
         task.Status = AgentTaskStatus.Executing;
         task.StartedAt = DateTime.UtcNow;
         await _taskStore.UpdateTaskAsync(task, cancellationToken);
@@ -117,6 +125,12 @@ public sealed class ExecutorService : IExecutorService {
                 task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
                 _logger.LogInformation("Task {TaskId} completed successfully", task.Id);
                 
+                _auditLogger.LogPlanExecution(
+                    taskId: task.Id,
+                    correlationId: correlationId,
+                    durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                    success: true);
+                
                 // Finalize the PR: remove [WIP], rewrite description, archive WIP details
                 if (prNumber.HasValue) {
                     await _progressReporter.FinalizePullRequestAsync(task, prNumber.Value, cancellationToken);
@@ -126,12 +140,27 @@ public sealed class ExecutorService : IExecutorService {
                 task.Status = AgentTaskStatus.Failed;
                 task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
                 _logger.LogWarning("Task {TaskId} failed with {FailedCount} failed steps", task.Id, failedSteps.Count);
+
+                _auditLogger.LogPlanExecution(
+                    taskId: task.Id,
+                    correlationId: correlationId,
+                    durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                    success: false,
+                    errorMessage: $"{failedSteps.Count} steps failed");
             }
 
             await _taskStore.UpdateTaskAsync(task, cancellationToken);
         }
         catch (Exception ex) {
             _logger.LogError(ex, "Error executing task {TaskId}", task.Id);
+            
+            _auditLogger.LogPlanExecution(
+                taskId: task.Id,
+                correlationId: correlationId,
+                durationMs: (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds,
+                success: false,
+                errorMessage: ex.Message);
+
             task.Status = AgentTaskStatus.Failed;
             task.CompletedAt = _timeProvider.GetUtcNow().DateTime;
             await _taskStore.UpdateTaskAsync(task, cancellationToken);

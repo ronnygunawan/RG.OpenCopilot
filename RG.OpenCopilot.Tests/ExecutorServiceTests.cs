@@ -22,7 +22,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -55,7 +56,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -101,7 +103,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -142,7 +145,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -189,7 +193,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -232,7 +237,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -326,7 +332,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -366,7 +373,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -409,7 +417,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -449,7 +458,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -494,7 +504,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -535,7 +546,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -576,7 +588,8 @@ public class ExecutorServiceTests {
             taskStore,
             new TestProgressReporter(),
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -618,7 +631,8 @@ public class ExecutorServiceTests {
             taskStore,
             progressReporter,
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -664,7 +678,8 @@ public class ExecutorServiceTests {
             taskStore,
             progressReporter,
             timeProvider,
-            new TestLogger<ExecutorService>());
+            new TestLogger<ExecutorService>(),
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",

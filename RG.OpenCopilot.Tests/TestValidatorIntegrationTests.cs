@@ -27,8 +27,8 @@ public class TestValidatorIntegrationTests : IDisposable {
         _fileEditorLogger = new TestLogger<FileEditor>();
         _validatorLogger = new TestLogger<TestValidator>();
         
-        _containerManager = new DockerContainerManager(commandExecutor: commandExecutor, logger: _containerLogger);
-        _fileEditor = new FileEditor(containerManager: _containerManager, logger: _fileEditorLogger);
+        _containerManager = new DockerContainerManager(commandExecutor: commandExecutor, logger: _containerLogger, auditLogger: new TestAuditLogger(), timeProvider: new FakeTimeProvider());
+        _fileEditor = new FileEditor(containerManager: _containerManager, logger: _fileEditorLogger, auditLogger: new TestAuditLogger());
         
         // Create a minimal kernel with mocked chat service for integration tests
         var chatService = new Mock<IChatCompletionService>();
