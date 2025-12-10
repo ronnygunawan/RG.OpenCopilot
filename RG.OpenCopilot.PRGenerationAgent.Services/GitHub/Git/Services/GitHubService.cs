@@ -19,6 +19,7 @@ public sealed class GitHubService : IGitHubService {
     private readonly IGitHubIssueAdapter _issueAdapter;
     private readonly ILogger<GitHubService> _logger;
     private readonly IAuditLogger _auditLogger;
+    private readonly TimeProvider _timeProvider;
 
     public GitHubService(
         IGitHubRepositoryAdapter repositoryAdapter,
@@ -26,17 +27,23 @@ public sealed class GitHubService : IGitHubService {
         IGitHubPullRequestAdapter pullRequestAdapter,
         IGitHubIssueAdapter issueAdapter,
         ILogger<GitHubService> logger,
-        IAuditLogger auditLogger) {
+        IAuditLogger auditLogger,
+        TimeProvider timeProvider) {
         _repositoryAdapter = repositoryAdapter;
         _gitAdapter = gitAdapter;
         _pullRequestAdapter = pullRequestAdapter;
         _issueAdapter = issueAdapter;
         _logger = logger;
         _auditLogger = auditLogger;
+        _timeProvider = timeProvider;
+    }
+
+    private long CalculateDurationMs(DateTime startTime) {
+        return (long)(_timeProvider.GetUtcNow().DateTime - startTime).TotalMilliseconds;
     }
 
     public async Task<string> CreateWorkingBranchAsync(string owner, string repo, int issueNumber, CancellationToken cancellationToken = default) {
-        var startTime = DateTime.UtcNow;
+        var startTime = _timeProvider.GetUtcNow().DateTime;
         var correlationId = $"branch-{owner}/{repo}/issue-{issueNumber}";
 
         try {
@@ -54,11 +61,10 @@ public sealed class GitHubService : IGitHubService {
                 // Create the new branch from the default branch
                 await _gitAdapter.CreateReferenceAsync(owner, repo, $"refs/heads/{branchName}", sha, cancellationToken);
 
-                var duration = (long)(DateTime.UtcNow - startTime).TotalMilliseconds;
                 _auditLogger.LogGitHubApiCall(
                     operation: "CreateBranch",
                     correlationId: correlationId,
-                    durationMs: duration,
+                    durationMs: CalculateDurationMs(startTime),
                     success: true);
 
                 _logger.LogInformation("Created branch {BranchName} for issue #{IssueNumber}", branchName, issueNumber);
@@ -67,11 +73,10 @@ public sealed class GitHubService : IGitHubService {
             catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.UnprocessableEntity &&
                                            ex.Message.Contains("Reference already exists", StringComparison.OrdinalIgnoreCase)) {
                 // Branch already exists, return it
-                var duration = (long)(DateTime.UtcNow - startTime).TotalMilliseconds;
                 _auditLogger.LogGitHubApiCall(
                     operation: "CreateBranch",
                     correlationId: correlationId,
-                    durationMs: duration,
+                    durationMs: CalculateDurationMs(startTime),
                     success: true);
 
                 _logger.LogInformation("Branch {BranchName} already exists for issue #{IssueNumber}", branchName, issueNumber);
@@ -79,11 +84,10 @@ public sealed class GitHubService : IGitHubService {
             }
         }
         catch (Exception ex) {
-            var duration = (long)(DateTime.UtcNow - startTime).TotalMilliseconds;
             _auditLogger.LogGitHubApiCall(
                 operation: "CreateBranch",
                 correlationId: correlationId,
-                durationMs: duration,
+                durationMs: CalculateDurationMs(startTime),
                 success: false,
                 errorMessage: ex.Message);
             throw;
@@ -91,7 +95,7 @@ public sealed class GitHubService : IGitHubService {
     }
 
     public async Task<int> CreateWipPullRequestAsync(string owner, string repo, string branchName, int issueNumber, string issueTitle, string issueBody, CancellationToken cancellationToken = default) {
-        var startTime = DateTime.UtcNow;
+        var startTime = _timeProvider.GetUtcNow().DateTime;
         var correlationId = $"pr-{owner}/{repo}/issue-{issueNumber}";
 
         try {
@@ -118,11 +122,10 @@ _The plan and progress will be updated here as the agent works on this issue._";
                 body, 
                 cancellationToken);
 
-            var duration = (long)(DateTime.UtcNow - startTime).TotalMilliseconds;
             _auditLogger.LogGitHubApiCall(
                 operation: "CreatePullRequest",
                 correlationId: correlationId,
-                durationMs: duration,
+                durationMs: CalculateDurationMs(startTime),
                 success: true);
             
             _logger.LogInformation("Created WIP PR #{PrNumber} for issue #{IssueNumber}", pr.Number, issueNumber);
@@ -130,11 +133,10 @@ _The plan and progress will be updated here as the agent works on this issue._";
             return pr.Number;
         }
         catch (Exception ex) {
-            var duration = (long)(DateTime.UtcNow - startTime).TotalMilliseconds;
             _auditLogger.LogGitHubApiCall(
                 operation: "CreatePullRequest",
                 correlationId: correlationId,
-                durationMs: duration,
+                durationMs: CalculateDurationMs(startTime),
                 success: false,
                 errorMessage: ex.Message);
             throw;

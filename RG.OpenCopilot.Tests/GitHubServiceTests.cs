@@ -29,7 +29,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act
         var branchName = await service.CreateWorkingBranchAsync("owner", "repo", 1);
@@ -62,7 +63,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act
         var branchName = await service.CreateWorkingBranchAsync("owner", "repo", 1);
@@ -89,7 +91,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act & Assert
         await Should.ThrowAsync<ApiException>(
@@ -117,7 +120,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act
         var prNumber = await service.CreateWipPullRequestAsync("owner", "repo", "feature-branch", 1, "Test Issue", "Issue body");
@@ -145,7 +149,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act & Assert
         await Should.ThrowAsync<ApiException>(
@@ -167,7 +172,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act
         await service.UpdatePullRequestDescriptionAsync("owner", "repo", 42, "Title", "Body");
@@ -200,7 +206,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act
         var prNumber = await service.GetPullRequestNumberForBranchAsync("owner", "repo", "feature-2");
@@ -232,7 +239,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act
         var prNumber = await service.GetPullRequestNumberForBranchAsync("owner", "repo", "nonexistent");
@@ -259,7 +267,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act & Assert
         await Should.ThrowAsync<ApiException>(
@@ -281,7 +290,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act
         await service.PostPullRequestCommentAsync("owner", "repo", 42, "comment");
@@ -312,7 +322,8 @@ public class GitHubServiceTests {
             mockPullRequestAdapter.Object,
             mockIssueAdapter.Object,
             logger,
-            new TestAuditLogger());
+            new TestAuditLogger(),
+            TimeProvider.System);
 
         // Act
         var result = await service.GetPullRequestAsync("owner", "repo", 42);
@@ -331,12 +342,4 @@ public class GitHubServiceTests {
         public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
     }
 
-    private class TestAuditLogger : IAuditLogger {
-        public void LogAuditEvent(AuditEvent auditEvent) { }
-        public void LogWebhookReceived(string eventType, string? correlationId, Dictionary<string, object>? data = null) { }
-        public void LogWebhookValidation(bool isValid, string? correlationId) { }
-        public void LogTaskStateTransition(string taskId, string fromState, string toState, string? correlationId) { }
-        public void LogGitHubApiCall(string operation, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null) { }
-        public void LogJobStateTransition(string jobId, string fromState, string toState, string? correlationId) { }
-    }
 }
