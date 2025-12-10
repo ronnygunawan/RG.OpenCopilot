@@ -421,7 +421,8 @@ public class BackgroundJobProcessingTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -1363,4 +1364,5 @@ public class BackgroundJobProcessingTests {
         public bool IsEnabled(LogLevel logLevel) => false;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
     }
+
 }

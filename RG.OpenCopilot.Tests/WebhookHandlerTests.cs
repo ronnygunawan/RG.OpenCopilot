@@ -17,7 +17,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "opened",
@@ -45,7 +46,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -77,7 +79,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -112,7 +115,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         // Create an existing task
         var existingTask = new AgentTask {
@@ -153,7 +157,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "unlabeled",
@@ -182,7 +187,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -204,6 +210,7 @@ public class WebhookHandlerTests {
         public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
         public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
     }
+
 
     private class TestGitHubService : IGitHubService {
         public bool BranchCreated { get; private set; }

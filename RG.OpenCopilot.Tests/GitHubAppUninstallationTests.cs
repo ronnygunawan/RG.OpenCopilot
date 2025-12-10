@@ -20,7 +20,8 @@ public class GitHubAppUninstallationTests {
             jobDispatcher.Object,
             jobStatusStore,
             timeProvider,
-            logger);
+            logger,
+            new TestAuditLogger());
 
         // Create tasks for the installation
         var task1 = new AgentTask {
@@ -106,7 +107,8 @@ public class GitHubAppUninstallationTests {
             jobDispatcher.Object,
             jobStatusStore,
             timeProvider,
-            logger);
+            logger,
+            new TestAuditLogger());
 
         // Create job statuses for the installation
         var job1 = new BackgroundJobStatusInfo {
@@ -187,7 +189,8 @@ public class GitHubAppUninstallationTests {
             jobDispatcher.Object,
             jobStatusStore,
             timeProvider,
-            logger);
+            logger,
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -229,7 +232,8 @@ public class GitHubAppUninstallationTests {
             jobDispatcher.Object,
             jobStatusStore,
             timeProvider,
-            logger);
+            logger,
+            new TestAuditLogger());
 
         var payload = new GitHubInstallationEventPayload {
             Action = "deleted",
@@ -257,7 +261,8 @@ public class GitHubAppUninstallationTests {
             jobDispatcher.Object,
             jobStatusStore,
             timeProvider,
-            logger);
+            logger,
+            new TestAuditLogger());
 
         var payload = new GitHubInstallationEventPayload {
             Action = "deleted",
@@ -282,7 +287,8 @@ public class GitHubAppUninstallationTests {
             jobDispatcher.Object,
             jobStatusStore,
             timeProvider,
-            logger);
+            logger,
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -322,7 +328,8 @@ public class GitHubAppUninstallationTests {
             jobDispatcher.Object,
             jobStatusStore,
             timeProvider,
-            logger);
+            logger,
+            new TestAuditLogger());
 
         var task = new AgentTask {
             Id = "test/repo/issues/1",
@@ -354,4 +361,5 @@ public class GitHubAppUninstallationTests {
         public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
         public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
     }
+
 }

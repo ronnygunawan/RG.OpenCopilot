@@ -444,6 +444,14 @@ public class RetryFailureHandlingIntegrationTests {
         // Wait for job to complete
         await jobCompleteTcs.Task;
         
+        // Wait for the processor to finish updating job status and releasing idempotency key
+        await Task.Delay(100);
+        
+        // Verify job status is actually completed
+        var job1Status = await statusStore.GetStatusAsync(job1.Id);
+        job1Status.ShouldNotBeNull();
+        job1Status.Status.ShouldBe(BackgroundJobStatus.Completed);
+        
         // Try to dispatch another job with same key
         var job2 = new BackgroundJob {
             Type = "IdempotentJob",
