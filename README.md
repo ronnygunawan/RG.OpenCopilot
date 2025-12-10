@@ -36,11 +36,12 @@ This project is actively under development and should **NOT** be used in product
 - ✅ Git operations (commit, push, branch management)
 - ✅ PR lifecycle management (create, update, finalize)
 - ✅ Repository analysis and custom instructions support
-- ✅ 112 comprehensive unit and integration tests (~64% coverage)
+- ✅ Persistent task storage with PostgreSQL and EF Core
+- ✅ Background job processing with retry and timeout support
+- ✅ Task resumption after application restart (with PostgreSQL)
+- ✅ 123+ comprehensive unit and integration tests
 
 ### Known Limitations
-- No background job processing - long-running tasks may timeout
-- In-memory task storage only - tasks lost on restart
 - Limited error recovery and retry logic
 - Not tested at scale or in production environments
 - API and architecture may change significantly
