@@ -17,7 +17,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "opened",
@@ -45,7 +46,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -77,7 +79,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -112,7 +115,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         // Create an existing task
         var existingTask = new AgentTask {
@@ -153,7 +157,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "unlabeled",
@@ -182,7 +187,8 @@ public class WebhookHandlerTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -203,6 +209,15 @@ public class WebhookHandlerTests {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
         public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+    }
+
+    private class TestAuditLogger : IAuditLogger {
+        public void LogAuditEvent(AuditEvent auditEvent) { }
+        public void LogWebhookReceived(string eventType, string? correlationId, Dictionary<string, object>? data = null) { }
+        public void LogWebhookValidation(bool isValid, string? correlationId) { }
+        public void LogTaskStateTransition(string taskId, string fromState, string toState, string? correlationId) { }
+        public void LogGitHubApiCall(string operation, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null) { }
+        public void LogJobStateTransition(string jobId, string fromState, string toState, string? correlationId) { }
     }
 
     private class TestGitHubService : IGitHubService {

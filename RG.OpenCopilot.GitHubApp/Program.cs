@@ -25,7 +25,29 @@ public partial class Program {
 
         app.MapGet("/health", () => Results.Ok("ok"));
 
-        app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<WebhookEndpoint> logger) => {
+        app.MapGet("/health/detailed", async (IHealthCheckService healthCheckService) => {
+            try {
+                var healthCheck = await healthCheckService.CheckHealthAsync();
+                
+                return healthCheck.Status switch {
+                    HealthStatus.Healthy => Results.Ok(healthCheck),
+                    HealthStatus.Degraded => Results.Ok(healthCheck),
+                    HealthStatus.Unhealthy => Results.Json(healthCheck, statusCode: 503),
+                    _ => Results.Ok(healthCheck)
+                };
+            }
+            catch (Exception ex) {
+                return Results.Json(new {
+                    status = "unhealthy",
+                    error = ex.Message
+                }, statusCode: 500);
+            }
+        });
+
+        app.MapPost("/github/webhook", async (HttpContext context, IWebhookHandler handler, IWebhookValidator validator, IConfiguration config, ILogger<WebhookEndpoint> logger, IAuditLogger auditLogger) => {
+            var correlationId = Guid.NewGuid().ToString();
+            var startTime = DateTime.UtcNow;
+
             try {
                 // Read the request body
                 using var reader = new StreamReader(context.Request.Body);
@@ -35,7 +57,11 @@ public partial class Program {
                 var webhookSecret = config["GitHub:WebhookSecret"];
                 if (!string.IsNullOrEmpty(webhookSecret)) {
                     var signature = context.Request.Headers["X-Hub-Signature-256"].ToString();
-                    if (!validator.ValidateSignature(body, signature, webhookSecret)) {
+                    var isValid = validator.ValidateSignature(body, signature, webhookSecret);
+                    
+                    auditLogger.LogWebhookValidation(isValid, correlationId);
+                    
+                    if (!isValid) {
                         logger.LogWarning("Invalid webhook signature");
                         return Results.Unauthorized();
                     }

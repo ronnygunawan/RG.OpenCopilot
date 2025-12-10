@@ -84,6 +84,10 @@ public static class ServiceCollectionExtensions {
             services.AddSingleton<IAgentTaskStore, InMemoryAgentTaskStore>();
         }
         
+        // Register infrastructure services
+        services.AddSingleton<IAuditLogger, AuditLogger>();
+        services.AddSingleton<IHealthCheckService, HealthCheckService>();
+        
         // Register services
         services.AddSingleton<IPlannerService, LlmPlannerService>();
         services.AddSingleton<ICodeGenerator, CodeGenerator>();

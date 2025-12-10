@@ -421,7 +421,8 @@ public class BackgroundJobProcessingTests {
             jobDispatcher,
             jobStatusStore,
             timeProvider,
-            new TestLogger<WebhookHandler>());
+            new TestLogger<WebhookHandler>(),
+            new TestAuditLogger());
 
         var payload = new GitHubIssueEventPayload {
             Action = "labeled",
@@ -1362,5 +1363,14 @@ public class BackgroundJobProcessingTests {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => false;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
+    }
+
+    private class TestAuditLogger : IAuditLogger {
+        public void LogAuditEvent(AuditEvent auditEvent) { }
+        public void LogWebhookReceived(string eventType, string? correlationId, Dictionary<string, object>? data = null) { }
+        public void LogWebhookValidation(bool isValid, string? correlationId) { }
+        public void LogTaskStateTransition(string taskId, string fromState, string toState, string? correlationId) { }
+        public void LogGitHubApiCall(string operation, string? correlationId, long? durationMs = null, bool success = true, string? errorMessage = null) { }
+        public void LogJobStateTransition(string jobId, string fromState, string toState, string? correlationId) { }
     }
 }
