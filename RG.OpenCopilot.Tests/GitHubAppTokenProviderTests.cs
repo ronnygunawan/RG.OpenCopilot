@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Moq;
 using Octokit;
 using RG.OpenCopilot.PRGenerationAgent.Services;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;

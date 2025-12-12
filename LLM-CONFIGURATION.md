@@ -1,6 +1,27 @@
 # LLM Configuration Guide
 
-RG.OpenCopilot uses Microsoft Semantic Kernel to integrate with various LLM providers for intelligent plan generation. This guide explains how to configure the LLM provider.
+RG.OpenCopilot uses Microsoft Semantic Kernel to integrate with various LLM providers. As of the latest version, it supports **separate AI configurations** for different phases of operation, allowing you to optimize costs and performance.
+
+## Separate AI Configurations
+
+RG.OpenCopilot now supports three separate AI configurations:
+
+### 1. Planner AI (Required)
+- **Used by**: PR Generation Agent and PR Review Agent during the planning phase
+- **Recommended models**: More powerful and expensive models like GPT-4o
+- **Purpose**: Generate comprehensive, high-quality implementation plans
+
+### 2. Executor AI (Required)
+- **Used by**: PR Generation Agent and PR Review Agent during the execution phase  
+- **Recommended models**: Dumber and cheaper models like GPT-4o-mini or GPT-3.5-turbo
+- **Purpose**: Generate code, tests, analyze steps, verify builds
+
+### 3. Thinker AI (Optional)
+- **Used by**: Future Research Agent (not yet implemented)
+- **Recommended models**: Powerful and general models like GPT-4o
+- **Purpose**: Research and analysis tasks
+
+This separation allows you to use expensive, powerful models for planning while using cheaper models for execution, significantly reducing costs without sacrificing quality.
 
 ## Supported Providers
 
@@ -33,54 +54,91 @@ Based on performance and capabilities, the following premium models are recommen
 
 ## Configuration
 
-LLM settings are configured in `appsettings.json` or via environment variables.
+LLM settings are configured in `appsettings.json` or via environment variables. Each AI configuration (Planner, Executor, Thinker) is configured separately.
 
-### OpenAI Configuration
-
-```json
-{
-  "LLM": {
-    "Provider": "OpenAI",
-    "ApiKey": "sk-...",
-    "ModelId": "gpt-4o"
-  }
-}
-```
-
-**Configuration Options:**
-- `Provider`: Set to `"OpenAI"`
-- `ApiKey`: Your OpenAI API key
-- `ModelId`: Model to use
-
-**Supported Model IDs:**
-- `gpt-4o` (recommended for current use)
-- `gpt-4-turbo`
-- `gpt-3.5-turbo`
-- `gpt-5` (when available)
-- `gpt-5-codex` (when available)
-- `gpt-5.1` (when available)
-- `gpt-5.1-codex` (when available)
-
-### Azure OpenAI Configuration
+### Complete Configuration Example
 
 ```json
 {
   "LLM": {
-    "Provider": "AzureOpenAI",
-    "ApiKey": "your-azure-api-key",
-    "AzureEndpoint": "https://your-resource.openai.azure.com",
-    "AzureDeployment": "your-deployment-name"
+    "Planner": {
+      "Provider": "OpenAI",
+      "ApiKey": "sk-planner-...",
+      "ModelId": "gpt-4o"
+    },
+    "Executor": {
+      "Provider": "OpenAI",
+      "ApiKey": "sk-executor-...",
+      "ModelId": "gpt-4o-mini"
+    },
+    "Thinker": {
+      "Provider": "OpenAI",
+      "ApiKey": "sk-thinker-...",
+      "ModelId": "gpt-4o"
+    }
   }
 }
 ```
 
-**Configuration Options:**
-- `Provider`: Set to `"AzureOpenAI"`
-- `ApiKey`: Your Azure OpenAI API key
-- `AzureEndpoint`: Your Azure OpenAI endpoint URL
-- `AzureDeployment`: The deployment name you configured in Azure
+### Planner Configuration (Required)
 
-Azure OpenAI supports the same models as OpenAI once deployed to your Azure resource.
+**OpenAI Example:**
+```json
+{
+  "LLM": {
+    "Planner": {
+      "Provider": "OpenAI",
+      "ApiKey": "sk-...",
+      "ModelId": "gpt-4o"
+    }
+  }
+}
+```
+
+**Azure OpenAI Example:**
+```json
+{
+  "LLM": {
+    "Planner": {
+      "Provider": "AzureOpenAI",
+      "ApiKey": "your-azure-api-key",
+      "AzureEndpoint": "https://your-resource.openai.azure.com",
+      "AzureDeployment": "your-planner-deployment-name"
+    }
+  }
+}
+```
+
+### Executor Configuration (Required)
+
+**OpenAI Example:**
+```json
+{
+  "LLM": {
+    "Executor": {
+      "Provider": "OpenAI",
+      "ApiKey": "sk-...",
+      "ModelId": "gpt-4o-mini"
+    }
+  }
+}
+```
+
+### Thinker Configuration (Optional)
+
+The Thinker configuration is optional and only needed when the Research Agent is implemented:
+
+```json
+{
+  "LLM": {
+    "Thinker": {
+      "Provider": "OpenAI",
+      "ApiKey": "sk-...",
+      "ModelId": "gpt-4o"
+    }
+  }
+}
+```
 
 ## Adding Support for Claude and Gemini
 
@@ -118,19 +176,35 @@ For Gemini models (2.5 Pro, 3 Pro), future implementation would use:
 
 ## Environment Variables
 
-You can also configure the LLM using environment variables, which is recommended for production deployments:
+You can also configure each AI separately using environment variables:
 
+### Planner Configuration
 ```bash
-# OpenAI
-export LLM__Provider="OpenAI"
-export LLM__ApiKey="sk-..."
-export LLM__ModelId="gpt-4o"
+export LLM__Planner__Provider="OpenAI"
+export LLM__Planner__ApiKey="sk-..."
+export LLM__Planner__ModelId="gpt-4o"
+```
 
-# Azure OpenAI
-export LLM__Provider="AzureOpenAI"
-export LLM__ApiKey="your-azure-api-key"
-export LLM__AzureEndpoint="https://your-resource.openai.azure.com"
-export LLM__AzureDeployment="your-deployment-name"
+### Executor Configuration
+```bash
+export LLM__Executor__Provider="OpenAI"
+export LLM__Executor__ApiKey="sk-..."
+export LLM__Executor__ModelId="gpt-4o-mini"
+```
+
+### Thinker Configuration (Optional)
+```bash
+export LLM__Thinker__Provider="OpenAI"
+export LLM__Thinker__ApiKey="sk-..."
+export LLM__Thinker__ModelId="gpt-4o"
+```
+
+**Azure OpenAI Example:**
+```bash
+export LLM__Planner__Provider="AzureOpenAI"
+export LLM__Planner__ApiKey="your-azure-api-key"
+export LLM__Planner__AzureEndpoint="https://your-resource.openai.azure.com"
+export LLM__Planner__AzureDeployment="your-deployment-name"
 ```
 
 Note: Environment variables use double underscores (`__`) as section separators in .NET.
@@ -199,15 +273,28 @@ The `RepositoryAnalyzer` automatically detects:
 
 This context is included in the planner prompt to help the LLM generate more accurate and context-aware implementation plans.
 
-## Model Recommendations
+## Recommended Models
 
-### For Planning (Premium Models)
-
-- **OpenAI GPT-4o**: Best balance of cost and quality
-- **OpenAI GPT-4 Turbo**: Excellent for complex planning
+### For Planner (Premium Models)
+- **OpenAI GPT-4o**: Best balance of cost and quality for complex planning tasks
+- **OpenAI GPT-4 Turbo**: Excellent for generating detailed implementation plans
 - **Azure OpenAI GPT-4**: Same quality as OpenAI with Azure integration
 
-Planning uses relatively low token counts (typically 1000-4000 tokens per plan), so the cost impact is minimal.
+The Planner uses relatively low token counts (typically 1000-4000 tokens per plan), so using premium models has minimal cost impact while significantly improving plan quality.
+
+### For Executor (Cost-Effective Models)
+- **OpenAI GPT-4o-mini**: Recommended - excellent for code generation at lower cost
+- **OpenAI GPT-3.5-turbo**: Budget option for simple code generation tasks
+- **Azure OpenAI GPT-3.5**: Cost-effective Azure option
+
+The Executor is called multiple times during execution (for code generation, test generation, step analysis), so using cheaper models here significantly reduces overall costs.
+
+### For Thinker (General-Purpose Models)
+- **OpenAI GPT-4o**: Best for complex research and analysis
+- **OpenAI GPT-4 Turbo**: Excellent for in-depth investigations
+- **Azure OpenAI GPT-4**: Azure-hosted option
+
+The Thinker is only used by the Research Agent (not yet implemented), so this configuration is optional.
 
 ### Temperature Setting
 
@@ -240,9 +327,49 @@ The planner uses `Temperature = 0.3` for more deterministic and consistent plann
 3. Check that your API key has access to the deployment
 4. Verify network connectivity to Azure OpenAI endpoint
 
-## Cost Optimization
+## Cost Optimization Strategies
 
-- Use the fallback `SimplePlannerService` for development/testing
-- Configure appropriate rate limits in your LLM provider dashboard
-- Monitor token usage via application logging
-- Consider caching plans for similar issues (future enhancement)
+With separate AI configurations, you can optimize costs while maintaining quality:
+
+1. **Use Premium Models for Planning**: The Planner is called only once per task and generates the overall strategy, so use the best models (GPT-4o) for maximum quality.
+
+2. **Use Budget Models for Execution**: The Executor is called many times (code generation, test generation, build fixes), so use cheaper models (GPT-4o-mini or GPT-3.5-turbo) to minimize cumulative costs.
+
+3. **Mix Providers**: You can use different providers for each AI:
+   ```json
+   {
+     "LLM": {
+       "Planner": {
+         "Provider": "AzureOpenAI",
+         "ApiKey": "...",
+         "AzureEndpoint": "...",
+         "AzureDeployment": "gpt-4o"
+       },
+       "Executor": {
+         "Provider": "OpenAI",
+         "ApiKey": "...",
+         "ModelId": "gpt-4o-mini"
+       }
+     }
+   }
+   ```
+
+4. **Share API Keys**: You can use the same API key for all three AIs if desired:
+   ```json
+   {
+     "LLM": {
+       "Planner": {
+         "Provider": "OpenAI",
+         "ApiKey": "sk-shared-key",
+         "ModelId": "gpt-4o"
+       },
+       "Executor": {
+         "Provider": "OpenAI",
+         "ApiKey": "sk-shared-key",
+         "ModelId": "gpt-4o-mini"
+       }
+     }
+   }
+   ```
+
+5. **Monitor Usage**: Track token usage separately for planning and execution phases to understand where costs are coming from and adjust model selection accordingly.

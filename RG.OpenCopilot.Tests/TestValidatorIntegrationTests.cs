@@ -1,4 +1,5 @@
 using RG.OpenCopilot.PRGenerationAgent.Services;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -39,7 +40,7 @@ public class TestValidatorIntegrationTests : IDisposable {
         _validator = new TestValidator(
             containerManager: _containerManager,
             fileEditor: _fileEditor,
-            kernel: kernel,
+            executorKernel: new ExecutorKernel(kernel),
             logger: _validatorLogger);
         
         // Create test container

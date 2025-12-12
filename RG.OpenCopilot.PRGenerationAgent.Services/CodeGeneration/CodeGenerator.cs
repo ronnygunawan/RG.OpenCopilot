@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Octokit;
 using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
 
@@ -18,12 +19,12 @@ public sealed class CodeGenerator : ICodeGenerator {
     private string? _cachedRepositoryName;
 
     public CodeGenerator(
-        Kernel kernel,
+        ExecutorKernel executorKernel,
         ILogger<CodeGenerator> logger,
         IGitHubClient gitHubClient) {
-        _kernel = kernel;
+        _kernel = executorKernel.Kernel;
         _logger = logger;
-        _chatService = kernel.GetRequiredService<IChatCompletionService>();
+        _chatService = executorKernel.Kernel.GetRequiredService<IChatCompletionService>();
         _gitHubClient = gitHubClient;
     }
 

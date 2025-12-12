@@ -4,6 +4,7 @@ using Moq;
 using RG.OpenCopilot.PRGenerationAgent.DependencyManagement.Models;
 using RG.OpenCopilot.PRGenerationAgent.DependencyManagement.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.DependencyManagement;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
@@ -16,7 +17,7 @@ public class DependencyManagerNegativeTests {
         containerManager.SetupNoPackageFiles();
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -52,7 +53,7 @@ public class DependencyManagerNegativeTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -87,7 +88,7 @@ public class DependencyManagerNegativeTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -106,7 +107,7 @@ public class DependencyManagerNegativeTests {
         containerManager.ThrowOnExecute = true;
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -140,7 +141,7 @@ public class DependencyManagerNegativeTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -155,7 +156,7 @@ public class DependencyManagerNegativeTests {
         var containerManager = new TestContainerManagerForDependencyManagerNegative();
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act - With an unconfigured kernel, the call will fail
         var result = await manager.RecommendPackagesAsync(
@@ -176,7 +177,7 @@ public class DependencyManagerNegativeTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
         var package = new Package {
             Name = "requests",
             Version = "2.31.0",
@@ -199,7 +200,7 @@ public class DependencyManagerNegativeTests {
         };
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(new TestContainerManagerForDependencyManagerNegative(), kernel, logger);
+        var manager = new DependencyManager(new TestContainerManagerForDependencyManagerNegative(), new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ResolveVersionConflictsAsync(dependencies);
@@ -224,7 +225,7 @@ public class DependencyManagerNegativeTests {
         }, pattern: "package.json");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");

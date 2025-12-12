@@ -3,6 +3,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.Planner;
 
@@ -14,13 +15,13 @@ public sealed class LlmPlannerService : IPlannerService {
     private readonly TimeProvider _timeProvider;
 
     public LlmPlannerService(
-        Kernel kernel,
+        PlannerKernel plannerKernel,
         ILogger<LlmPlannerService> logger,
         IAuditLogger auditLogger,
         TimeProvider timeProvider) {
-        _kernel = kernel;
+        _kernel = plannerKernel.Kernel;
         _logger = logger;
-        _chatService = kernel.GetRequiredService<IChatCompletionService>();
+        _chatService = plannerKernel.Kernel.GetRequiredService<IChatCompletionService>();
         _auditLogger = auditLogger;
         _timeProvider = timeProvider;
     }

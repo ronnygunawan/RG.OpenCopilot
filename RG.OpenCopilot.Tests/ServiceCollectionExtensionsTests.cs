@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel;
 using Octokit;
 using RG.OpenCopilot.PRGenerationAgent.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure.Persistence;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
@@ -18,9 +19,12 @@ public class ServiceCollectionExtensionsTests {
         services.AddSingleton(TimeProvider.System); // Add TimeProvider
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OpenAI",
-                ["LLM:ApiKey"] = "test-api-key",
-                ["LLM:ModelId"] = "gpt-4o"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o"
             })
             .Build();
         services.AddSingleton<IConfiguration>(configuration); // Register configuration
@@ -30,7 +34,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
         serviceProvider.GetService<IPlannerService>().ShouldNotBeNull();
         serviceProvider.GetService<ICodeGenerator>().ShouldNotBeNull();
         serviceProvider.GetService<IExecutorService>().ShouldNotBeNull();
@@ -61,10 +66,14 @@ public class ServiceCollectionExtensionsTests {
         services.AddSingleton(TimeProvider.System); // Add TimeProvider
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "AzureOpenAI",
-                ["LLM:ApiKey"] = "test-api-key",
-                ["LLM:AzureEndpoint"] = "https://test.openai.azure.com",
-                ["LLM:AzureDeployment"] = "gpt-4o"
+                ["LLM:Planner:Provider"] = "AzureOpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:AzureEndpoint"] = "https://test.openai.azure.com",
+                ["LLM:Planner:AzureDeployment"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "AzureOpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:AzureEndpoint"] = "https://test.openai.azure.com",
+                ["LLM:Executor:AzureDeployment"] = "gpt-4o"
             })
             .Build();
 
@@ -73,7 +82,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
         serviceProvider.GetService<IPlannerService>().ShouldNotBeNull();
     }
 
@@ -83,8 +93,12 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OpenAI",
-                ["LLM:ApiKey"] = "test-api-key"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o"
                 // ModelId not specified
             })
             .Build();
@@ -94,7 +108,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert - Should not throw and kernel should be registered
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
     }
 
     [Fact]
@@ -103,8 +118,13 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:ApiKey"] = "test-api-key"
-                // Provider not specified
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o"
+                // Provider defaulted to OpenAI
             })
             .Build();
 
@@ -113,7 +133,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert - Should not throw and kernel should be registered
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
     }
 
     [Fact]
@@ -122,16 +143,16 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OpenAI"
+                ["LLM:Planner:Provider"] = "OpenAI"
                 // ApiKey missing
             })
             .Build();
 
         // Act & Assert
-        var exception = Should.Throw<InvalidProgramException>(() => 
+        var exception = Should.Throw<InvalidOperationException>(() =>
             services.AddPRGenerationAgentServices(configuration));
         
-        exception.Message.ShouldBe("Unconfigured LLM:ApiKey");
+        exception.Message.ShouldContain("Planner AI configuration is required");
     }
 
     [Fact]
@@ -140,9 +161,12 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "AzureOpenAI",
-                ["LLM:ApiKey"] = "test-api-key",
-                ["LLM:AzureDeployment"] = "gpt-4o"
+                ["LLM:Planner:Provider"] = "AzureOpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:AzureDeployment"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "AzureOpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:AzureDeployment"] = "gpt-4o"
                 // AzureEndpoint missing
             })
             .Build();
@@ -151,7 +175,7 @@ public class ServiceCollectionExtensionsTests {
         var exception = Should.Throw<InvalidOperationException>(() => 
             services.AddPRGenerationAgentServices(configuration));
         
-        exception.Message.ShouldBe("Azure OpenAI requires LLM:AzureEndpoint and LLM:AzureDeployment configuration");
+        exception.Message.ShouldContain("Planner Azure OpenAI configuration requires AzureEndpoint and AzureDeployment");
     }
 
     [Fact]
@@ -160,9 +184,12 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "AzureOpenAI",
-                ["LLM:ApiKey"] = "test-api-key",
-                ["LLM:AzureEndpoint"] = "https://test.openai.azure.com"
+                ["LLM:Planner:Provider"] = "AzureOpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:AzureEndpoint"] = "https://test.openai.azure.com",
+                ["LLM:Executor:Provider"] = "AzureOpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:AzureEndpoint"] = "https://test.openai.azure.com"
                 // AzureDeployment missing
             })
             .Build();
@@ -171,7 +198,7 @@ public class ServiceCollectionExtensionsTests {
         var exception = Should.Throw<InvalidOperationException>(() => 
             services.AddPRGenerationAgentServices(configuration));
         
-        exception.Message.ShouldBe("Azure OpenAI requires LLM:AzureEndpoint and LLM:AzureDeployment configuration");
+        exception.Message.ShouldContain("Planner Azure OpenAI configuration requires AzureEndpoint and AzureDeployment");
     }
 
     [Fact]
@@ -199,8 +226,12 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OpenAI",
-                ["LLM:ApiKey"] = "test-api-key",
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o",
                 ["GitHub:Token"] = "test-github-token"
             })
             .Build();
@@ -220,8 +251,12 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OpenAI",
-                ["LLM:ApiKey"] = "test-api-key"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o"
                 // No GitHub token
             })
             .Build();
@@ -243,8 +278,12 @@ public class ServiceCollectionExtensionsTests {
         services.AddSingleton(TimeProvider.System); // Add TimeProvider
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OpenAI",
-                ["LLM:ApiKey"] = "test-api-key"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o"
             })
             .Build();
         services.AddSingleton<IConfiguration>(configuration); // Register configuration
@@ -269,8 +308,12 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OpenAI",
-                ["LLM:ApiKey"] = "test-api-key"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o"
             })
             .Build();
 
@@ -297,7 +340,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert - Should not throw and kernel should be registered
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
     }
 
     [Fact]
@@ -306,8 +350,12 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OpenAI",
-                ["LLM:ApiKey"] = "test-api-key"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o"
             })
             .Build();
 
@@ -333,8 +381,12 @@ public class ServiceCollectionExtensionsTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OpenAI",
-                ["LLM:ApiKey"] = "test-api-key"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o"
             })
             .Build();
 
