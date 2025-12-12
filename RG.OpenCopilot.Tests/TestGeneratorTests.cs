@@ -6,6 +6,7 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Moq;
 using Shouldly;
 using RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 namespace RG.OpenCopilot.Tests;
 
@@ -79,7 +80,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -128,7 +129,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -170,7 +171,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -220,7 +221,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -267,7 +268,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -296,7 +297,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -347,7 +348,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -380,7 +381,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -448,7 +449,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -479,7 +480,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -534,7 +535,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -591,7 +592,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -663,7 +664,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -723,7 +724,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -768,7 +769,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act & Assert
@@ -819,7 +820,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -873,7 +874,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -902,7 +903,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -956,7 +957,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1001,7 +1002,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1065,7 +1066,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1124,7 +1125,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1176,7 +1177,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1218,7 +1219,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1264,7 +1265,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1317,7 +1318,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1364,7 +1365,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1413,7 +1414,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1452,7 +1453,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1509,7 +1510,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1575,7 +1576,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1636,7 +1637,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1697,7 +1698,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1793,7 +1794,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1843,7 +1844,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1874,7 +1875,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1927,7 +1928,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -1977,7 +1978,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -2027,7 +2028,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -2068,7 +2069,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -2112,7 +2113,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -2170,7 +2171,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act
@@ -2214,7 +2215,7 @@ public class TestGeneratorTests {
         var generator = new TestGenerator(
             mockContainerManager.Object,
             mockFileAnalyzer.Object,
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object);
 
         // Act

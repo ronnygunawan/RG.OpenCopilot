@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Moq;
 using RG.OpenCopilot.PRGenerationAgent;
 using RG.OpenCopilot.PRGenerationAgent.Services;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
@@ -1194,7 +1195,7 @@ public class StepAnalyzerTests {
         var kernel = kernelBuilder.Build();
 
         return new StepAnalyzer(
-            kernel: kernel,
+            executorKernel: new ExecutorKernel(kernel),
             fileAnalyzer: mockFileAnalyzer,
             containerManager: mockContainerManager,
             logger: logger);

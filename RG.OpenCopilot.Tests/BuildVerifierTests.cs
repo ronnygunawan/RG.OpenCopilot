@@ -1,7 +1,9 @@
 using Moq;
 using RG.OpenCopilot.PRGenerationAgent;
 using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using RG.OpenCopilot.PRGenerationAgent.Services.Executor;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Shouldly;
@@ -32,7 +34,7 @@ public class BuildVerifierTests {
         _verifier = new BuildVerifier(
             containerManager: _containerManager.Object,
             fileEditor: _fileEditor.Object,
-            kernel: _kernel,
+            executorKernel: new ExecutorKernel(_kernel),
             logger: _logger);
     }
 

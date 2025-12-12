@@ -7,6 +7,7 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Moq;
 using RG.OpenCopilot.PRGenerationAgent;
 using RG.OpenCopilot.PRGenerationAgent.Services;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
@@ -108,7 +109,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -156,7 +157,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -196,7 +197,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -234,7 +235,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -289,7 +290,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -350,7 +351,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -410,7 +411,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -463,7 +464,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await service.CreatePlanAsync(context, cts.Token);
@@ -514,7 +515,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -564,7 +565,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -613,7 +614,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await service.CreatePlanAsync(context);
@@ -650,7 +651,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         var plan = await service.CreatePlanAsync(context);
@@ -706,7 +707,7 @@ public class LlmPlannerServiceTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var service = new LlmPlannerService(kernel, mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
+        var service = new LlmPlannerService(new PlannerKernel(kernel), mockLogger.Object, new TestAuditLogger(), new FakeTimeProvider());
 
         // Act
         await service.CreatePlanAsync(context);
