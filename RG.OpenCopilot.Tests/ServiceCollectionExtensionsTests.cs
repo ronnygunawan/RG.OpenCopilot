@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel;
 using Octokit;
 using RG.OpenCopilot.PRGenerationAgent.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure.Persistence;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
@@ -33,7 +34,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
         serviceProvider.GetService<IPlannerService>().ShouldNotBeNull();
         serviceProvider.GetService<ICodeGenerator>().ShouldNotBeNull();
         serviceProvider.GetService<IExecutorService>().ShouldNotBeNull();
@@ -80,7 +82,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
         serviceProvider.GetService<IPlannerService>().ShouldNotBeNull();
     }
 
@@ -105,7 +108,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert - Should not throw and kernel should be registered
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
     }
 
     [Fact]
@@ -129,7 +133,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert - Should not throw and kernel should be registered
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
     }
 
     [Fact]
@@ -335,7 +340,8 @@ public class ServiceCollectionExtensionsTests {
         var serviceProvider = services.BuildServiceProvider();
 
         // Assert - Should not throw and kernel should be registered
-        serviceProvider.GetService<Kernel>().ShouldNotBeNull();
+        serviceProvider.GetService<PlannerKernel>().ShouldNotBeNull();
+        serviceProvider.GetService<ExecutorKernel>().ShouldNotBeNull();
     }
 
     [Fact]
