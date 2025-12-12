@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using RG.OpenCopilot.PRGenerationAgent;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.Executor;
 
@@ -19,12 +20,12 @@ public sealed class StepAnalyzer : IStepAnalyzer {
     private readonly ILogger<StepAnalyzer> _logger;
 
     public StepAnalyzer(
-        Kernel kernel,
+        ExecutorKernel executorKernel,
         IFileAnalyzer fileAnalyzer,
         IContainerManager containerManager,
         ILogger<StepAnalyzer> logger) {
-        _kernel = kernel;
-        _chatService = kernel.GetRequiredService<IChatCompletionService>();
+        _kernel = executorKernel.Kernel;
+        _chatService = executorKernel.Kernel.GetRequiredService<IChatCompletionService>();
         _fileAnalyzer = fileAnalyzer;
         _containerManager = containerManager;
         _logger = logger;

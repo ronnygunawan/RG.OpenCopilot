@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
 
@@ -20,13 +21,13 @@ public sealed class TestGenerator : ITestGenerator {
     public TestGenerator(
         IContainerManager containerManager,
         IFileAnalyzer fileAnalyzer,
-        Kernel kernel,
+        ExecutorKernel executorKernel,
         ILogger<TestGenerator> logger) {
         _containerManager = containerManager;
         _fileAnalyzer = fileAnalyzer;
-        _kernel = kernel;
+        _kernel = executorKernel.Kernel;
         _logger = logger;
-        _chatService = kernel.GetRequiredService<IChatCompletionService>();
+        _chatService = executorKernel.Kernel.GetRequiredService<IChatCompletionService>();
     }
 
     public async Task<string> GenerateTestsAsync(

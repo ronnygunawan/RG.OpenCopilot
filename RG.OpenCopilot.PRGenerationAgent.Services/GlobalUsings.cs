@@ -1,6 +1,7 @@
 // Global usings for RG.OpenCopilot.PRGenerationAgent.Services
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.Logging;
+global using RG.OpenCopilot.PRGenerationAgent.Configuration.Models;
 global using RG.OpenCopilot.PRGenerationAgent.Planning.Models;
 global using RG.OpenCopilot.PRGenerationAgent.Planning.Services;
 global using RG.OpenCopilot.PRGenerationAgent.Execution.Models;

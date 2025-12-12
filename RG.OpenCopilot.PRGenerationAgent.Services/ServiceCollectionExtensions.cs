@@ -31,46 +31,37 @@ public static class ServiceCollectionExtensions {
         this IServiceCollection services,
         IConfiguration configuration) {
         
-        // Configure Semantic Kernel
-        var kernelBuilder = Kernel.CreateBuilder();
+        // Load LLM configurations
+        var llmConfigurations = new LlmConfigurations();
+        configuration.GetSection("LLM").Bind(llmConfigurations);
 
-        // Configure LLM provider based on configuration
-        var llmProvider = configuration["LLM:Provider"] ?? "OpenAI";
-        var apiKey = configuration["LLM:ApiKey"] ?? throw new InvalidProgramException("Unconfigured LLM:ApiKey");
-        var modelId = configuration["LLM:ModelId"] ?? "gpt-4o";
-
-        // Configure the appropriate LLM provider
-        switch (llmProvider.ToLowerInvariant()) {
-            case "openai":
-                // Supports GPT-4o, GPT-5, GPT-5-Codex, GPT-5.1, GPT-5.1-Codex (when available)
-                kernelBuilder.AddOpenAIChatCompletion(
-                    modelId: modelId,
-                    apiKey: apiKey);
-                break;
-
-            case "azureopenai":
-                var azureEndpoint = configuration["LLM:AzureEndpoint"];
-                var azureDeployment = configuration["LLM:AzureDeployment"];
-
-                if (string.IsNullOrEmpty(azureEndpoint) || string.IsNullOrEmpty(azureDeployment)) {
-                    throw new InvalidOperationException(
-                        "Azure OpenAI requires LLM:AzureEndpoint and LLM:AzureDeployment configuration");
-                }
-
-                kernelBuilder.AddAzureOpenAIChatCompletion(
-                    deploymentName: azureDeployment,
-                    endpoint: azureEndpoint,
-                    apiKey: apiKey);
-                break;
-
-            default:
-                throw new InvalidOperationException(
-                    $"Unsupported LLM provider: {llmProvider}. Supported providers: OpenAI, AzureOpenAI. " +
-                    $"For Claude or Gemini models, use OpenAI-compatible endpoints or extend with custom connectors.");
+        // Create and register Planner Kernel
+        if (llmConfigurations.Planner.IsValid()) {
+            var plannerKernel = KernelFactory.CreateKernel(llmConfigurations.Planner, "Planner");
+            services.AddSingleton(new PlannerKernel(plannerKernel));
+        } else {
+            throw new InvalidOperationException(
+                "Planner AI configuration is required. Set LLM:Planner:Provider and LLM:Planner:ApiKey.");
         }
 
-        var kernel = kernelBuilder.Build();
-        services.AddSingleton(kernel);
+        // Create and register Executor Kernel
+        if (llmConfigurations.Executor.IsValid()) {
+            var executorKernel = KernelFactory.CreateKernel(llmConfigurations.Executor, "Executor");
+            services.AddSingleton(new ExecutorKernel(executorKernel));
+        } else {
+            throw new InvalidOperationException(
+                "Executor AI configuration is required. Set LLM:Executor:Provider and LLM:Executor:ApiKey.");
+        }
+
+        // Create and register Thinker Kernel (optional for now, as Research Agent doesn't exist yet)
+        if (llmConfigurations.Thinker.IsValid()) {
+            var thinkerKernel = KernelFactory.CreateKernel(llmConfigurations.Thinker, "Thinker");
+            services.AddSingleton(new ThinkerKernel(thinkerKernel));
+        }
+        // Note: Thinker is optional since Research Agent doesn't exist yet
+        
+        // Register the configuration itself for reference
+        services.AddSingleton(llmConfigurations);
         
         // Configure Database
         var connectionString = configuration.GetConnectionString("AgentTaskDatabase");

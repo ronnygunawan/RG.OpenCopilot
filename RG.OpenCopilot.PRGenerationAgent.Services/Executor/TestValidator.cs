@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.Executor;
 
@@ -34,13 +35,13 @@ public sealed class TestValidator : ITestValidator {
     public TestValidator(
         IContainerManager containerManager,
         IFileEditor fileEditor,
-        Kernel kernel,
+        ExecutorKernel executorKernel,
         ILogger<TestValidator> logger) {
         _containerManager = containerManager;
         _fileEditor = fileEditor;
-        _kernel = kernel;
+        _kernel = executorKernel.Kernel;
         _logger = logger;
-        _chatService = kernel.GetRequiredService<IChatCompletionService>();
+        _chatService = executorKernel.Kernel.GetRequiredService<IChatCompletionService>();
     }
 
     public async Task<TestValidationResult> RunAndValidateTestsAsync(string containerId, int maxRetries = 2, CancellationToken cancellationToken = default) {
