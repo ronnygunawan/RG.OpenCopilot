@@ -467,6 +467,18 @@ public class ContainerExecutorServiceTests {
         public Task<string> GetInstallationTokenAsync(long installationId, CancellationToken cancellationToken = default) {
             return Task.FromResult("test-token");
         }
+
+        public Task<AppInstallationPermissions> GetInstallationPermissionsAsync(long installationId, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new AppInstallationPermissions {
+                HasContents = true,
+                HasIssues = true,
+                HasPullRequests = true,
+                HasWorkflows = true
+            });
+        }
+
+        public void ClearCache() {
+        }
     }
 
     private class TestContainerManager : IContainerManager {
@@ -584,6 +596,18 @@ public class ContainerExecutorServiceTests {
     private class TestTokenProviderReturningEmpty : IGitHubAppTokenProvider {
         public Task<string> GetInstallationTokenAsync(long installationId, CancellationToken cancellationToken = default) {
             return Task.FromResult("");
+        }
+
+        public Task<AppInstallationPermissions> GetInstallationPermissionsAsync(long installationId, CancellationToken cancellationToken = default) {
+            return Task.FromResult(new AppInstallationPermissions {
+                HasContents = true,
+                HasIssues = true,
+                HasPullRequests = true,
+                HasWorkflows = true
+            });
+        }
+
+        public void ClearCache() {
         }
     }
 

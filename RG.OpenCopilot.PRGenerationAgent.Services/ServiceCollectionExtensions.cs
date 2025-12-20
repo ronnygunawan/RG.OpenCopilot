@@ -104,6 +104,7 @@ public static class ServiceCollectionExtensions {
         services.AddSingleton<IJwtTokenGenerator>(sp => 
             new JwtTokenGenerator(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IGitHubAppTokenProvider, GitHubAppTokenProvider>();
+        services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.AddSingleton<IContainerManager, DockerContainerManager>();
         services.AddSingleton<ICommandExecutor, ProcessCommandExecutor>();
         services.AddSingleton<IExecutorService, ContainerExecutorService>();
