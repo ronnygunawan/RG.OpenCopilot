@@ -24,13 +24,13 @@ public sealed class BuildVerifier : IBuildVerifier {
     public BuildVerifier(
         IContainerManager containerManager,
         IFileEditor fileEditor,
-        Kernel kernel,
+        ExecutorKernel executorKernel,
         ILogger<BuildVerifier> logger) {
         _containerManager = containerManager;
         _fileEditor = fileEditor;
-        _kernel = kernel;
+        _kernel = executorKernel.Kernel;
         _logger = logger;
-        _chatService = kernel.GetRequiredService<IChatCompletionService>();
+        _chatService = executorKernel.Kernel.GetRequiredService<IChatCompletionService>();
     }
 
     public async Task<BuildResult> VerifyBuildAsync(string containerId, int maxRetries = 3, CancellationToken cancellationToken = default) {

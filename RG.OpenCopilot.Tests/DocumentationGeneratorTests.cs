@@ -5,6 +5,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Moq;
 using Shouldly;
 using RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 namespace RG.OpenCopilot.Tests;
 
@@ -58,7 +59,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -125,7 +126,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -190,7 +191,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -221,7 +222,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -248,7 +249,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -323,7 +324,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -385,7 +386,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -416,7 +417,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -445,7 +446,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -532,7 +533,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -570,7 +571,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -632,7 +633,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -662,7 +663,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -746,7 +747,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -812,7 +813,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -843,7 +844,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -872,7 +873,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -901,7 +902,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -968,7 +969,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -998,7 +999,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1025,7 +1026,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1088,7 +1089,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1154,7 +1155,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1214,7 +1215,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1273,7 +1274,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1330,7 +1331,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1386,7 +1387,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1441,7 +1442,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1481,7 +1482,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1531,7 +1532,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1574,7 +1575,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,
@@ -1623,7 +1624,7 @@ public class DocumentationGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var generator = new DocumentationGenerator(
-            kernel,
+            new ExecutorKernel(kernel),
             mockLogger.Object,
             mockFileAnalyzer.Object,
             mockFileEditor.Object,

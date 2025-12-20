@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
 
@@ -18,14 +19,14 @@ internal sealed class DocumentationGenerator : IDocumentationGenerator {
     private readonly IContainerManager _containerManager;
 
     public DocumentationGenerator(
-        Kernel kernel,
+        ExecutorKernel executorKernel,
         ILogger<DocumentationGenerator> logger,
         IFileAnalyzer fileAnalyzer,
         IFileEditor fileEditor,
         IContainerManager containerManager) {
-        _kernel = kernel;
+        _kernel = executorKernel.Kernel;
         _logger = logger;
-        _chatService = kernel.GetRequiredService<IChatCompletionService>();
+        _chatService = executorKernel.Kernel.GetRequiredService<IChatCompletionService>();
         _fileAnalyzer = fileAnalyzer;
         _fileEditor = fileEditor;
         _containerManager = containerManager;

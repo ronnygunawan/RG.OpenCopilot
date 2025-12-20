@@ -4,6 +4,7 @@ using Moq;
 using RG.OpenCopilot.PRGenerationAgent.DependencyManagement.Models;
 using RG.OpenCopilot.PRGenerationAgent.DependencyManagement.Services;
 using RG.OpenCopilot.PRGenerationAgent.Services.DependencyManagement;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
@@ -19,7 +20,7 @@ public class DependencyManagerTests {
         }, pattern: "*.csproj");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -42,7 +43,7 @@ public class DependencyManagerTests {
         }, pattern: "package.json");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -69,7 +70,7 @@ public class DependencyManagerTests {
         }, pattern: "requirements.txt");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -100,7 +101,7 @@ public class DependencyManagerTests {
         }, pattern: "pom.xml");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -135,7 +136,7 @@ public class DependencyManagerTests {
         }, pattern: "build.gradle");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -178,7 +179,7 @@ public class DependencyManagerTests {
         }, pattern: "Cargo.toml");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -225,7 +226,7 @@ public class DependencyManagerTests {
         }, pattern: "go.mod");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -276,7 +277,7 @@ public class DependencyManagerTests {
         }, pattern: "composer.json");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -296,7 +297,7 @@ public class DependencyManagerTests {
         }, pattern: "Gemfile");
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -312,7 +313,7 @@ public class DependencyManagerTests {
         containerManager.SetupNoPackageFiles();
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.DetectPackageManagerAsync("test-container");
@@ -335,7 +336,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -369,7 +370,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -411,7 +412,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -442,7 +443,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -473,7 +474,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -504,7 +505,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -535,7 +536,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -566,7 +567,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -597,7 +598,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -627,7 +628,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -655,7 +656,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -684,7 +685,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -713,7 +714,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -753,7 +754,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -782,7 +783,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -811,7 +812,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -840,7 +841,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.AddDependencyAsync(
@@ -863,7 +864,7 @@ public class DependencyManagerTests {
         };
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(new TestContainerManagerForDependencyManager(), kernel, logger);
+        var manager = new DependencyManager(new TestContainerManagerForDependencyManager(), new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ResolveVersionConflictsAsync(dependencies);
@@ -884,7 +885,7 @@ public class DependencyManagerTests {
         };
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(new TestContainerManagerForDependencyManager(), kernel, logger);
+        var manager = new DependencyManager(new TestContainerManagerForDependencyManager(), new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ResolveVersionConflictsAsync(dependencies);
@@ -903,7 +904,7 @@ public class DependencyManagerTests {
         var dependencies = new List<Package>();
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(new TestContainerManagerForDependencyManager(), kernel, logger);
+        var manager = new DependencyManager(new TestContainerManagerForDependencyManager(), new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ResolveVersionConflictsAsync(dependencies);
@@ -933,7 +934,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -953,7 +954,7 @@ public class DependencyManagerTests {
         containerManager.SetupNoPackageFiles();
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -987,7 +988,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -1027,7 +1028,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -1055,7 +1056,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -1083,7 +1084,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -1111,7 +1112,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -1139,7 +1140,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -1167,7 +1168,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -1195,7 +1196,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -1219,7 +1220,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act
         var result = await manager.ListInstalledPackagesAsync("test-container");
@@ -1238,7 +1239,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
         var package = new Package {
             Name = "requests",
             Version = "2.31.0",
@@ -1262,7 +1263,7 @@ public class DependencyManagerTests {
         });
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
         var package = new Package {
             Name = "requests",
             Version = null,
@@ -1282,7 +1283,7 @@ public class DependencyManagerTests {
         var containerManager = new TestContainerManagerForDependencyManager();
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
         var package = new Package {
             Name = "Newtonsoft.Json",
             Version = "13.0.3",
@@ -1302,7 +1303,7 @@ public class DependencyManagerTests {
         var containerManager = new TestContainerManagerForDependencyManager();
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
         var package = new Package {
             Name = "com.google.code.gson:gson",
             Version = "2.10.1",
@@ -1322,7 +1323,7 @@ public class DependencyManagerTests {
         var containerManager = new TestContainerManagerForDependencyManager();
         var kernel = CreateMockKernel();
         var logger = new TestLogger<DependencyManager>();
-        var manager = new DependencyManager(containerManager, kernel, logger);
+        var manager = new DependencyManager(containerManager, new ExecutorKernel(kernel), logger);
 
         // Act - With an unconfigured kernel, this will throw and return empty list
         var result = await manager.RecommendPackagesAsync(

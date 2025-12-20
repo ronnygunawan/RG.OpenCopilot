@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 
 namespace RG.OpenCopilot.PRGenerationAgent.Services.DependencyManagement;
 
@@ -11,10 +12,10 @@ internal sealed class DependencyManager : IDependencyManager {
 
     public DependencyManager(
         IContainerManager containerManager,
-        Kernel kernel,
+        ExecutorKernel executorKernel,
         ILogger<DependencyManager> logger) {
         _containerManager = containerManager;
-        _kernel = kernel;
+        _kernel = executorKernel.Kernel;
         _logger = logger;
     }
 

@@ -7,6 +7,7 @@ using Moq;
 using Octokit;
 using RG.OpenCopilot.PRGenerationAgent;
 using RG.OpenCopilot.PRGenerationAgent.Services.CodeGeneration;
+using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 
 namespace RG.OpenCopilot.Tests;
@@ -51,7 +52,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -103,7 +104,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -165,7 +166,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request, existingCode);
@@ -211,7 +212,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateClassAsync(
@@ -258,7 +259,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateFunctionAsync(
@@ -286,7 +287,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         var validCode = """
             public class Test {
@@ -316,7 +317,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         var invalidCode = """
             public class Test {
@@ -345,7 +346,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         var validCode = """
             function test() {
@@ -373,7 +374,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         var validCode = """
             def test():
@@ -400,7 +401,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.ValidateSyntaxAsync("", "C#");
@@ -442,7 +443,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -493,7 +494,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -541,7 +542,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         await generator.GenerateCodeAsync(request);
@@ -581,7 +582,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         await generator.GenerateCodeAsync(request);
@@ -629,7 +630,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act & Assert
         var exception = await Should.ThrowAsync<InvalidOperationException>(
@@ -678,7 +679,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         await generator.GenerateCodeAsync(request, cancellationToken: cts.Token);
@@ -698,7 +699,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         var validCode = """
             interface User {
@@ -729,7 +730,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         var code = "some code in an unknown language";
 
@@ -770,7 +771,7 @@ public class CodeGeneratorTests {
         var kernel = kernelBuilder.Build();
 
         var mockGitHubClient = new Mock<IGitHubClient>();
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         await generator.GenerateCodeAsync(request);
@@ -843,7 +844,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         await generator.GenerateCodeAsync(request);
@@ -887,7 +888,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         await generator.GenerateCodeAsync(request);
@@ -947,7 +948,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -1013,7 +1014,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act - Call twice with same repository
         await generator.GenerateCodeAsync(request);
@@ -1055,7 +1056,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         await generator.GenerateCodeAsync(request);
@@ -1099,7 +1100,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         await generator.GenerateCodeAsync(request);
@@ -1168,7 +1169,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -1218,7 +1219,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -1264,7 +1265,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -1284,7 +1285,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act - pass null to trigger exception
         var result = await generator.ValidateSyntaxAsync(null!, "C#");
@@ -1319,7 +1320,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -1359,7 +1360,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.GenerateCodeAsync(request);
@@ -1387,7 +1388,7 @@ public class CodeGeneratorTests {
         kernelBuilder.Services.AddSingleton(mockChatService.Object);
         var kernel = kernelBuilder.Build();
 
-        var generator = new CodeGenerator(kernel, mockLogger.Object, mockGitHubClient.Object);
+        var generator = new CodeGenerator(new ExecutorKernel(kernel), mockLogger.Object, mockGitHubClient.Object);
 
         // Act
         var result = await generator.ValidateSyntaxAsync("   \n\t  ", "C#");
