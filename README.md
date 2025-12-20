@@ -27,6 +27,7 @@ This project is actively under development and should **NOT** be used in product
 
 ### Implemented Features (In Development)
 - ✅ GitHub webhook integration with signature validation
+- ✅ GitHub App authentication with installation token caching
 - ✅ LLM-powered planning with Semantic Kernel (OpenAI, Azure OpenAI)
 - ✅ Docker-based code execution environment
 - ✅ Code generation with context awareness
@@ -39,7 +40,7 @@ This project is actively under development and should **NOT** be used in product
 - ✅ Persistent task storage with PostgreSQL and EF Core
 - ✅ Background job processing with retry and timeout support
 - ✅ Task resumption after application restart (with PostgreSQL)
-- ✅ 123+ comprehensive unit and integration tests
+- ✅ 1050+ comprehensive unit and integration tests
 
 ### Known Limitations
 - Limited error recovery and retry logic
@@ -201,9 +202,16 @@ All projects target **.NET 10.0** with nullable reference types and follow SOLID
    - Repository contents: Read & write
    - Pull requests: Read & write
    - Issues: Read & write
+   - Workflows: Read & write (optional)
 2. Generate private key
 3. Configure `GitHub:AppId` and `GitHub:AppPrivateKey`
 4. Install app on target repositories
+
+**Authentication Features:**
+- **Automatic token caching**: Installation tokens are cached and refreshed automatically
+- **Per-installation tokens**: Each repository installation gets its own scoped token
+- **Fallback support**: Automatically falls back to PAT if GitHub App not configured
+- **Permission validation**: Checks installation has required permissions before processing
 
 See [POC-SETUP.md](POC-SETUP.md) for detailed setup instructions.
 
