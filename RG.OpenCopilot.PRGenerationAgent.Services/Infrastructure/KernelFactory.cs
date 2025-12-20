@@ -24,24 +24,15 @@ internal static class KernelFactory {
 
         switch (config.Provider.ToLowerInvariant()) {
             case "openai":
-                if (string.IsNullOrWhiteSpace(config.ModelId)) {
-                    throw new InvalidOperationException(
-                        $"{configName} OpenAI configuration requires ModelId to be set.");
-                }
                 kernelBuilder.AddOpenAIChatCompletion(
                     modelId: config.ModelId,
                     apiKey: config.ApiKey);
                 break;
 
             case "azureopenai":
-                if (string.IsNullOrWhiteSpace(config.AzureEndpoint) || 
-                    string.IsNullOrWhiteSpace(config.AzureDeployment)) {
-                    throw new InvalidOperationException(
-                        $"{configName} Azure OpenAI configuration requires AzureEndpoint and AzureDeployment to be set.");
-                }
                 kernelBuilder.AddAzureOpenAIChatCompletion(
-                    deploymentName: config.AzureDeployment,
-                    endpoint: config.AzureEndpoint,
+                    deploymentName: config.AzureDeployment!,
+                    endpoint: config.AzureEndpoint!,
                     apiKey: config.ApiKey);
                 break;
 

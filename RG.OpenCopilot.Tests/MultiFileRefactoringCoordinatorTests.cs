@@ -3,9 +3,7 @@ using RG.OpenCopilot.PRGenerationAgent;
 using RG.OpenCopilot.PRGenerationAgent.Services.Docker;
 using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using RG.OpenCopilot.PRGenerationAgent.Services.Executor;
-using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using RG.OpenCopilot.PRGenerationAgent.Services.FileOperations;
-using RG.OpenCopilot.PRGenerationAgent.Services.Infrastructure;
 using Shouldly;
 using Microsoft.Extensions.Logging;
 
