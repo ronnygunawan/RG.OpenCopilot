@@ -36,22 +36,40 @@ public static class ServiceCollectionExtensions {
         configuration.GetSection("LLM").Bind(llmConfigurations);
 
         // Create and register Planner Kernel
-        if (llmConfigurations.Planner.IsValid()) {
-            var plannerKernel = KernelFactory.CreateKernel(llmConfigurations.Planner, "Planner");
-            services.AddSingleton(new PlannerKernel(plannerKernel));
-        } else {
+        if (!llmConfigurations.Planner.IsValid()) {
+            // Provide specific error message based on what's missing
+            if (string.IsNullOrWhiteSpace(llmConfigurations.Planner.Provider) || 
+                string.IsNullOrWhiteSpace(llmConfigurations.Planner.ApiKey)) {
+                throw new InvalidOperationException(
+                    "Planner AI configuration is required. Set LLM:Planner:Provider and LLM:Planner:ApiKey.");
+            }
+            if (llmConfigurations.Planner.Provider.Equals("AzureOpenAI", StringComparison.OrdinalIgnoreCase)) {
+                throw new InvalidOperationException(
+                    "Planner Azure OpenAI configuration requires AzureEndpoint and AzureDeployment to be set.");
+            }
             throw new InvalidOperationException(
-                "Planner AI configuration is required. Set LLM:Planner:Provider and LLM:Planner:ApiKey.");
+                "Planner AI configuration is invalid. Ensure Provider, ApiKey, and ModelId are properly set.");
         }
+        var plannerKernel = KernelFactory.CreateKernel(llmConfigurations.Planner, "Planner");
+        services.AddSingleton(new PlannerKernel(plannerKernel));
 
         // Create and register Executor Kernel
-        if (llmConfigurations.Executor.IsValid()) {
-            var executorKernel = KernelFactory.CreateKernel(llmConfigurations.Executor, "Executor");
-            services.AddSingleton(new ExecutorKernel(executorKernel));
-        } else {
+        if (!llmConfigurations.Executor.IsValid()) {
+            // Provide specific error message based on what's missing
+            if (string.IsNullOrWhiteSpace(llmConfigurations.Executor.Provider) || 
+                string.IsNullOrWhiteSpace(llmConfigurations.Executor.ApiKey)) {
+                throw new InvalidOperationException(
+                    "Executor AI configuration is required. Set LLM:Executor:Provider and LLM:Executor:ApiKey.");
+            }
+            if (llmConfigurations.Executor.Provider.Equals("AzureOpenAI", StringComparison.OrdinalIgnoreCase)) {
+                throw new InvalidOperationException(
+                    "Executor Azure OpenAI configuration requires AzureEndpoint and AzureDeployment to be set.");
+            }
             throw new InvalidOperationException(
-                "Executor AI configuration is required. Set LLM:Executor:Provider and LLM:Executor:ApiKey.");
+                "Executor AI configuration is invalid. Ensure Provider, ApiKey, and ModelId are properly set.");
         }
+        var executorKernel = KernelFactory.CreateKernel(llmConfigurations.Executor, "Executor");
+        services.AddSingleton(new ExecutorKernel(executorKernel));
 
         // Create and register Thinker Kernel (optional for now, as Research Agent doesn't exist yet)
         if (llmConfigurations.Thinker.IsValid()) {

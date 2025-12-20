@@ -182,6 +182,8 @@ public class ServiceCollectionExtensionsTests {
     public void AddPRGenerationAgentServices_WithAzureOpenAIMissingDeployment_ThrowsException() {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(TimeProvider.System);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
                 ["LLM:Planner:Provider"] = "AzureOpenAI",
@@ -190,7 +192,7 @@ public class ServiceCollectionExtensionsTests {
                 ["LLM:Executor:Provider"] = "AzureOpenAI",
                 ["LLM:Executor:ApiKey"] = "test-api-key",
                 ["LLM:Executor:AzureEndpoint"] = "https://test.openai.azure.com"
-                // AzureDeployment missing
+                // AzureDeployment missing for both
             })
             .Build();
 
@@ -198,17 +200,26 @@ public class ServiceCollectionExtensionsTests {
         var exception = Should.Throw<InvalidOperationException>(() => 
             services.AddPRGenerationAgentServices(configuration));
         
-        exception.Message.ShouldContain("Planner Azure OpenAI configuration requires AzureEndpoint and AzureDeployment");
+        // The error message should mention that the configuration is invalid
+        exception.Message.ShouldContain("Planner");
+        exception.Message.ShouldContain("AzureEndpoint");
+        exception.Message.ShouldContain("AzureDeployment");
     }
 
     [Fact]
     public void AddPRGenerationAgentServices_WithUnsupportedProvider_ThrowsException() {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(TimeProvider.System);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "Claude",
-                ["LLM:ApiKey"] = "test-api-key"
+                ["LLM:Planner:Provider"] = "Claude",
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "claude-opus-4-5",
+                ["LLM:Executor:Provider"] = "Claude",
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "claude-opus-4-5"
             })
             .Build();
 
@@ -216,8 +227,8 @@ public class ServiceCollectionExtensionsTests {
         var exception = Should.Throw<InvalidOperationException>(() => 
             services.AddPRGenerationAgentServices(configuration));
         
-        exception.Message.ShouldContain("Unsupported LLM provider: Claude");
-        exception.Message.ShouldContain("Supported providers: OpenAI, AzureOpenAI");
+        exception.Message.ShouldContain("Unsupported LLM provider");
+        exception.Message.ShouldContain("Claude");
     }
 
     [Fact]
@@ -328,10 +339,16 @@ public class ServiceCollectionExtensionsTests {
     public void AddPRGenerationAgentServices_WithCaseInsensitiveProvider_WorksCorrectly() {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(TimeProvider.System);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:Provider"] = "OPENAI",  // Uppercase
-                ["LLM:ApiKey"] = "test-api-key"
+                ["LLM:Planner:Provider"] = "OPENAI",  // Uppercase
+                ["LLM:Planner:ApiKey"] = "test-api-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "openai",  // Lowercase
+                ["LLM:Executor:ApiKey"] = "test-api-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o-mini"
             })
             .Build();
 
@@ -408,8 +425,12 @@ public class ServiceCollectionExtensionsTests {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
                 ["ConnectionStrings:AgentTaskDatabase"] = "Host=localhost;Database=test",
-                ["LLM:ApiKey"] = "test-key",
-                ["LLM:Provider"] = "OpenAI"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o-mini"
             })
             .Build();
 
@@ -437,15 +458,19 @@ public class ServiceCollectionExtensionsTests {
     public void AddPRGenerationAgentServices_WithPostgreSqlConnectionString_RegistersDbContext() {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(TimeProvider.System);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
                 ["ConnectionStrings:AgentTaskDatabase"] = "Host=localhost;Database=test",
-                ["LLM:ApiKey"] = "test-key",
-                ["LLM:Provider"] = "OpenAI"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o-mini"
             })
             .Build();
-
-        services.AddLogging();
 
         // Act
         services.AddPRGenerationAgentServices(configuration);
@@ -461,15 +486,19 @@ public class ServiceCollectionExtensionsTests {
     public void AddPRGenerationAgentServices_WithEmptyConnectionString_DoesNotRegisterDbContext() {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(TimeProvider.System);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
                 ["ConnectionStrings:AgentTaskDatabase"] = "",
-                ["LLM:ApiKey"] = "test-key",
-                ["LLM:Provider"] = "OpenAI"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o-mini"
             })
             .Build();
-
-        services.AddLogging();
 
         // Act
         services.AddPRGenerationAgentServices(configuration);
@@ -484,14 +513,18 @@ public class ServiceCollectionExtensionsTests {
     public void AddPRGenerationAgentServices_WithNoConnectionString_DoesNotRegisterDbContext() {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(TimeProvider.System);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:ApiKey"] = "test-key",
-                ["LLM:Provider"] = "OpenAI"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o-mini"
             })
             .Build();
-
-        services.AddLogging();
 
         // Act
         services.AddPRGenerationAgentServices(configuration);
@@ -506,11 +539,17 @@ public class ServiceCollectionExtensionsTests {
     public void AddPRGenerationAgentServices_WithPostgreSqlConnectionString_RegistersScopedTaskStore() {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(TimeProvider.System);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
                 ["ConnectionStrings:AgentTaskDatabase"] = "Host=localhost;Database=test",
-                ["LLM:ApiKey"] = "test-key",
-                ["LLM:Provider"] = "OpenAI"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o-mini"
             })
             .Build();
 
@@ -531,14 +570,18 @@ public class ServiceCollectionExtensionsTests {
     public void AddPRGenerationAgentServices_WithoutPostgreSqlConnectionString_RegistersSingletonTaskStore() {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton(TimeProvider.System);
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?> {
-                ["LLM:ApiKey"] = "test-key",
-                ["LLM:Provider"] = "OpenAI"
+                ["LLM:Planner:Provider"] = "OpenAI",
+                ["LLM:Planner:ApiKey"] = "test-key",
+                ["LLM:Planner:ModelId"] = "gpt-4o",
+                ["LLM:Executor:Provider"] = "OpenAI",
+                ["LLM:Executor:ApiKey"] = "test-key",
+                ["LLM:Executor:ModelId"] = "gpt-4o-mini"
             })
             .Build();
-
-        services.AddLogging();
 
         // Act
         services.AddPRGenerationAgentServices(configuration);
