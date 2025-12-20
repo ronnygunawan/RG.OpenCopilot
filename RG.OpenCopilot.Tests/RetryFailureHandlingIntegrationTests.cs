@@ -215,6 +215,9 @@ public class RetryFailureHandlingIntegrationTests {
         // Wait for all retries
         await finalAttemptTcs.Task;
         
+        // Give the processor time to persist the final attempt status
+        await Task.Delay(100);
+        
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
         
