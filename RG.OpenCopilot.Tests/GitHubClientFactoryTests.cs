@@ -297,6 +297,160 @@ public class GitHubClientFactoryTests {
         mockTokenProvider.Verify(p => p.GetInstallationTokenAsync(123, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
+    [Fact]
+    public async Task GetClientForInstallationAsync_WithDifferentExceptionMessage_PropagatesException() {
+        // Arrange
+        var mockTokenProvider = new Mock<IGitHubAppTokenProvider>();
+        mockTokenProvider.Setup(p => p.GetInstallationTokenAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Unexpected error occurred"));
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                { "GitHub:AppId", "12345" },
+                { "GitHub:AppPrivateKey", "test-key" },
+                { "GitHub:Token", "ghp_fallback" }
+            })
+            .Build();
+
+        var logger = new TestLogger<GitHubClientFactory>();
+        var factory = new GitHubClientFactory(mockTokenProvider.Object, configuration, logger);
+
+        // Act & Assert - Should propagate exception, not fall back to PAT
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            () => factory.GetClientForInstallationAsync(installationId: 123));
+        
+        exception.Message.ShouldBe("Unexpected error occurred");
+    }
+
+    [Fact]
+    public async Task GetClientForInstallationAsync_WithOperationCanceledException_Propagates() {
+        // Arrange
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+        
+        var mockTokenProvider = new Mock<IGitHubAppTokenProvider>();
+        mockTokenProvider.Setup(p => p.GetInstallationTokenAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                { "GitHub:AppId", "12345" },
+                { "GitHub:AppPrivateKey", "test-key" }
+            })
+            .Build();
+
+        var logger = new TestLogger<GitHubClientFactory>();
+        var factory = new GitHubClientFactory(mockTokenProvider.Object, configuration, logger);
+
+        // Act & Assert
+        await Should.ThrowAsync<OperationCanceledException>(
+            () => factory.GetClientForInstallationAsync(installationId: 123, cancellationToken: cts.Token));
+    }
+
+    [Fact]
+    public void GetClientWithJwt_WithEmptyAppId_ThrowsException() {
+        // Arrange
+        var mockTokenProvider = new Mock<IGitHubAppTokenProvider>();
+        var privateKey = GenerateTestPrivateKey();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                { "GitHub:AppId", "" },
+                { "GitHub:AppPrivateKey", privateKey }
+            })
+            .Build();
+
+        var logger = new TestLogger<GitHubClientFactory>();
+        var factory = new GitHubClientFactory(mockTokenProvider.Object, configuration, logger);
+
+        // Act & Assert
+        var exception = Should.Throw<InvalidOperationException>(
+            () => factory.GetClientWithJwt());
+        
+        exception.Message.ShouldBe("GitHub App credentials (AppId and PrivateKey) must be configured to use JWT authentication");
+    }
+
+    [Fact]
+    public void GetClientWithJwt_WithEmptyPrivateKey_ThrowsException() {
+        // Arrange
+        var mockTokenProvider = new Mock<IGitHubAppTokenProvider>();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                { "GitHub:AppId", "12345" },
+                { "GitHub:AppPrivateKey", "" }
+            })
+            .Build();
+
+        var logger = new TestLogger<GitHubClientFactory>();
+        var factory = new GitHubClientFactory(mockTokenProvider.Object, configuration, logger);
+
+        // Act & Assert
+        var exception = Should.Throw<InvalidOperationException>(
+            () => factory.GetClientWithJwt());
+        
+        exception.Message.ShouldBe("GitHub App credentials (AppId and PrivateKey) must be configured to use JWT authentication");
+    }
+
+    [Fact]
+    public void GetClientWithJwt_CalledMultipleTimes_CreatesNewClientsWithFreshJwt() {
+        // Arrange
+        var mockTokenProvider = new Mock<IGitHubAppTokenProvider>();
+        var privateKey = GenerateTestPrivateKey();
+        
+        var jwtCallCount = 0;
+        var mockJwtGenerator = new Mock<IJwtTokenGenerator>();
+        mockJwtGenerator.Setup(j => j.GenerateJwtToken(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(() => {
+                jwtCallCount++;
+                return $"jwt-token-{jwtCallCount}";
+            });
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                { "GitHub:AppId", "12345" },
+                { "GitHub:AppPrivateKey", privateKey }
+            })
+            .Build();
+
+        var logger = new TestLogger<GitHubClientFactory>();
+        var factory = new GitHubClientFactory(mockTokenProvider.Object, configuration, mockJwtGenerator.Object, logger);
+
+        // Act
+        var client1 = factory.GetClientWithJwt();
+        var client2 = factory.GetClientWithJwt();
+        var client3 = factory.GetClientWithJwt();
+
+        // Assert - Each call should generate a new JWT
+        client1.ShouldNotBeNull();
+        client2.ShouldNotBeNull();
+        client3.ShouldNotBeNull();
+        client1.ShouldNotBe(client2);
+        client2.ShouldNotBe(client3);
+        jwtCallCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task GetClientForInstallationAsync_WithNullPAT_ThrowsProperException() {
+        // Arrange
+        var mockTokenProvider = new Mock<IGitHubAppTokenProvider>();
+        mockTokenProvider.Setup(p => p.GetInstallationTokenAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("GitHub App credentials not configured"));
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                { "GitHub:Token", null }
+            })
+            .Build();
+
+        var logger = new TestLogger<GitHubClientFactory>();
+        var factory = new GitHubClientFactory(mockTokenProvider.Object, configuration, logger);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
+            () => factory.GetClientForInstallationAsync(installationId: 123));
+        
+        exception.Message.ShouldBe("GitHub App credentials or personal access token must be configured");
+    }
+
     private static string GenerateTestPrivateKey() {
         using var rsa = System.Security.Cryptography.RSA.Create(keySizeInBits: 2048);
         return rsa.ExportRSAPrivateKeyPem();

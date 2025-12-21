@@ -209,4 +209,60 @@ public class InstallationPermissionsTests {
         permissionsWithoutWorkflows.HasRequiredPermissions().ShouldBeTrue();
         permissionsWithWorkflows.HasRequiredPermissions().ShouldBeTrue();
     }
+
+    [Fact]
+    public void AppInstallationPermissions_WithOnlyWorkflows_DoesNotHaveRequired() {
+        // Arrange
+        var permissions = new AppInstallationPermissions {
+            HasContents = false,
+            HasIssues = false,
+            HasPullRequests = false,
+            HasWorkflows = true
+        };
+
+        // Act & Assert
+        permissions.HasRequiredPermissions().ShouldBeFalse();
+    }
+
+    [Fact]
+    public void AppInstallationPermissions_WithMixedPermissions_ValidatesCorrectly() {
+        // Arrange - Has contents and issues but missing pull requests
+        var permissions1 = new AppInstallationPermissions {
+            HasContents = true,
+            HasIssues = true,
+            HasPullRequests = false,
+            HasWorkflows = true
+        };
+
+        // Arrange - Has contents and pull requests but missing issues
+        var permissions2 = new AppInstallationPermissions {
+            HasContents = true,
+            HasIssues = false,
+            HasPullRequests = true,
+            HasWorkflows = true
+        };
+
+        // Act & Assert
+        permissions1.HasRequiredPermissions().ShouldBeFalse();
+        permissions2.HasRequiredPermissions().ShouldBeFalse();
+    }
+
+    [Fact]
+    public void AppInstallationPermissions_AllPropertiesSettable() {
+        // Arrange & Act
+        var permissions = new AppInstallationPermissions {
+            HasContents = true,
+            HasIssues = true,
+            HasPullRequests = true,
+            HasWorkflows = true
+        };
+
+        // Assert
+        permissions.HasContents.ShouldBeTrue();
+        permissions.HasIssues.ShouldBeTrue();
+        permissions.HasPullRequests.ShouldBeTrue();
+        permissions.HasWorkflows.ShouldBeTrue();
+        permissions.HasRequiredPermissions().ShouldBeTrue();
+    }
 }
+

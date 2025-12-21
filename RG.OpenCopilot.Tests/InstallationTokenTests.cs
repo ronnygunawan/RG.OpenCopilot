@@ -156,4 +156,74 @@ public class InstallationTokenTests {
         // Assert
         isValid.ShouldBeTrue();
     }
+
+    [Fact]
+    public void IsValid_AtExactExpirationTime_ReturnsFalse() {
+        // Arrange
+        var now = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var timeProvider = new FakeTimeProvider(now);
+        var token = new InstallationToken {
+            InstallationId = 123,
+            Token = "test-token",
+            ExpiresAt = now.UtcDateTime // Expires exactly now
+        };
+
+        // Act
+        var isValid = token.IsValid(timeProvider);
+
+        // Assert
+        isValid.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsValid_WithUnspecifiedDateTimeKind_HandlesCorrectly() {
+        // Arrange - even with unspecified kind, should handle correctly
+        var timeProvider = new FakeTimeProvider(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        var token = new InstallationToken {
+            InstallationId = 123,
+            Token = "test-token",
+            ExpiresAt = new DateTime(2024, 1, 1, 13, 0, 0, DateTimeKind.Unspecified)
+        };
+
+        // Act
+        var isValid = token.IsValid(timeProvider);
+
+        // Assert
+        isValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void InstallationToken_MultipleInstancesWithSameData_AreEqual() {
+        // Arrange
+        var token1 = new InstallationToken {
+            InstallationId = 123,
+            Token = "same-token",
+            ExpiresAt = new DateTime(2024, 1, 1, 13, 0, 0, DateTimeKind.Utc)
+        };
+        var token2 = new InstallationToken {
+            InstallationId = 123,
+            Token = "same-token",
+            ExpiresAt = new DateTime(2024, 1, 1, 13, 0, 0, DateTimeKind.Utc)
+        };
+
+        // Act & Assert
+        token1.InstallationId.ShouldBe(token2.InstallationId);
+        token1.Token.ShouldBe(token2.Token);
+        token1.ExpiresAt.ShouldBe(token2.ExpiresAt);
+    }
+
+    [Fact]
+    public void InstallationToken_WithDefaultValues_HasEmptyToken() {
+        // Arrange & Act
+        var token = new InstallationToken {
+            InstallationId = 0,
+            ExpiresAt = default
+        };
+
+        // Assert
+        token.Token.ShouldBe("");
+        token.InstallationId.ShouldBe(0);
+        token.ExpiresAt.ShouldBe(default(DateTime));
+    }
 }
+
