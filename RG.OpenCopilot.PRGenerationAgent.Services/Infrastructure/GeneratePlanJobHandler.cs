@@ -290,22 +290,64 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
         var checklistMarkdown = string.Join("\n", plan.Checklist.Select(c =>
             $"- [ ] {EscapeMarkdown(c)}"));
 
+        // Build files section
+        var filesSection = "";
+        if (plan.FileTargets.Count > 0) {
+            var filesMarkdown = string.Join("\n", plan.FileTargets.Select(f => $"- `{f}`"));
+            filesSection = $"""
+
+### Files to be Modified
+
+{filesMarkdown}
+""";
+        }
+
+        // Build testing section
+        var testingSection = "";
+        var testSteps = plan.Steps.Where(s => 
+            s.Title.Contains("test", StringComparison.OrdinalIgnoreCase) ||
+            s.Details.Contains("test", StringComparison.OrdinalIgnoreCase)).ToList();
+        
+        if (testSteps.Count > 0) {
+            var testStepsMarkdown = string.Join("\n", testSteps.Select(s =>
+                $"- {EscapeMarkdown(s.Title)}"));
+            testingSection = $"""
+
+### Testing Strategy
+
+{testStepsMarkdown}
+""";
+        }
+
+        // Build constraints section
+        var constraintsSection = "";
+        if (plan.Constraints.Count > 0) {
+            var constraintsMarkdown = string.Join("\n", plan.Constraints.Select(c => $"- {EscapeMarkdown(c)}"));
+            constraintsSection = $"""
+
+### Assumptions & Constraints
+
+{constraintsMarkdown}
+""";
+        }
+
         return $"""
-## Plan
+## Agent Plan Summary
 
-**Problem Summary:** {EscapeMarkdown(plan.ProblemSummary)}
+### Goal
 
-### Steps
+{EscapeMarkdown(plan.ProblemSummary)}
+
+### Planned Steps
 
 {stepsMarkdown}
+{filesSection}
+{testingSection}
+{constraintsSection}
 
 ### Checklist
 
 {checklistMarkdown}
-
-### Constraints
-
-{string.Join("\n", plan.Constraints.Select(c => $"- {EscapeMarkdown(c)}"))}
 
 ---
 
@@ -321,7 +363,7 @@ internal sealed class GeneratePlanJobHandler : IJobHandler {
 ---
 
 _This PR was automatically created by RG.OpenCopilot._
-_Progress will be updated here as the agent works on this issue._
+_The plan is deterministic and reviewable. Progress will be updated here as the agent works on this issue._
 """;
     }
 
