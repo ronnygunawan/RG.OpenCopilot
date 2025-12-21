@@ -89,4 +89,71 @@ public class InstallationTokenTests {
         // Assert
         isValid.ShouldBeTrue();
     }
+
+    [Fact]
+    public void IsValid_WithVeryLongExpirationTime_ReturnsTrue() {
+        // Arrange
+        var timeProvider = new FakeTimeProvider(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        var token = new InstallationToken {
+            InstallationId = 123,
+            Token = "test-token",
+            ExpiresAt = new DateTime(2024, 1, 2, 12, 0, 0, DateTimeKind.Utc) // 24 hours in future
+        };
+
+        // Act
+        var isValid = token.IsValid(timeProvider);
+
+        // Assert
+        isValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsValid_WithExpiredBySeconds_ReturnsFalse() {
+        // Arrange
+        var timeProvider = new FakeTimeProvider(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        var token = new InstallationToken {
+            InstallationId = 123,
+            Token = "test-token",
+            ExpiresAt = new DateTime(2024, 1, 1, 11, 59, 59, DateTimeKind.Utc) // 1 second in past
+        };
+
+        // Act
+        var isValid = token.IsValid(timeProvider);
+
+        // Assert
+        isValid.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void InstallationToken_CanBeCreatedWithInitializer() {
+        // Arrange & Act
+        var token = new InstallationToken {
+            InstallationId = 456,
+            Token = "my-token-value",
+            ExpiresAt = DateTime.UtcNow.AddHours(1)
+        };
+
+        // Assert
+        token.InstallationId.ShouldBe(456);
+        token.Token.ShouldBe("my-token-value");
+        token.ExpiresAt.ShouldBeGreaterThan(DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void IsValid_WithDifferentTimeZones_HandlesCorrectly() {
+        // Arrange - time provider is in UTC
+        var timeProvider = new FakeTimeProvider(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
+        var token = new InstallationToken {
+            InstallationId = 123,
+            Token = "test-token",
+            // ExpiresAt should be in UTC
+            ExpiresAt = new DateTime(2024, 1, 1, 13, 0, 0, DateTimeKind.Utc)
+        };
+
+        // Act
+        var isValid = token.IsValid(timeProvider);
+
+        // Assert
+        isValid.ShouldBeTrue();
+    }
 }
