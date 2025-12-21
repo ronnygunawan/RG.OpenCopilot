@@ -72,11 +72,45 @@ Create a token at: https://github.com/settings/tokens
 
 For production use with a GitHub App:
 
-1. Create a GitHub App with the required permissions (see below)
-2. Generate a private key for the app
-3. Configure `GitHub:AppId` and `GitHub:AppPrivateKey` in your settings
+1. **Create a GitHub App** with the required permissions:
+   - Repository permissions:
+     - Contents: Read and write
+     - Issues: Read and write
+     - Pull requests: Read and write
+     - Workflows: Read and write (optional, for updating GitHub Actions)
+   - Subscribe to events:
+     - Issues
+     - Label
 
-The executor service will use installation tokens for repository access when App credentials are configured.
+2. **Generate a private key** for the app:
+   - Go to your GitHub App settings
+   - Scroll to "Private keys" section
+   - Click "Generate a private key"
+   - Download the `.pem` file
+
+3. **Configure in appsettings**:
+   ```json
+   {
+     "GitHub": {
+       "AppId": "123456",
+       "AppPrivateKey": "-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+     }
+   }
+   ```
+
+4. **Install the GitHub App**:
+   - Install the app on your organization or repositories
+   - Each installation gets a unique installation ID
+   - The agent automatically uses installation tokens for repository access
+
+**Benefits of GitHub App authentication:**
+- **Scoped permissions**: Fine-grained control over what the app can access
+- **Installation-based**: Each repository installation gets its own token
+- **Automatic token refresh**: Tokens are cached and refreshed automatically (expires after ~1 hour)
+- **Multiple installations**: Support for different repositories with separate tokens
+- **Better security**: Tokens are short-lived and scoped to specific permissions
+
+The executor service will automatically use installation tokens when App credentials are configured. If not configured, it falls back to personal access token (PAT) authentication for development.
 
 ### LLM Configuration
 
