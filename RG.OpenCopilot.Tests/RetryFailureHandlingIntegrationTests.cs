@@ -218,14 +218,19 @@ public class RetryFailureHandlingIntegrationTests {
         // Wait for the processor to finish updating status
         // Poll status until we see all 3 attempts recorded
         var maxWaitIterations = 100;
+        BackgroundJobStatusInfo? finalStatus = null;
         for (int i = 0; i < maxWaitIterations; i++) {
-            var status = await statusStore.GetStatusAsync(job.Id);
-            if (status?.Attempts.Count >= 3) {
+            finalStatus = await statusStore.GetStatusAsync(job.Id);
+            if (finalStatus?.Attempts.Count >= 3) {
                 break;
             }
             // Yield to allow the processor task to complete
             await Task.Yield();
         }
+        
+        // Verify the polling succeeded
+        finalStatus.ShouldNotBeNull("Polling timed out waiting for job status to be updated");
+        finalStatus.Attempts.Count.ShouldBeGreaterThanOrEqualTo(3, "Polling completed but expected attempts were not recorded");
         
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
@@ -233,7 +238,7 @@ public class RetryFailureHandlingIntegrationTests {
         // Assert
         attemptCount.ShouldBe(3); // Initial + 2 retries
         
-        var finalStatus = await statusStore.GetStatusAsync(job.Id);
+        // finalStatus was already retrieved in the polling loop above
         finalStatus.ShouldNotBeNull();
         finalStatus.Status.ShouldBe(BackgroundJobStatus.DeadLetter);
         finalStatus.RetryCount.ShouldBe(2);
@@ -459,19 +464,19 @@ public class RetryFailureHandlingIntegrationTests {
         // Wait for the processor to finish updating job status and releasing idempotency key
         // Poll status until it's marked as completed
         var maxWaitIterations = 100;
+        BackgroundJobStatusInfo? job1Status = null;
         for (int i = 0; i < maxWaitIterations; i++) {
-            var status = await statusStore.GetStatusAsync(job1.Id);
-            if (status?.Status == BackgroundJobStatus.Completed) {
+            job1Status = await statusStore.GetStatusAsync(job1.Id);
+            if (job1Status?.Status == BackgroundJobStatus.Completed) {
                 break;
             }
             // Yield to allow the processor task to complete
             await Task.Yield();
         }
         
-        // Verify job status is actually completed
-        var job1Status = await statusStore.GetStatusAsync(job1.Id);
-        job1Status.ShouldNotBeNull();
-        job1Status.Status.ShouldBe(BackgroundJobStatus.Completed);
+        // Verify the polling succeeded and job status is completed
+        job1Status.ShouldNotBeNull("Polling timed out waiting for job status to be updated");
+        job1Status.Status.ShouldBe(BackgroundJobStatus.Completed, "Polling completed but job status was not marked as Completed");
         
         // Try to dispatch another job with same key
         var job2 = new BackgroundJob {

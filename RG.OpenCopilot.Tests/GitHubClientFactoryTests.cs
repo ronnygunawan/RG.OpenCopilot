@@ -204,7 +204,7 @@ public class GitHubClientFactoryTests {
     [Fact]
     public async Task GetClientForInstallationAsync_WithCancellationToken_PassesToProvider() {
         // Arrange
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         var mockTokenProvider = new Mock<IGitHubAppTokenProvider>();
         mockTokenProvider.Setup(p => p.GetInstallationTokenAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("test-token");

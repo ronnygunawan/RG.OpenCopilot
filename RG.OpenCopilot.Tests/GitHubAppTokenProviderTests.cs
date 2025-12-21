@@ -430,9 +430,8 @@ public class GitHubAppTokenProviderTests {
 
         // Assert
         tokens.ShouldAllBe(t => t == "installation-token-123");
-        // Note: Due to race condition, might be called more than once, but should be minimal
-        callCount.ShouldBeGreaterThan(0);
-        callCount.ShouldBeLessThanOrEqualTo(5); // At most 5, but typically 1-2 due to caching
+        // With proper locking, API should only be called once
+        callCount.ShouldBe(1);
     }
 
     [Fact]

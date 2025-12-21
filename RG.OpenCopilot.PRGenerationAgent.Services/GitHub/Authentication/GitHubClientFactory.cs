@@ -21,13 +21,23 @@ public sealed class GitHubClientFactory : IGitHubClientFactory {
     private readonly IGitHubAppTokenProvider _tokenProvider;
     private readonly IConfiguration _configuration;
     private readonly ILogger<GitHubClientFactory> _logger;
+    private readonly IJwtTokenGenerator _jwtGenerator;
 
     public GitHubClientFactory(
         IGitHubAppTokenProvider tokenProvider,
         IConfiguration configuration,
+        ILogger<GitHubClientFactory> logger)
+        : this(tokenProvider, configuration, new JwtTokenGenerator(TimeProvider.System), logger) {
+    }
+
+    public GitHubClientFactory(
+        IGitHubAppTokenProvider tokenProvider,
+        IConfiguration configuration,
+        IJwtTokenGenerator jwtGenerator,
         ILogger<GitHubClientFactory> logger) {
         _tokenProvider = tokenProvider;
         _configuration = configuration;
+        _jwtGenerator = jwtGenerator;
         _logger = logger;
     }
 
@@ -41,7 +51,7 @@ public sealed class GitHubClientFactory : IGitHubClientFactory {
             _logger.LogDebug("Created GitHub client with installation token for installation {InstallationId}", installationId);
             return client;
         }
-        catch (InvalidOperationException) {
+        catch (InvalidOperationException ex) when (ex.Message.Contains("GitHub App credentials")) {
             // Fall back to PAT if GitHub App credentials not configured
             var pat = _configuration["GitHub:Token"];
             if (!string.IsNullOrEmpty(pat)) {
@@ -64,8 +74,7 @@ public sealed class GitHubClientFactory : IGitHubClientFactory {
         }
         
         var client = new GitHubClient(new ProductHeaderValue("RG-OpenCopilot"));
-        var jwtGenerator = new JwtTokenGenerator(TimeProvider.System);
-        var jwt = jwtGenerator.GenerateJwtToken(appId, privateKey);
+        var jwt = _jwtGenerator.GenerateJwtToken(appId, privateKey);
         client.Credentials = new Credentials(token: jwt, authenticationType: AuthenticationType.Bearer);
         
         _logger.LogDebug("Created GitHub client with JWT authentication");
