@@ -153,7 +153,7 @@ Currently, we do **not** have a fixed release schedule. The project is in active
 
 - **For technical questions**: Open an issue with the `question` label
 - **For feature proposals**: Open an issue with the `enhancement` label
-- **For security concerns**: See [SECURITY.md](SECURITY.md) if available, or open a private issue
+- **For security concerns**: Open an issue with the `security` label or contact the maintainers directly
 - **For general discussion**: Use GitHub Discussions (if enabled)
 
 ---
