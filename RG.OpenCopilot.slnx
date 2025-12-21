@@ -7,5 +7,6 @@
   <Project Path="RG.OpenCopilot.PRGenerationAgent/RG.OpenCopilot.PRGenerationAgent.csproj" />
   <Project Path="RG.OpenCopilot.PRGenerationAgent.Services/RG.OpenCopilot.PRGenerationAgent.Services.csproj" />
   <Project Path="RG.OpenCopilot.GitHubApp/RG.OpenCopilot.GitHubApp.csproj" />
+  <Project Path="RG.OpenCopilot.Demo/RG.OpenCopilot.Demo.csproj" />
   <Project Path="RG.OpenCopilot.Tests/RG.OpenCopilot.Tests.csproj" />
 </Solution>
