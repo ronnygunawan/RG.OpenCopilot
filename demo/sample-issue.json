@@ -1,0 +1,11 @@
+{
+  "number": 1,
+  "title": "Add multiplication and division methods to Calculator",
+  "body": "Please add the following methods to the Calculator class:\n\n1. Multiply(int a, int b) - multiplies two numbers\n2. Divide(int a, int b) - divides a by b (should handle division by zero)\n\nEnsure proper XML documentation comments are added for both methods.\n\nNote: This is a demo issue for showcasing RG.OpenCopilot capabilities.",
+  "labels": ["copilot-assisted"],
+  "repository": {
+    "name": "sample-calculator",
+    "owner": "demo",
+    "path": "./demo/sample-repo"
+  }
+}

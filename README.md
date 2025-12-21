@@ -8,6 +8,31 @@ RG.OpenCopilot is a C#/.NET 10 solution that aims to provide an intelligent codi
 
 **This is an experimental project under construction. Many features are incomplete or subject to breaking changes.**
 
+## ⚡ Quick Start Demo
+
+**Want to see it in action in 1-2 minutes?** Run our minimal demo that requires **zero configuration**:
+
+```bash
+# Linux/macOS
+./demo/run-demo.sh
+
+# Windows
+demo\run-demo.bat
+
+# Or manually
+dotnet run --project RG.OpenCopilot.Demo
+```
+
+This demo:
+- ✅ Loads a sample issue
+- ✅ Generates an AI implementation plan
+- ✅ Shows structured output
+- ✅ Works without API keys (uses rule-based planner)
+- ✅ No Docker or GitHub setup needed
+- ✅ Completes in ~2 minutes
+
+**See [demo/README.md](demo/README.md) for detailed demo documentation.**
+
 ## 🚀 Key Features
 
 - **🤖 Automated Code Generation**: LLM-powered code generation in multiple languages (C#, TypeScript, Python, Java, Go, Rust)

@@ -27,3 +27,6 @@ RiderProjects/
 # Local environment
 .env
 *.local.json
+
+# Demo generated files
+demo/generated-plan.json
