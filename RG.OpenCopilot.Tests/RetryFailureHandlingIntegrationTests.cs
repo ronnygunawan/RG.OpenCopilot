@@ -142,13 +142,29 @@ public class RetryFailureHandlingIntegrationTests {
         // Wait for processing
         await attemptTcs.Task;
         
+        // Wait for the processor to finish updating status
+        // Poll status until it's marked as failed
+        var maxWaitIterations = 100;
+        BackgroundJobStatusInfo? finalStatus = null;
+        for (int i = 0; i < maxWaitIterations; i++) {
+            finalStatus = await statusStore.GetStatusAsync(job.Id);
+            if (finalStatus?.Status == BackgroundJobStatus.Failed) {
+                break;
+            }
+            // Yield to allow the processor task to complete
+            await Task.Yield();
+        }
+        
+        // Verify the polling succeeded and job status is Failed
+        finalStatus.ShouldNotBeNull("Polling timed out waiting for job status to be updated");
+        finalStatus.Status.ShouldBe(BackgroundJobStatus.Failed, "Polling completed but job status was not marked as Failed");
+        
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
         
         // Assert - should only execute once (no retries)
         handler.Verify(h => h.ExecuteAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()), Times.Once);
         
-        var finalStatus = await statusStore.GetStatusAsync(job.Id);
         finalStatus.ShouldNotBeNull();
         finalStatus.Status.ShouldBe(BackgroundJobStatus.Failed);
         finalStatus.RetryCount.ShouldBe(0);
