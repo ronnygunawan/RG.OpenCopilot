@@ -812,6 +812,562 @@ public class GeneratePlanJobHandlerTests {
         finalStatus.ErrorMessage.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WithFileTargets_IncludesFilesSection() {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var taskStore = new InMemoryAgentTaskStore();
+        var plannerService = new Mock<IPlannerService>();
+        var gitHubService = new Mock<IGitHubService>();
+        var repositoryAnalyzer = new Mock<IRepositoryAnalyzer>();
+        var instructionsLoader = new Mock<IInstructionsLoader>();
+        var jobDispatcher = new Mock<IJobDispatcher>();
+        var jobStatusStore = new InMemoryJobStatusStore();
+        var logger = new TestLogger<GeneratePlanJobHandler>();
+
+        var handler = new GeneratePlanJobHandler(
+            taskStore,
+            plannerService.Object,
+            gitHubService.Object,
+            repositoryAnalyzer.Object,
+            instructionsLoader.Object,
+            jobDispatcher.Object,
+            jobStatusStore,
+            new BackgroundJobOptions(),
+            timeProvider,
+            logger);
+
+        var task = new AgentTask {
+            Id = "owner/repo/issues/1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await taskStore.CreateTaskAsync(task);
+
+        gitHubService
+            .Setup(g => g.CreateWorkingBranchAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("open-copilot/issue-1");
+
+        gitHubService
+            .Setup(g => g.CreateWipPullRequestAsync("owner", "repo", "open-copilot/issue-1", 1, "Test Issue", "Test body", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(42);
+
+        repositoryAnalyzer
+            .Setup(r => r.AnalyzeAsync("owner", "repo", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RepositoryAnalysis { Summary = "Test" });
+
+        instructionsLoader
+            .Setup(i => i.LoadInstructionsAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var plan = new AgentPlan {
+            ProblemSummary = "Fix authentication bug",
+            Steps = new List<PlanStep> {
+                new() { Title = "Update AuthService", Details = "Add null checks" }
+            },
+            Checklist = new List<string> { "Test authentication flow" },
+            Constraints = new List<string> { "Must not break existing auth" },
+            FileTargets = new List<string> {
+                "src/AuthService.cs",
+                "src/UserController.cs",
+                "tests/AuthServiceTests.cs"
+            }
+        };
+        plannerService
+            .Setup(p => p.CreatePlanAsync(It.IsAny<AgentTaskContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(plan);
+
+        string? capturedPrBody = null;
+        gitHubService
+            .Setup(g => g.UpdatePullRequestDescriptionAsync("owner", "repo", 42, "[WIP] Test Issue", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, int, string, string, CancellationToken>((_, _, _, _, body, _) => capturedPrBody = body)
+            .Returns(Task.CompletedTask);
+
+        jobDispatcher
+            .Setup(j => j.DispatchAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var payload = new GeneratePlanJobPayload {
+            TaskId = "owner/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            IssueTitle = "Test Issue",
+            IssueBody = "Test body",
+            WebhookId = "webhook-123"
+        };
+
+        var job = new BackgroundJob {
+            Id = "job-123",
+            Type = GeneratePlanJobHandler.JobTypeName,
+            Payload = JsonSerializer.Serialize(payload),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await handler.ExecuteAsync(job);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        capturedPrBody.ShouldNotBeNull();
+        capturedPrBody.ShouldContain("## Agent Plan Summary");
+        capturedPrBody.ShouldContain("### Files to be Modified");
+        capturedPrBody.ShouldContain("`src/AuthService.cs`");
+        capturedPrBody.ShouldContain("`src/UserController.cs`");
+        capturedPrBody.ShouldContain("`tests/AuthServiceTests.cs`");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithTestSteps_IncludesTestingSection() {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var taskStore = new InMemoryAgentTaskStore();
+        var plannerService = new Mock<IPlannerService>();
+        var gitHubService = new Mock<IGitHubService>();
+        var repositoryAnalyzer = new Mock<IRepositoryAnalyzer>();
+        var instructionsLoader = new Mock<IInstructionsLoader>();
+        var jobDispatcher = new Mock<IJobDispatcher>();
+        var jobStatusStore = new InMemoryJobStatusStore();
+        var logger = new TestLogger<GeneratePlanJobHandler>();
+
+        var handler = new GeneratePlanJobHandler(
+            taskStore,
+            plannerService.Object,
+            gitHubService.Object,
+            repositoryAnalyzer.Object,
+            instructionsLoader.Object,
+            jobDispatcher.Object,
+            jobStatusStore,
+            new BackgroundJobOptions(),
+            timeProvider,
+            logger);
+
+        var task = new AgentTask {
+            Id = "owner/repo/issues/1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await taskStore.CreateTaskAsync(task);
+
+        gitHubService
+            .Setup(g => g.CreateWorkingBranchAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("open-copilot/issue-1");
+
+        gitHubService
+            .Setup(g => g.CreateWipPullRequestAsync("owner", "repo", "open-copilot/issue-1", 1, "Test Issue", "Test body", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(42);
+
+        repositoryAnalyzer
+            .Setup(r => r.AnalyzeAsync("owner", "repo", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RepositoryAnalysis { Summary = "Test" });
+
+        instructionsLoader
+            .Setup(i => i.LoadInstructionsAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var plan = new AgentPlan {
+            ProblemSummary = "Add new feature",
+            Steps = new List<PlanStep> {
+                new() { Title = "Implement feature", Details = "Add core functionality" },
+                new() { Title = "Add unit tests", Details = "Test the new feature thoroughly" },
+                new() { Title = "Update integration tests", Details = "Ensure integration tests cover the feature" }
+            },
+            Checklist = new List<string> { "Feature implemented", "Tests added" },
+            Constraints = new List<string>()
+        };
+        plannerService
+            .Setup(p => p.CreatePlanAsync(It.IsAny<AgentTaskContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(plan);
+
+        string? capturedPrBody = null;
+        gitHubService
+            .Setup(g => g.UpdatePullRequestDescriptionAsync("owner", "repo", 42, "[WIP] Test Issue", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, int, string, string, CancellationToken>((_, _, _, _, body, _) => capturedPrBody = body)
+            .Returns(Task.CompletedTask);
+
+        jobDispatcher
+            .Setup(j => j.DispatchAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var payload = new GeneratePlanJobPayload {
+            TaskId = "owner/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            IssueTitle = "Test Issue",
+            IssueBody = "Test body",
+            WebhookId = "webhook-123"
+        };
+
+        var job = new BackgroundJob {
+            Id = "job-123",
+            Type = GeneratePlanJobHandler.JobTypeName,
+            Payload = JsonSerializer.Serialize(payload),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await handler.ExecuteAsync(job);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        capturedPrBody.ShouldNotBeNull();
+        capturedPrBody.ShouldContain("## Agent Plan Summary");
+        capturedPrBody.ShouldContain("### Testing Strategy");
+        capturedPrBody.ShouldContain("Add unit tests");
+        capturedPrBody.ShouldContain("Update integration tests");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithConstraints_IncludesAssumptionsSection() {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var taskStore = new InMemoryAgentTaskStore();
+        var plannerService = new Mock<IPlannerService>();
+        var gitHubService = new Mock<IGitHubService>();
+        var repositoryAnalyzer = new Mock<IRepositoryAnalyzer>();
+        var instructionsLoader = new Mock<IInstructionsLoader>();
+        var jobDispatcher = new Mock<IJobDispatcher>();
+        var jobStatusStore = new InMemoryJobStatusStore();
+        var logger = new TestLogger<GeneratePlanJobHandler>();
+
+        var handler = new GeneratePlanJobHandler(
+            taskStore,
+            plannerService.Object,
+            gitHubService.Object,
+            repositoryAnalyzer.Object,
+            instructionsLoader.Object,
+            jobDispatcher.Object,
+            jobStatusStore,
+            new BackgroundJobOptions(),
+            timeProvider,
+            logger);
+
+        var task = new AgentTask {
+            Id = "owner/repo/issues/1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await taskStore.CreateTaskAsync(task);
+
+        gitHubService
+            .Setup(g => g.CreateWorkingBranchAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("open-copilot/issue-1");
+
+        gitHubService
+            .Setup(g => g.CreateWipPullRequestAsync("owner", "repo", "open-copilot/issue-1", 1, "Test Issue", "Test body", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(42);
+
+        repositoryAnalyzer
+            .Setup(r => r.AnalyzeAsync("owner", "repo", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RepositoryAnalysis { Summary = "Test" });
+
+        instructionsLoader
+            .Setup(i => i.LoadInstructionsAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var plan = new AgentPlan {
+            ProblemSummary = "Refactor database access",
+            Steps = new List<PlanStep> {
+                new() { Title = "Refactor queries", Details = "Use repository pattern" }
+            },
+            Checklist = new List<string> { "Queries refactored" },
+            Constraints = new List<string> {
+                "Assumes existing database schema remains unchanged",
+                "May impact performance during migration",
+                "Requires database connection string configuration"
+            }
+        };
+        plannerService
+            .Setup(p => p.CreatePlanAsync(It.IsAny<AgentTaskContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(plan);
+
+        string? capturedPrBody = null;
+        gitHubService
+            .Setup(g => g.UpdatePullRequestDescriptionAsync("owner", "repo", 42, "[WIP] Test Issue", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, int, string, string, CancellationToken>((_, _, _, _, body, _) => capturedPrBody = body)
+            .Returns(Task.CompletedTask);
+
+        jobDispatcher
+            .Setup(j => j.DispatchAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var payload = new GeneratePlanJobPayload {
+            TaskId = "owner/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            IssueTitle = "Test Issue",
+            IssueBody = "Test body",
+            WebhookId = "webhook-123"
+        };
+
+        var job = new BackgroundJob {
+            Id = "job-123",
+            Type = GeneratePlanJobHandler.JobTypeName,
+            Payload = JsonSerializer.Serialize(payload),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await handler.ExecuteAsync(job);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        capturedPrBody.ShouldNotBeNull();
+        capturedPrBody.ShouldContain("## Agent Plan Summary");
+        capturedPrBody.ShouldContain("### Assumptions & Constraints");
+        capturedPrBody.ShouldContain("Assumes existing database schema remains unchanged");
+        capturedPrBody.ShouldContain("May impact performance during migration");
+        capturedPrBody.ShouldContain("Requires database connection string configuration");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CompletePlan_IncludesAllSections() {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var taskStore = new InMemoryAgentTaskStore();
+        var plannerService = new Mock<IPlannerService>();
+        var gitHubService = new Mock<IGitHubService>();
+        var repositoryAnalyzer = new Mock<IRepositoryAnalyzer>();
+        var instructionsLoader = new Mock<IInstructionsLoader>();
+        var jobDispatcher = new Mock<IJobDispatcher>();
+        var jobStatusStore = new InMemoryJobStatusStore();
+        var logger = new TestLogger<GeneratePlanJobHandler>();
+
+        var handler = new GeneratePlanJobHandler(
+            taskStore,
+            plannerService.Object,
+            gitHubService.Object,
+            repositoryAnalyzer.Object,
+            instructionsLoader.Object,
+            jobDispatcher.Object,
+            jobStatusStore,
+            new BackgroundJobOptions(),
+            timeProvider,
+            logger);
+
+        var task = new AgentTask {
+            Id = "owner/repo/issues/1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await taskStore.CreateTaskAsync(task);
+
+        gitHubService
+            .Setup(g => g.CreateWorkingBranchAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("open-copilot/issue-1");
+
+        gitHubService
+            .Setup(g => g.CreateWipPullRequestAsync("owner", "repo", "open-copilot/issue-1", 1, "Test Issue", "Test body", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(42);
+
+        repositoryAnalyzer
+            .Setup(r => r.AnalyzeAsync("owner", "repo", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RepositoryAnalysis { Summary = "Test" });
+
+        instructionsLoader
+            .Setup(i => i.LoadInstructionsAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var plan = new AgentPlan {
+            ProblemSummary = "Implement user authentication with JWT tokens",
+            Steps = new List<PlanStep> {
+                new() { Title = "Create JWT service", Details = "Implement token generation and validation" },
+                new() { Title = "Add authentication middleware", Details = "Validate tokens on protected routes" },
+                new() { Title = "Create unit tests for JWT service", Details = "Test token generation, validation, and expiration" },
+                new() { Title = "Add integration tests", Details = "Test full authentication flow" }
+            },
+            Checklist = new List<string> {
+                "JWT service implemented",
+                "Middleware configured",
+                "Tests pass",
+                "Documentation updated"
+            },
+            Constraints = new List<string> {
+                "Must use HS256 algorithm for signing",
+                "Token expiration set to 24 hours",
+                "Assumes secret key is configured in environment variables"
+            },
+            FileTargets = new List<string> {
+                "src/Services/JwtService.cs",
+                "src/Middleware/AuthenticationMiddleware.cs",
+                "tests/Services/JwtServiceTests.cs",
+                "tests/Integration/AuthenticationTests.cs"
+            }
+        };
+        plannerService
+            .Setup(p => p.CreatePlanAsync(It.IsAny<AgentTaskContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(plan);
+
+        string? capturedPrBody = null;
+        gitHubService
+            .Setup(g => g.UpdatePullRequestDescriptionAsync("owner", "repo", 42, "[WIP] Test Issue", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, int, string, string, CancellationToken>((_, _, _, _, body, _) => capturedPrBody = body)
+            .Returns(Task.CompletedTask);
+
+        jobDispatcher
+            .Setup(j => j.DispatchAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var payload = new GeneratePlanJobPayload {
+            TaskId = "owner/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            IssueTitle = "Test Issue",
+            IssueBody = "Test body",
+            WebhookId = "webhook-123"
+        };
+
+        var job = new BackgroundJob {
+            Id = "job-123",
+            Type = GeneratePlanJobHandler.JobTypeName,
+            Payload = JsonSerializer.Serialize(payload),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await handler.ExecuteAsync(job);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        capturedPrBody.ShouldNotBeNull();
+        
+        // Verify all major sections are present
+        capturedPrBody.ShouldContain("## Agent Plan Summary");
+        capturedPrBody.ShouldContain("### Goal");
+        capturedPrBody.ShouldContain("### Planned Steps");
+        capturedPrBody.ShouldContain("### Files to be Modified");
+        capturedPrBody.ShouldContain("### Testing Strategy");
+        capturedPrBody.ShouldContain("### Assumptions & Constraints");
+        capturedPrBody.ShouldContain("### Checklist");
+        
+        // Verify content
+        capturedPrBody.ShouldContain("Implement user authentication with JWT tokens");
+        capturedPrBody.ShouldContain("Create JWT service");
+        capturedPrBody.ShouldContain("`src/Services/JwtService.cs`");
+        capturedPrBody.ShouldContain("Create unit tests for JWT service");
+        capturedPrBody.ShouldContain("Add integration tests");
+        capturedPrBody.ShouldContain("Must use HS256 algorithm for signing");
+        
+        // Verify deterministic language
+        capturedPrBody.ShouldContain("The plan is deterministic and reviewable");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NoFileTargets_ExcludesFilesSection() {
+        // Arrange
+        var timeProvider = new FakeTimeProvider();
+        var taskStore = new InMemoryAgentTaskStore();
+        var plannerService = new Mock<IPlannerService>();
+        var gitHubService = new Mock<IGitHubService>();
+        var repositoryAnalyzer = new Mock<IRepositoryAnalyzer>();
+        var instructionsLoader = new Mock<IInstructionsLoader>();
+        var jobDispatcher = new Mock<IJobDispatcher>();
+        var jobStatusStore = new InMemoryJobStatusStore();
+        var logger = new TestLogger<GeneratePlanJobHandler>();
+
+        var handler = new GeneratePlanJobHandler(
+            taskStore,
+            plannerService.Object,
+            gitHubService.Object,
+            repositoryAnalyzer.Object,
+            instructionsLoader.Object,
+            jobDispatcher.Object,
+            jobStatusStore,
+            new BackgroundJobOptions(),
+            timeProvider,
+            logger);
+
+        var task = new AgentTask {
+            Id = "owner/repo/issues/1",
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            Status = AgentTaskStatus.PendingPlanning
+        };
+        await taskStore.CreateTaskAsync(task);
+
+        gitHubService
+            .Setup(g => g.CreateWorkingBranchAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("open-copilot/issue-1");
+
+        gitHubService
+            .Setup(g => g.CreateWipPullRequestAsync("owner", "repo", "open-copilot/issue-1", 1, "Test Issue", "Test body", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(42);
+
+        repositoryAnalyzer
+            .Setup(r => r.AnalyzeAsync("owner", "repo", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RepositoryAnalysis { Summary = "Test" });
+
+        instructionsLoader
+            .Setup(i => i.LoadInstructionsAsync("owner", "repo", 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var plan = new AgentPlan {
+            ProblemSummary = "Update documentation",
+            Steps = new List<PlanStep> {
+                new() { Title = "Review docs", Details = "Check for accuracy" }
+            },
+            Checklist = new List<string> { "Docs reviewed" },
+            Constraints = new List<string>(),
+            FileTargets = new List<string>() // Empty file targets
+        };
+        plannerService
+            .Setup(p => p.CreatePlanAsync(It.IsAny<AgentTaskContext>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(plan);
+
+        string? capturedPrBody = null;
+        gitHubService
+            .Setup(g => g.UpdatePullRequestDescriptionAsync("owner", "repo", 42, "[WIP] Test Issue", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, int, string, string, CancellationToken>((_, _, _, _, body, _) => capturedPrBody = body)
+            .Returns(Task.CompletedTask);
+
+        jobDispatcher
+            .Setup(j => j.DispatchAsync(It.IsAny<BackgroundJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var payload = new GeneratePlanJobPayload {
+            TaskId = "owner/repo/issues/1",
+            InstallationId = 123,
+            RepositoryOwner = "owner",
+            RepositoryName = "repo",
+            IssueNumber = 1,
+            IssueTitle = "Test Issue",
+            IssueBody = "Test body",
+            WebhookId = "webhook-123"
+        };
+
+        var job = new BackgroundJob {
+            Id = "job-123",
+            Type = GeneratePlanJobHandler.JobTypeName,
+            Payload = JsonSerializer.Serialize(payload),
+            Metadata = new Dictionary<string, string>()
+        };
+
+        // Act
+        var result = await handler.ExecuteAsync(job);
+
+        // Assert
+        result.Success.ShouldBeTrue();
+        capturedPrBody.ShouldNotBeNull();
+        capturedPrBody.ShouldContain("## Agent Plan Summary");
+        capturedPrBody.ShouldNotContain("### Files to be Modified");
+    }
+
     private class TestLogger<T> : Microsoft.Extensions.Logging.ILogger<T> {
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
