@@ -215,8 +215,17 @@ public class RetryFailureHandlingIntegrationTests {
         // Wait for all retries
         await finalAttemptTcs.Task;
         
-        // Give the processor time to persist the final attempt status
-        await Task.Delay(100);
+        // Wait for the processor to finish updating status
+        // Poll status until we see all 3 attempts recorded
+        var maxWaitIterations = 100;
+        for (int i = 0; i < maxWaitIterations; i++) {
+            var status = await statusStore.GetStatusAsync(job.Id);
+            if (status?.Attempts.Count >= 3) {
+                break;
+            }
+            // Yield to allow the processor task to complete
+            await Task.Yield();
+        }
         
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
@@ -448,7 +457,16 @@ public class RetryFailureHandlingIntegrationTests {
         await jobCompleteTcs.Task;
         
         // Wait for the processor to finish updating job status and releasing idempotency key
-        await Task.Delay(100);
+        // Poll status until it's marked as completed
+        var maxWaitIterations = 100;
+        for (int i = 0; i < maxWaitIterations; i++) {
+            var status = await statusStore.GetStatusAsync(job1.Id);
+            if (status?.Status == BackgroundJobStatus.Completed) {
+                break;
+            }
+            // Yield to allow the processor task to complete
+            await Task.Yield();
+        }
         
         // Verify job status is actually completed
         var job1Status = await statusStore.GetStatusAsync(job1.Id);

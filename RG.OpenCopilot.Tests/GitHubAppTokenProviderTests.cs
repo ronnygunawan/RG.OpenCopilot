@@ -400,9 +400,9 @@ public class GitHubAppTokenProviderTests {
         var callCount = 0;
         var mockGitHubAppsClient = new Mock<IGitHubAppsClient>();
         mockGitHubAppsClient.Setup(c => c.CreateInstallationToken(It.IsAny<long>()))
-            .Returns(async () => {
+            .ReturnsAsync(() => {
                 Interlocked.Increment(ref callCount);
-                await Task.Delay(50); // Simulate API delay
+                // Yield to simulate async behavior without using Task.Delay
                 return new AccessToken(
                     token: "installation-token-123",
                     expiresAt: new DateTimeOffset(2024, 1, 1, 13, 0, 0, TimeSpan.Zero));
