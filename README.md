@@ -534,9 +534,9 @@ dotnet clean && dotnet build
 
 ## Roadmap
 
-**⚠️ This project is in early development. The roadmap below represents planned features, many of which are incomplete or experimental.**
+**⚠️ This project is in early development. See [ROADMAP.md](ROADMAP.md) for the complete contributor-facing roadmap including current phase, next steps, and how to help.**
 
-### Implemented (Experimental) ✅
+### Current Phase: Core Foundation (In Progress) ✅
 - ✅ Core agent architecture and domain models
 - ✅ GitHub webhook integration with signature validation
 - ✅ LLM-powered planning (OpenAI, Azure OpenAI)
@@ -548,31 +548,22 @@ dotnet clean && dotnet build
 - ✅ Build and test automation
 - ✅ PR lifecycle management (WIP → final)
 - ✅ Comprehensive test coverage
-
-### In Progress 🚧
-- 🚧 Enhanced code generation with iterative refinement
-- 🚧 Advanced error recovery and retry logic
+- 🚧 Enhanced error recovery and retry logic
 - 🚧 Performance optimizations for large repositories
 - 🚧 Production readiness and stability improvements
 
-### Critical Missing Features 📋
-- 📋 Background job processing for long-running tasks
-- 📋 Persistent storage (SQLite/PostgreSQL) for agent tasks
+### Next Phase: Production Readiness 🚀
 - 📋 Comprehensive error handling and recovery
-- 📋 Production deployment documentation and tooling
 - 📋 Security audit and hardening
 - 📋 Performance testing and optimization
+- 📋 Production deployment documentation and tooling
+- 📋 Observability (logging, metrics, tracing)
 
-### Future Enhancements 📋
-- 📋 Multi-step execution with intermediate PR updates
-- 📋 Support for additional LLM providers (Claude, Gemini)
-- 📋 Code review integration
-- 📋 Metrics and observability dashboard
-- 📋 Multi-repository coordination
-- 📋 Custom agent workflows
+**→ [View Full Roadmap](ROADMAP.md)** for detailed phases, contribution opportunities, and out-of-scope items.
 
 ## Documentation
 
+- **[ROADMAP.md](ROADMAP.md)** - Project roadmap and contribution guide
 - **[POC-SETUP.md](POC-SETUP.md)** - Setup and testing instructions
 - **[LLM-CONFIGURATION.md](LLM-CONFIGURATION.md)** - LLM provider configuration
 - **[CODE-GENERATOR.md](CODE-GENERATOR.md)** - Code generation documentation
@@ -586,7 +577,13 @@ dotnet clean && dotnet build
 
 **⚠️ Important**: This project is in early development and not ready for production use. Contributions are welcome, but be aware that significant architectural changes may occur.
 
-Please:
+**See [ROADMAP.md](ROADMAP.md) for:**
+- Current development phase and priorities
+- Areas where we need help
+- Contribution guidelines and getting started steps
+- Out-of-scope items and future plans
+
+### Quick Start
 
 1. Fork the repository
 2. Create a feature branch
