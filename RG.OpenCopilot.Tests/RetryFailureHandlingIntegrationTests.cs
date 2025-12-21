@@ -72,6 +72,23 @@ public class RetryFailureHandlingIntegrationTests {
         // Wait for all retries to complete
         await finalAttemptTcs.Task;
         
+        // Wait for the processor to finish updating status with all attempts
+        // Poll status until all 3 attempts are recorded
+        var maxWaitIterations = 100;
+        BackgroundJobStatusInfo? finalStatus = null;
+        for (int i = 0; i < maxWaitIterations; i++) {
+            finalStatus = await statusStore.GetStatusAsync(job.Id);
+            if (finalStatus?.Attempts.Count == 3) {
+                break;
+            }
+            // Yield to allow the processor task to complete
+            await Task.Yield();
+        }
+        
+        // Verify the polling succeeded and all 3 attempts are recorded
+        finalStatus.ShouldNotBeNull("Polling timed out waiting for job status to be updated");
+        finalStatus.Attempts.Count.ShouldBe(3, "Polling completed but not all attempts were recorded");
+        
         cts.Cancel();
         await processor.StopAsync(CancellationToken.None);
         
@@ -79,7 +96,6 @@ public class RetryFailureHandlingIntegrationTests {
         attemptCount.ShouldBe(3);
         
         // Verify final status
-        var finalStatus = await statusStore.GetStatusAsync(job.Id);
         finalStatus.ShouldNotBeNull();
         finalStatus.Status.ShouldBe(BackgroundJobStatus.Completed);
         finalStatus.Attempts.Count.ShouldBe(3);
